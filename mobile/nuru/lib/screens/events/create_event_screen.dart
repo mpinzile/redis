@@ -1376,18 +1376,48 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       ]),
       _previewSection('Planning', [
         if (_expectedGuestsCtrl.text.trim().isNotEmpty)
-          _previewRow('assets/icons/user-icon.svg', '${_expectedGuestsCtrl.text.trim()} expected guests'),
+          _previewItem(
+            icon: 'assets/icons/user-icon.svg',
+            label: 'Expected guests',
+            value: _expectedGuestsCtrl.text.trim(),
+          ),
         if (_budgetCtrl.text.trim().isNotEmpty)
-          _previewRow('assets/icons/card-icon.svg',
-              'Budget: ${formatMoney(num.tryParse(_budgetCtrl.text.replaceAll(RegExp(r"[^0-9.]"), "")) ?? 0)}'),
+          _previewItem(
+            icon: 'assets/icons/card-icon.svg',
+            label: 'Budget',
+            value: formatMoney(num.tryParse(
+                    _budgetCtrl.text.replaceAll(RegExp(r"[^0-9.]"), "")) ??
+                0),
+          ),
         if (_guestOfHonorCtrl.text.trim().isNotEmpty)
-          _previewRow('assets/icons/user-icon.svg', 'Guest of honor: ${_guestOfHonorCtrl.text.trim()}'),
-        ..._extraDetailsItems.where((m) => (m['label'] ?? '').trim().isNotEmpty && (m['details'] ?? '').trim().isNotEmpty).map(
-          (m) => _previewRow('assets/icons/info-icon.svg', '${m['label']!.trim()}: ${m['details']!.trim()}'),
-        ),
+          _previewItem(
+            icon: 'assets/icons/user-icon.svg',
+            label: 'Guest of honor',
+            value: _guestOfHonorCtrl.text.trim(),
+          ),
         if (_reminderContactPhoneCtrl.text.trim().isNotEmpty)
-          _previewRow('assets/icons/phone-icon.svg', 'Reminder contact: ${_reminderContactPhoneCtrl.text.trim()}'),
+          _previewItem(
+            icon: 'assets/icons/phone-icon.svg',
+            label: 'Reminder contact',
+            value: _reminderContactPhoneCtrl.text.trim(),
+          ),
       ]),
+      // Additional info lives in its own clearly-labelled section so the
+      // Planning block stays focused on the core logistics.
+      if (_extraDetailsItems.any((m) =>
+          (m['label'] ?? '').trim().isNotEmpty &&
+          (m['details'] ?? '').trim().isNotEmpty))
+        _previewSection('Additional info', [
+          ..._extraDetailsItems
+              .where((m) =>
+                  (m['label'] ?? '').trim().isNotEmpty &&
+                  (m['details'] ?? '').trim().isNotEmpty)
+              .map((m) => _previewItem(
+                    icon: 'assets/icons/info-icon.svg',
+                    label: m['label']!.trim(),
+                    value: m['details']!.trim(),
+                  )),
+        ]),
       _previewSection('Visibility & Tickets', [
         _previewRow(_visibility == 'public' ? 'assets/icons/view-icon.svg' : 'assets/icons/shield-icon.svg',
             _visibility == 'public' ? 'Public event (discoverable)' : 'Private event (invitees only)'),
@@ -1437,33 +1467,121 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   }
 
   Widget _previewSection(String title, List<Widget> rows) {
-    final visible = rows.where((w) => true).toList();
+    final visible = rows.where((w) => w is! SizedBox).toList();
     if (visible.isEmpty) return const SizedBox.shrink();
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.border),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title.toUpperCase(),
-            style: appText(size: 11, weight: FontWeight.w700, color: AppColors.textTertiary, letterSpacing: 0.8)),
-        const SizedBox(height: 10),
-        ...visible,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+          child: Text(title.toUpperCase(),
+              style: appText(
+                size: 11,
+                weight: FontWeight.w700,
+                color: AppColors.textTertiary,
+                letterSpacing: 1.0,
+              )),
+        ),
+        // Render rows with a thin divider between them for a clean list feel.
+        for (int i = 0; i < visible.length; i++) ...[
+          if (i > 0)
+            const Divider(
+              height: 1,
+              thickness: 1,
+              color: AppColors.borderLight,
+              indent: 60,
+              endIndent: 16,
+            ),
+          visible[i],
+        ],
+        const SizedBox(height: 4),
       ]),
     );
   }
 
+  /// Polished list row with a tinted icon chip + label/value pair.
+  Widget _previewItem({
+    required String icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 16, 10),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          alignment: Alignment.center,
+          child: SvgPicture.asset(icon,
+              width: 16,
+              height: 16,
+              colorFilter:
+                  const ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label,
+                  style: appText(
+                      size: 11.5,
+                      weight: FontWeight.w600,
+                      color: AppColors.textTertiary,
+                      letterSpacing: 0.2)),
+              const SizedBox(height: 2),
+              Text(value,
+                  style: appText(
+                      size: 14.5,
+                      weight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                      height: 1.35)),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
+  /// Compact single-line row (used by sections that pass text only).
   Widget _previewRow(String iconAsset, String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SvgPicture.asset(iconAsset, width: 16, height: 16,
-          colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
-        const SizedBox(width: 10),
-        Expanded(child: Text(text, style: appText(size: 14, color: AppColors.textPrimary, height: 1.4))),
+      padding: const EdgeInsets.fromLTRB(14, 10, 16, 10),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          alignment: Alignment.center,
+          child: SvgPicture.asset(iconAsset,
+              width: 16,
+              height: 16,
+              colorFilter:
+                  const ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(text,
+              style: appText(
+                  size: 14.5,
+                  weight: FontWeight.w500,
+                  color: AppColors.textPrimary,
+                  height: 1.4)),
+        ),
       ]),
     );
   }

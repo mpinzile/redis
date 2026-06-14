@@ -751,7 +751,19 @@ class _EchoItemWidgetState extends State<_EchoItemWidget> {
                     // Actions
                     Row(
                       children: [
-                        Text('❤️ $_glowCount', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textTertiary)),
+                        // Match the main Glow action icon so glow visuals stay
+                        // consistent across the moment and its replies.
+                        SvgPicture.asset(
+                          'assets/icons/heart-icon.svg',
+                          width: 12,
+                          height: 12,
+                          colorFilter: const ColorFilter.mode(
+                              AppColors.textTertiary, BlendMode.srcIn),
+                        ),
+                        const SizedBox(width: 4),
+                        Text('$_glowCount',
+                            style: GoogleFonts.inter(
+                                fontSize: 11, color: AppColors.textTertiary)),
                         const SizedBox(width: 16),
                         if (widget.depth < 4)
                           GestureDetector(

@@ -21,7 +21,8 @@ class GlimpseGroupCard extends StatelessWidget {
     final name = isSelf ? 'Your Glimpses' : (user['name']?.toString() ?? 'Unknown');
     final isVerified = user['is_verified'] == true || user['is_identity_verified'] == true;
     final avatar = user['avatar']?.toString();
-    final allSeen = group['all_seen'] == true;
+    // Own glimpses don't show the unseen ring.
+    final allSeen = isSelf ? true : (group['all_seen'] == true);
 
     return Container(
       decoration: BoxDecoration(

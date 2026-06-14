@@ -246,16 +246,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _loadGlimpses({bool silent = false}) async {
     if (mounted && !silent) setState(() => _glimpsesLoading = true);
-    final res = await MomentsService.getFeed();
-    if (!mounted) return;
-    final data = res['data'];
-    final fresh = _pruneExpiredGlimpses(data is List ? data : const []);
-    setState(() {
-      _glimpses = fresh;
-      _glimpsesLoading = false;
-    });
-    HomeCache.glimpses = _glimpses;
-    FeedPersistentCache.saveGlimpses(_glimpses);
+    try {
+      final res = await MomentsService.getFeed();
+      if (!mounted) return;
+      final data = res['data'];
+      final fresh = _pruneExpiredGlimpses(data is List ? data : const []);
+      setState(() {
+        _glimpses = fresh;
+        _glimpsesLoading = false;
+      });
+      HomeCache.glimpses = _glimpses;
+      FeedPersistentCache.saveGlimpses(_glimpses);
+    } catch (_) {
+      // Swallow network/parse errors so the tab still resolves into its
+      // empty state instead of spinning forever on the skeleton.
+      if (!mounted) return;
+      setState(() => _glimpsesLoading = false);
+    }
   }
 
   /// Remove moments whose `expires_at` has already passed, and drop authors

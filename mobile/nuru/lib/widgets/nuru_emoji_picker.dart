@@ -12,14 +12,37 @@ import '../core/theme/app_colors.dart';
 class NuruEmojiPicker extends StatefulWidget {
   final ValueChanged<String> onEmojiSelected;
   final VoidCallback? onClose;
-  final double height;
+  /// Optional fixed height. When null the picker fills its parent's bounded
+  /// height so it works inside DraggableScrollableSheet without clipping the
+  /// bottom bar beneath Android navigation/gesture insets.
+  final double? height;
 
   const NuruEmojiPicker({
     super.key,
     required this.onEmojiSelected,
     this.onClose,
-    this.height = 380,
+    this.height,
   });
+
+  /// Ensures color (emoji) presentation for codepoints like U+2764 ❤ that
+  /// otherwise render as a monochrome text glyph on Android.
+  static String normalizeEmoji(String e) {
+    if (e.isEmpty) return e;
+    const needsVS16 = {'\u2764', '\u2665', '\u2620', '\u2660', '\u2663', '\u2666', '\u263A', '\u2639', '\u270C', '\u261D', '\u26A1', '\u2B50', '\u2728'};
+    if (e.length == 1 && needsVS16.contains(e)) return '$e\uFE0F';
+    return e;
+  }
+
+  /// Font fallback chain that forces the system *color* emoji font, bypassing
+  /// any inherited text font (e.g. Google Fonts Inter) that would otherwise
+  /// render codepoints like U+2764 ❤ as a monochrome glyph on Android.
+  static const List<String> emojiFontFallback = <String>[
+    'Apple Color Emoji',
+    'Noto Color Emoji',
+    'Segoe UI Emoji',
+    'Twemoji Mozilla',
+    'EmojiOne Color',
+  ];
 
   /// Convenience: open the picker as a draggable modal sheet.
   static Future<String?> show(
@@ -32,22 +55,27 @@ class NuruEmojiPicker extends StatefulWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.55,
+        initialChildSize: 0.6,
         minChildSize: 0.4,
-        maxChildSize: 0.9,
+        maxChildSize: 0.95,
         expand: false,
         builder: (_, controller) => Material(
           color: Colors.white,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: NuruEmojiPicker(
-            height: MediaQuery.of(ctx).size.height * 0.55,
-            onEmojiSelected: (e) {
-              onEmojiSelected?.call(e);
-              Navigator.of(ctx).pop(e);
-            },
-            onClose: () => Navigator.of(ctx).pop(),
+          clipBehavior: Clip.antiAlias,
+          // Fill the sheet so the bottom Recent/Frequently bar always sits
+          // above the Android system nav (we also pad by viewPadding.bottom
+          // inside build).
+          child: SizedBox.expand(
+            child: NuruEmojiPicker(
+              onEmojiSelected: (e) {
+                onEmojiSelected?.call(e);
+                Navigator.of(ctx).pop(e);
+              },
+              onClose: () => Navigator.of(ctx).pop(),
+            ),
           ),
         ),
       ),
@@ -125,6 +153,7 @@ class _NuruEmojiPickerState extends State<NuruEmojiPicker> {
         final cat = _categories[_categoryIndex];
         final emojis = cat.emojis;
 
+        final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
         return Container(
           height: widget.height,
           decoration: const BoxDecoration(
@@ -197,10 +226,10 @@ class _NuruEmojiPickerState extends State<NuruEmojiPicker> {
                     ],
                     if (!veryShort)
                       ..._frequentlyUsed.take(compact ? 2 : 4).map((e) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 1),
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
                             child: GestureDetector(
                               onTap: () => _onEmojiTap(e),
-                              child: Text(e, style: const TextStyle(fontSize: 15)),
+                              child: EmojiText(e, size: 18),
                             ),
                           )),
                     const SizedBox(width: 4),
@@ -295,7 +324,7 @@ class _NuruEmojiPickerState extends State<NuruEmojiPicker> {
                               itemBuilder: (_, i) => GestureDetector(
                                 onTap: () => _onEmojiTap(emojis[i]),
                                 child: Center(
-                                  child: Text(emojis[i], style: TextStyle(fontSize: compact ? 20 : 22)),
+                                  child: EmojiText(emojis[i], size: compact ? 22 : 24),
                                 ),
                               ),
                             ),
@@ -310,7 +339,7 @@ class _NuruEmojiPickerState extends State<NuruEmojiPicker> {
               // Bottom action bar - Recent + Frequently Used (no GIF)
               if (!veryShort)
                 Container(
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                  padding: EdgeInsets.fromLTRB(14, 8, 14, 12 + bottomInset),
                   decoration: const BoxDecoration(
                     border: Border(top: BorderSide(color: Color(0xFFF0F0F2))),
                   ),
@@ -396,3 +425,26 @@ const _categories = <_Category>[
     '🇮🇹','🇪🇸','🇨🇳','🇯🇵','🇰🇷','🇮🇳','🇧🇷','🇲🇽','🇨🇦','🇦🇺','🇷🇺','🇸🇦','🇦🇪','🇹🇷','🇳🇱','🇸🇪','🇳🇴','🇵🇱','🇵🇹','🇨🇭',
   ]),
 ];
+
+/// Renders an emoji glyph forcing the system *color* emoji font so it never
+/// inherits a monochrome typeface (e.g. Inter) from an ancestor DefaultTextStyle.
+class EmojiText extends StatelessWidget {
+  final String emoji;
+  final double size;
+  final double height;
+  const EmojiText(this.emoji, {super.key, this.size = 18, this.height = 1.0});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      NuruEmojiPicker.normalizeEmoji(emoji),
+      style: TextStyle(
+        fontSize: size,
+        height: height,
+        fontFamily: null,
+        fontFamilyFallback: NuruEmojiPicker.emojiFontFallback,
+        decoration: TextDecoration.none,
+      ),
+    );
+  }
+}

@@ -37,6 +37,8 @@ export interface UserContributor extends Partial<WhatsAppAvailability> {
   user_id: string;
   contributor_user_id?: string | null;
   name: string;
+  /** Original address-book name when `name` has been overridden by a per-event display_name. */
+  global_name?: string | null;
   email?: string | null;
   phone?: string | null;
   notes?: string | null;
@@ -74,6 +76,10 @@ export interface EventContributorSummary {
   event_id: string;
   contributor_id: string;
   contributor: UserContributor | null;
+  /** Per-event override of the contributor's display name (null when same as global). */
+  display_name?: string | null;
+  /** The original address-book name, regardless of any per-event override. */
+  global_name?: string | null;
   pledge_amount: number;
   total_paid: number;
   balance: number;
@@ -92,6 +98,7 @@ export interface EventContributorSummary {
   created_at?: string;
   updated_at?: string;
 }
+
 
 export interface ContributorPayment {
   id: string;
@@ -176,6 +183,8 @@ export const contributorsApi = {
     notes?: string;
     secondary_phone?: string | null;
     notify_target?: ContributorNotifyTarget;
+    /** Per-event-only display name override. Empty string clears the override. */
+    display_name?: string | null;
   }) =>
     put<EventContributorSummary>(`/user-contributors/events/${eventId}/contributors/${eventContributorId}`, data),
 
@@ -239,12 +248,20 @@ export const contributorsApi = {
     get<{
       job_id: string;
       status: "queued" | "processing" | "completed" | "failed" | "partially_completed";
-      mode: "targets" | "contributions";
+      mode: "targets" | "contributions" | "resend";
       total_rows: number;
       processed_rows: number;
       successful_rows: number;
       failed_rows: number;
       error_message?: string | null;
+      summary?: {
+        inserted?: number;
+        updated?: number;
+        duplicates_in_file?: number;
+        notified?: number;
+        notify_failed?: number;
+        notify_errors?: { row?: number; ec_id?: string; name?: string; phone?: string; errors: string[] }[];
+      };
       started_at?: string | null;
       finished_at?: string | null;
       created_at?: string | null;
@@ -256,6 +273,20 @@ export const contributorsApi = {
       job_id: string;
       errors: { row: number; message: string }[];
     }>(`/user-contributors/events/${eventId}/contributor-imports/${jobId}/errors`),
+
+  /** Queue a single-contributor "Target Notification" resend. */
+  resendTargetNotification: (eventId: string, eventContributorId: string) =>
+    post<{ job_id: string; status: string; total_rows: number }>(
+      `/user-contributors/events/${eventId}/contributors/${eventContributorId}/resend-notification`,
+      {},
+    ),
+
+  /** Queue a bulk "Target Notification" resend for selected contributors. */
+  bulkResendTargetNotification: (eventId: string, eventContributorIds: string[]) =>
+    post<{ job_id: string; status: string; total_rows: number }>(
+      `/user-contributors/events/${eventId}/contributors/resend-notifications`,
+      { event_contributor_ids: eventContributorIds },
+    ),
 
   /** Get pending contributions awaiting creator confirmation */
   getPendingContributions: (eventId: string) =>

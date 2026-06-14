@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { useLogout } from '@/api/useLogout';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNotifications, useConversations } from '@/data/useSocial';
+import BackgroundTaskBadge from '@/components/background/BackgroundTaskBadge';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -133,6 +134,9 @@ const Header = ({ onMenuToggle, onRightPanelToggle }: HeaderProps) => {
             )}
           </Button>
         </NavLink>
+
+        {/* Background tasks (uploads, bulk actions, exports…) */}
+        <BackgroundTaskBadge />
 
         {/* Mobile Right Panel Toggle */}
         <Button 

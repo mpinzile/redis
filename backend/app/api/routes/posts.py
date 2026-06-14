@@ -8,7 +8,7 @@ from typing import List, Optional
 
 import httpx
 import pytz
-from fastapi import APIRouter, Depends, File, Form, UploadFile, Body
+from fastapi import APIRouter, Depends, File, Form, UploadFile, Body, Request
 from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session
 
@@ -541,25 +541,42 @@ def delete_post(post_id: str, db: Session = Depends(get_db), current_user: User 
 
 # Glow
 @router.post("/{post_id}/glow")
-def glow_post(post_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def glow_post(post_id: str, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         pid = uuid.UUID(post_id)
     except ValueError:
         return standard_response(False, "Invalid post ID")
+    # Optional emoji body. Tolerate empty/missing body for backward compat.
+    emoji: str | None = None
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
+            raw = body.get("emoji")
+            if isinstance(raw, str):
+                raw = raw.strip()
+                if raw and len(raw) <= 16:
+                    emoji = raw
+    except Exception:
+        emoji = None
+
     existing = db.query(UserFeedGlow).filter(UserFeedGlow.feed_id == pid, UserFeedGlow.user_id == current_user.id).first()
     if not existing:
-        db.add(UserFeedGlow(id=uuid.uuid4(), feed_id=pid, user_id=current_user.id, created_at=datetime.now(EAT)))
+        db.add(UserFeedGlow(id=uuid.uuid4(), feed_id=pid, user_id=current_user.id, emoji=emoji, created_at=datetime.now(EAT)))
+        db.commit()
+    elif emoji is not None and getattr(existing, "emoji", None) != emoji:
+        existing.emoji = emoji
         db.commit()
     glow_count = db.query(sa_func.count(UserFeedGlow.id)).filter(UserFeedGlow.feed_id == pid).scalar() or 0
-    # Invalidate this user's cached feed so has_glowed reflects immediately on
-    # the next /feed request (was returning stale `has_glowed=false` for up to
-    # the 120s TTL otherwise).
     try:
         from core.redis import invalidate_user_feed
         invalidate_user_feed(str(current_user.id))
     except Exception:
         pass
-    return standard_response(True, "Post glowed", {"has_glowed": True, "glow_count": glow_count})
+    return standard_response(True, "Post glowed", {
+        "has_glowed": True,
+        "glow_count": glow_count,
+        "glow_emoji": emoji or (existing.emoji if existing else None),
+    })
 
 
 @router.delete("/{post_id}/glow")

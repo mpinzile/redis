@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 import { WhatsAppStatusBadge } from '@/components/whatsapp/WhatsAppStatusBadge';
 import { 
-  DollarSign, Plus, Search, Filter, MoreVertical, Edit, Trash, Send, Download, TrendingUp, Users, Clock, Loader2, Eye, ChevronLeft, ChevronRight, UserPlus, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, ShieldCheck, UserCheck, CalendarIcon, Link as LinkIcon
+  DollarSign, Plus, Search, Filter, MoreVertical, Edit, Trash, Send, Download, TrendingUp, Users, Clock, Loader2, Eye, ChevronLeft, ChevronRight, UserPlus, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, ShieldCheck, UserCheck, CalendarIcon, Link as LinkIcon, BellRing
 } from 'lucide-react';
 import ShareContributorLinkDialog from './ShareContributorLinkDialog';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,8 @@ import ChatIcon from '@/assets/icons/chat-icon.svg';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import ReceivedPaymentsPanel from '@/components/payments/ReceivedPaymentsPanel';
 import ContributorInvitationsPanel from './ContributorInvitationsPanel';
+import { startTask, updateTask, appendDetail, finishTask } from '@/lib/backgroundTasks/store';
+import DismissibleHint from '@/components/background/DismissibleHint';
 
 interface EventContributionsProps {
   eventId: string;
@@ -116,6 +118,7 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
 
   // Edit pledge
   const [editAmount, setEditAmount] = useState('');
+  const [editDisplayName, setEditDisplayName] = useState('');
   const [editSecondaryPhone, setEditSecondaryPhone] = useState('');
   const [editNotifyTarget, setEditNotifyTarget] = useState<'primary' | 'secondary' | 'both'>('primary');
 
@@ -142,7 +145,7 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
   const [bulkFileName, setBulkFileName] = useState('');
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [bulkUploading, setBulkUploading] = useState(false);
-  const [bulkResult, setBulkResult] = useState<{ processed: number; errors_count: number; errors: { row: number; message: string }[]; job_id?: string; status?: string } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ processed: number; errors_count: number; errors: { row: number; message: string }[]; job_id?: string; status?: string; summary?: { inserted?: number; updated?: number; duplicates_in_file?: number; notified?: number; notify_failed?: number } } | null>(null);
   const bulkFileRef = useRef<HTMLInputElement>(null);
 
   // Pending contributions (creator only)
@@ -313,11 +316,33 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
         if (!check.ok) { toast.error(check.message); setIsSubmitting(false); return; }
         normalizedSecondary = check.e164 || editSecondaryPhone.trim();
       }
-      await updateEventContributor(editTarget.id, {
-        pledge_amount: parseFloat(editAmount),
-        secondary_phone: normalizedSecondary,
-        notify_target: editNotifyTarget,
-      });
+      // Only send fields that actually changed so the backend won't trigger an
+      // SMS/WhatsApp notification when only the display name (or contact prefs)
+      // were edited — the backend gates notifications on pledge_amount diffs.
+      const payload: Record<string, any> = {};
+      const newPledge = parseFloat(editAmount);
+      if (newPledge !== Number(editTarget.pledge_amount || 0)) {
+        payload.pledge_amount = newPledge;
+      }
+      const currentDisplay = (editTarget.display_name ?? '') || '';
+      const nextDisplay = (editDisplayName || '').trim();
+      if (nextDisplay !== currentDisplay) {
+        payload.display_name = nextDisplay; // empty string clears override
+      }
+      if ((normalizedSecondary || '') !== ((editTarget.secondary_phone as string | null) || '')) {
+        payload.secondary_phone = normalizedSecondary;
+      }
+      if (editNotifyTarget !== ((editTarget.notify_target as any) || 'primary')) {
+        payload.notify_target = editNotifyTarget;
+      }
+      if (Object.keys(payload).length === 0) {
+        toast.success('No changes');
+        setEditPledgeDialogOpen(false);
+        setEditTarget(null);
+        setIsSubmitting(false);
+        return;
+      }
+      await updateEventContributor(editTarget.id, payload);
       toast.success('Contributor updated');
       setEditPledgeDialogOpen(false);
       setEditTarget(null);
@@ -359,21 +384,98 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
     setBulkRemoving(true);
     // Optimistic: clear selection immediately so the UI feels instant.
     setSelectedForGuest([]);
+    const taskId = startTask({
+      title: `Removing ${count} contributor${count > 1 ? 's' : ''} from event`,
+      subtitle: all ? 'All contributors on this event' : `${count} selected`,
+      kind: 'bulk-remove',
+      total: count,
+      progress: 0,
+      href: `/event-management/${eventId}?tab=contributions`,
+    });
     try {
       const res = await contributorsApi.bulkRemoveFromEvent(eventId, { ids });
       if (res.success) {
-        toast.success(`Removed ${res.data?.removed ?? count} contributor(s)`);
+        const removed = res.data?.removed ?? count;
+        appendDetail(taskId, { level: 'info', message: `Removed ${removed} contributor(s)` });
+        updateTask(taskId, { processed: removed, total: removed, progress: 1 });
+        finishTask(taskId, 'success');
+        toast.success(`Removed ${removed} contributor(s)`);
         refetchEC();
       } else {
+        finishTask(taskId, 'failed', res.message || 'Failed to remove');
         toast.error(res.message || 'Failed to remove');
       }
     } catch (err: any) {
+      finishTask(taskId, 'failed', err?.message || 'Failed to remove contributors');
       showCaughtError(err, 'Failed to remove contributors');
     } finally {
       setBulkRemoving(false);
     }
   };
 
+
+  /** Resend the same "target / contribution recorded" notification using the
+   *  exact same Celery worker the bulk upload uses, so template and channels
+   *  stay 1:1 identical. Progress is streamed into the background-task tracker. */
+  const handleResendTargetNotification = async (ids: string[]) => {
+    if (!ids.length) return;
+    const taskId = startTask({
+      title: `Resend target notification — ${ids.length} contributor${ids.length > 1 ? 's' : ''}`,
+      subtitle: 'Sending WhatsApp + SMS',
+      kind: 'notify',
+      total: ids.length,
+      progress: 0,
+      href: `/event-management/${eventId}?tab=contributions`,
+    });
+    try {
+      const res = ids.length === 1
+        ? await contributorsApi.resendTargetNotification(eventId, ids[0])
+        : await contributorsApi.bulkResendTargetNotification(eventId, ids);
+      if (!res.success || !res.data?.job_id) {
+        finishTask(taskId, 'failed', res.message || 'Failed to queue resend');
+        toast.error(res.message || 'Failed to queue resend');
+        return;
+      }
+      const jobId = res.data.job_id;
+      toast.success(`Resend queued for ${res.data.total_rows} contributor${res.data.total_rows > 1 ? 's' : ''}`);
+      appendDetail(taskId, { level: 'info', message: `Job queued (${res.data.total_rows} recipients).` });
+      setSelectedForGuest([]);
+
+      let finished = false;
+      for (let attempt = 0; attempt < 240 && !finished; attempt++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const statusRes = await contributorsApi.getImportJobStatus(eventId, jobId);
+        if (!statusRes.success || !statusRes.data) continue;
+        const s = statusRes.data;
+        const processed = s.processed_rows ?? 0;
+        updateTask(taskId, {
+          processed,
+          total: s.total_rows,
+          progress: s.total_rows ? processed / s.total_rows : undefined,
+        });
+        if (s.status === 'completed' || s.status === 'failed' || s.status === 'partially_completed') {
+          finished = true;
+          const sum = s.summary || {};
+          appendDetail(taskId, {
+            level: (sum.notify_failed || 0) > 0 ? 'warn' : 'info',
+            message: `Sent: ${sum.notified ?? s.successful_rows} · Failed: ${sum.notify_failed ?? s.failed_rows}`,
+          });
+          (sum.notify_errors || []).slice(0, 30).forEach((e) =>
+            appendDetail(taskId, {
+              level: 'error',
+              message: `Failed — ${e.name || e.ec_id}: ${(e.errors || []).join('; ')}`,
+            }),
+          );
+          if (s.status === 'failed') finishTask(taskId, 'failed', s.error_message || 'Resend failed');
+          else finishTask(taskId, 'success');
+        }
+      }
+      if (!finished) finishTask(taskId, 'failed', 'Timed out waiting for resend.');
+    } catch (err: any) {
+      finishTask(taskId, 'failed', err?.message || 'Resend failed');
+      showCaughtError(err, 'Resend failed');
+    }
+  };
 
 
   const handleAddAsGuest = async (ecId: string) => {
@@ -623,10 +725,20 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
     }
   };
 
+
   const handleBulkUpload = async () => {
     if (bulkRows.length === 0) return;
     setBulkUploading(true);
     setBulkResult(null);
+    const rowCount = bulkRows.length;
+    const taskId = startTask({
+      title: `Bulk upload — ${rowCount} contributor${rowCount > 1 ? 's' : ''}`,
+      subtitle: bulkMode === 'targets' ? 'Setting pledge targets' : 'Recording contributions',
+      kind: 'upload',
+      total: rowCount,
+      progress: 0,
+      href: `/event-management/${eventId}?tab=contributions`,
+    });
     try {
       const res = await contributorsApi.bulkAddToEvent(eventId, {
         contributors: bulkRows,
@@ -634,24 +746,34 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
         mode: bulkMode,
       });
       if (!res.success || !res.data?.job_id) {
+        finishTask(taskId, 'failed', res.message || 'Bulk upload failed');
         toast.error(res.message || 'Bulk upload failed');
         return;
       }
 
       const jobId = res.data.job_id;
+      appendDetail(taskId, { level: 'info', message: `Job queued (${res.data.total_rows} rows). Processing…` });
       toast.success(`Upload received. Processing ${res.data.total_rows} contributors in the background…`);
       setBulkRows([]);
       setBulkFileName('');
       setBulkErrors([]);
       if (bulkFileRef.current) bulkFileRef.current.value = '';
+      // The user can now safely close the dialog — work continues below.
+      setBulkUploading(false);
 
       // Poll job status until it finishes
       let finished = false;
-      for (let attempt = 0; attempt < 120 && !finished; attempt++) {
+      for (let attempt = 0; attempt < 240 && !finished; attempt++) {
         await new Promise((r) => setTimeout(r, 2000));
         const statusRes = await contributorsApi.getImportJobStatus(eventId, jobId);
         if (!statusRes.success || !statusRes.data) continue;
         const s = statusRes.data;
+        const processed = s.processed_rows ?? 0;
+        updateTask(taskId, {
+          processed,
+          total: s.total_rows,
+          progress: s.total_rows ? processed / s.total_rows : undefined,
+        });
         if (s.status === 'completed' || s.status === 'failed' || s.status === 'partially_completed') {
           finished = true;
           let errs: { row: number; message: string }[] = [];
@@ -665,25 +787,57 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
             errors: errs,
             job_id: jobId,
             status: s.status,
+            summary: s.summary,
           });
+          const sum = s.summary || {};
+          appendDetail(taskId, {
+            level: s.failed_rows > 0 ? 'warn' : 'info',
+            message: `${s.successful_rows} processed, ${s.failed_rows} errors`,
+          });
+          if (sum.inserted !== undefined || sum.updated !== undefined || sum.duplicates_in_file !== undefined) {
+            appendDetail(taskId, {
+              level: 'info',
+              message: `${sum.inserted ?? 0} new · ${sum.updated ?? 0} updated · ${sum.duplicates_in_file ?? 0} duplicates in file`,
+            });
+          }
+          if (sum.notified !== undefined || sum.notify_failed !== undefined) {
+            appendDetail(taskId, {
+              level: (sum.notify_failed || 0) > 0 ? 'warn' : 'info',
+              message: `Notifications sent: ${sum.notified ?? 0} · failed: ${sum.notify_failed ?? 0}`,
+            });
+            (sum.notify_errors || []).slice(0, 20).forEach((e) =>
+              appendDetail(taskId, {
+                level: 'error',
+                message: `Notify failed — ${e.name || e.phone || 'row ' + e.row}: ${(e.errors || []).join('; ')}`,
+              }),
+            );
+          }
+          errs.slice(0, 20).forEach((e) =>
+            appendDetail(taskId, { level: 'error', message: `Row ${e.row}: ${e.message}` }),
+          );
           if (s.status === 'completed' || s.status === 'partially_completed') {
+            finishTask(taskId, 'success');
             toast.success(`${s.successful_rows} contributors processed${s.failed_rows ? `, ${s.failed_rows} errors` : ''}`);
           } else {
+            finishTask(taskId, 'failed', s.error_message || 'Bulk import failed');
             toast.error(s.error_message || 'Bulk import failed');
           }
           refetchEC();
-          // Bulk import also adds rows to the organiser's global address
-          // book — invalidate that cache so the Global Contributors page
-          // reflects the new entries on next visit.
           invalidateUserContributorsCache();
         }
       }
+      if (!finished) {
+        finishTask(taskId, 'failed', 'Timed out waiting for the import to finish.');
+      }
     } catch (err: any) {
+      finishTask(taskId, 'failed', err?.message || 'Bulk upload failed');
       showCaughtError(err, 'Bulk upload failed');
     } finally {
       setBulkUploading(false);
     }
   };
+
+  // legacy placeholder lines below intentionally removed
 
   const downloadSampleXlsx = async () => {
     const writeXlsxFile = (await import('write-excel-file')).default;
@@ -964,6 +1118,9 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setSelectedForGuest([])}>Clear</Button>
+              <Button size="sm" variant="outline" onClick={() => handleResendTargetNotification(selectedForGuest)}>
+                <BellRing className="w-4 h-4 mr-1" />Target Notification
+              </Button>
               <Button size="sm" onClick={() => setGuestBatchDialogOpen(true)} disabled={addingAsGuests}>
                 <UserCheck className="w-4 h-4 mr-1" />Add as Guest{selectedForGuest.length > 1 ? 's' : ''}
               </Button>
@@ -985,16 +1142,31 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
             <thead>
               <tr className="border-b bg-muted/50">
                 {canManage && (
-                  <th className="p-4 w-10">
-                    <Checkbox
-                      checked={paginatedContributors.length > 0 && paginatedContributors.every(ec => selectedForGuest.includes(ec.id))}
-                      onCheckedChange={(checked) => {
-                        const pageIds = paginatedContributors.map(ec => ec.id);
-                        setSelectedForGuest(prev => checked
-                          ? Array.from(new Set([...prev, ...pageIds]))
-                          : prev.filter(id => !pageIds.includes(id)));
-                      }}
-                    />
+                  <th className="p-4 w-16">
+                    <div className="flex items-center gap-1.5">
+                      <Checkbox
+                        checked={paginatedContributors.length > 0 && paginatedContributors.every(ec => selectedForGuest.includes(ec.id))}
+                        onCheckedChange={(checked) => {
+                          const pageIds = paginatedContributors.map(ec => ec.id);
+                          setSelectedForGuest(prev => checked
+                            ? Array.from(new Set([...prev, ...pageIds]))
+                            : prev.filter(id => !pageIds.includes(id)));
+                        }}
+                      />
+                      {totalPages > 1 && (
+                        <button
+                          type="button"
+                          title={selectedForGuest.length === filteredContributors.length ? 'Clear selection' : `Select all ${filteredContributors.length} across all pages`}
+                          className="text-[10px] font-medium text-blue-700 hover:underline whitespace-nowrap"
+                          onClick={() => {
+                            if (selectedForGuest.length === filteredContributors.length) setSelectedForGuest([]);
+                            else setSelectedForGuest(filteredContributors.map(ec => ec.id));
+                          }}
+                        >
+                          {selectedForGuest.length === filteredContributors.length ? 'Clear' : `All ${filteredContributors.length}`}
+                        </button>
+                      )}
+                    </div>
                   </th>
                 )}
                 <th className="text-left p-4 text-sm font-medium">Contributor</th>
@@ -1020,6 +1192,11 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
                     )}
                     <td className="p-4">
                       <p className="font-medium">{ec.contributor?.name || 'Unknown'}</p>
+                      {ec.contributor?.global_name && ec.display_name && ec.contributor.global_name !== ec.display_name && (
+                        <p className="text-[11px] text-muted-foreground italic mt-0.5">
+                          also known as {ec.contributor.global_name}
+                        </p>
+                      )}
                       {ec.contributor?.email && <p className="text-xs text-muted-foreground">{ec.contributor.email}</p>}
                       {ec.contributor?.phone && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
@@ -1044,6 +1221,7 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
                             <DropdownMenuItem onClick={() => {
                               setEditTarget(ec);
                               setEditAmount(String(ec.pledge_amount));
+                              setEditDisplayName(ec.display_name || '');
                               setEditSecondaryPhone(ec.secondary_phone || '');
                               setEditNotifyTarget((ec.notify_target as any) || 'primary');
                               setEditPledgeDialogOpen(true);
@@ -1060,6 +1238,9 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
                             )}
                             <DropdownMenuItem onClick={() => setShareLinkTarget(ec)}>
                               <LinkIcon className="w-4 h-4 mr-2" />Share payment link
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleResendTargetNotification([ec.id])}>
+                              <BellRing className="w-4 h-4 mr-2" />Target Notification
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleAddAsGuest(ec.id)}>
                               <UserCheck className="w-4 h-4 mr-2" />Add as Guest
@@ -1213,8 +1394,22 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
       {/* Edit Contributor Dialog */}
       <Dialog open={editPledgeDialogOpen} onOpenChange={setEditPledgeDialogOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Edit {editTarget?.contributor?.name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Edit {editTarget?.contributor?.global_name || editTarget?.contributor?.name}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Display name for this event <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <Input
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                placeholder={editTarget?.contributor?.global_name || editTarget?.contributor?.name || 'e.g. Mr & Mrs Mpinzile'}
+                autoComplete="off"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Shown only on this event. Leave blank to use the address-book name
+                {editTarget?.contributor?.global_name ? ` (${editTarget.contributor.global_name})` : ''}.
+                Changing only the name will not send an SMS.
+              </p>
+            </div>
             <div className="space-y-2">
               <Label>Pledge Amount ({currency})</Label>
               <FormattedNumberInput value={editAmount} onChange={(v) => setEditAmount(v)} />
@@ -1466,6 +1661,20 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
               <div className="border rounded-lg p-3 bg-green-50 space-y-1">
                 <div className="flex items-center gap-2 text-green-700 text-sm font-medium"><CheckCircle2 className="w-4 h-4" />Upload Complete</div>
                 <p className="text-xs text-green-600">{bulkResult.processed} contributors processed, {bulkResult.errors_count} errors</p>
+                {bulkResult.summary && (
+                  <p className="text-xs text-green-700/80">
+                    {(bulkResult.summary.inserted ?? 0)} new · {(bulkResult.summary.updated ?? 0)} updated
+                    {(bulkResult.summary.duplicates_in_file ?? 0) > 0 && (
+                      <> · <span className="text-amber-700">{bulkResult.summary.duplicates_in_file} duplicate{(bulkResult.summary.duplicates_in_file ?? 0) > 1 ? 's' : ''} in file (merged)</span></>
+                    )}
+                  </p>
+                )}
+                {bulkResult.summary && (bulkResult.summary.notified !== undefined || bulkResult.summary.notify_failed !== undefined) && (
+                  <p className={`text-xs ${(bulkResult.summary.notify_failed || 0) > 0 ? 'text-amber-700' : 'text-green-700/80'}`}>
+                    Notifications: {bulkResult.summary.notified ?? 0} sent · {bulkResult.summary.notify_failed ?? 0} failed
+                    {(bulkResult.summary.notify_failed || 0) > 0 && ' — open Background Tasks for details'}
+                  </p>
+                )}
                 {bulkResult.errors.length > 0 && (
                   <div className="mt-2 space-y-1 max-h-24 overflow-y-auto">
                     {bulkResult.errors.map((e, i) => <p key={i} className="text-xs text-destructive">Row {e.row}: {e.message}</p>)}
@@ -1473,10 +1682,11 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
                 )}
               </div>
             )}
+            <DismissibleHint />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setBulkDialogOpen(false); resetBulkForm(); }}>
-              {bulkResult ? 'Close' : 'Cancel'}
+              {bulkUploading ? 'Dismiss (keep running)' : bulkResult ? 'Close' : 'Cancel'}
             </Button>
             {!bulkResult && (
               <Button onClick={handleBulkUpload} disabled={bulkUploading || bulkRows.length === 0}>

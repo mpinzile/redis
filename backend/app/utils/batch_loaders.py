@@ -129,11 +129,13 @@ def batch_load_user_interactions(
     if not post_ids or not current_user_id:
         return {}
 
-    result = {str(pid): {"has_glowed": False, "has_echoed": False, "has_saved": False, "is_pinned": False} for pid in post_ids}
+    result = {str(pid): {"has_glowed": False, "has_echoed": False, "has_saved": False, "is_pinned": False, "glow_emoji": None} for pid in post_ids}
 
-    glowed_ids = {str(r[0]) for r in db.query(UserFeedGlow.feed_id).filter(
+    glow_rows = db.query(UserFeedGlow.feed_id, UserFeedGlow.emoji).filter(
         UserFeedGlow.feed_id.in_(post_ids), UserFeedGlow.user_id == current_user_id
-    ).all()}
+    ).all()
+    glowed_ids = {str(r[0]) for r in glow_rows}
+    glow_emoji_map = {str(r[0]): r[1] for r in glow_rows}
 
     echoed_ids = {str(r[0]) for r in db.query(UserFeedEcho.feed_id).filter(
         UserFeedEcho.feed_id.in_(post_ids), UserFeedEcho.user_id == current_user_id
@@ -152,6 +154,7 @@ def batch_load_user_interactions(
         result[pid_str]["has_echoed"] = pid_str in echoed_ids
         result[pid_str]["has_saved"] = pid_str in saved_ids
         result[pid_str]["is_pinned"] = pid_str in pinned_ids
+        result[pid_str]["glow_emoji"] = glow_emoji_map.get(pid_str)
 
     return result
 
@@ -255,6 +258,7 @@ def build_post_dicts(
             "spark_count": counts.get("spark_count", 0),
             "comment_count": counts.get("comment_count", 0),
             "has_glowed": interactions.get("has_glowed", False),
+            "glow_emoji": interactions.get("glow_emoji"),
             "has_echoed": interactions.get("has_echoed", False),
             "has_saved": interactions.get("has_saved", False),
             "is_pinned": interactions.get("is_pinned", False),

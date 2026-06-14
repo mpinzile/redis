@@ -14,6 +14,7 @@ import '../../../core/widgets/video_thumbnail_image.dart';
 import '../../events/event_public_view_screen.dart';
 import '../../../core/widgets/event_cover_image.dart';
 import '../../../core/l10n/l10n_helper.dart';
+import '../../../widgets/nuru_emoji_picker.dart';
 
 /// Feed post card - clean, modern white card with subtle border
 class MomentCard extends StatefulWidget {
@@ -31,6 +32,7 @@ class _MomentCardState extends State<MomentCard> {
   late bool _glowed;
   late int _glowCount;
   late bool _saved;
+  late String _glowEmoji;
   bool _glowing = false;
   bool _saving = false;
 
@@ -40,6 +42,11 @@ class _MomentCardState extends State<MomentCard> {
     _glowed = widget.post['has_glowed'] == true;
     _glowCount = (widget.post['glow_count'] ?? 0) as int;
     _saved = widget.post['has_saved'] == true;
+    _glowEmoji = NuruEmojiPicker.normalizeEmoji(
+      (widget.post['glow_emoji']?.toString().isNotEmpty == true)
+          ? widget.post['glow_emoji'].toString()
+          : '❤️',
+    );
   }
 
   @override
@@ -121,28 +128,31 @@ class _MomentCardState extends State<MomentCard> {
   Map<String, dynamic>? get _sharedEvent => widget.post['shared_event'] as Map<String, dynamic>?;
   bool get _isEventShare => widget.post['post_type'] == 'event_share' && _sharedEvent != null;
 
-  Future<void> _handleGlow() async {
+  Future<void> _handleGlow({String? emoji}) async {
     if (_glowing) return;
     _glowing = true;
     HapticFeedback.lightImpact();
     final wasGlowed = _glowed;
+    final willGlow = emoji != null ? true : !wasGlowed;
     setState(() {
-      _glowed = !wasGlowed;
-      _glowCount += wasGlowed ? -1 : 1;
+      _glowed = willGlow;
+      if (emoji != null) _glowEmoji = NuruEmojiPicker.normalizeEmoji(emoji);
+      if (emoji != null) {
+        if (!wasGlowed) _glowCount += 1;
+      } else {
+        _glowCount += wasGlowed ? -1 : 1;
+      }
     });
     try {
       final postId = widget.post['id'].toString();
       Map<String, dynamic> res;
-      if (wasGlowed) {
+      if (!willGlow) {
         res = await SocialService.unglowPost(postId);
         FeedInteractionTracker.log(postId, 'unglow');
       } else {
-        res = await SocialService.glowPost(postId);
+        res = await SocialService.glowPost(postId, emoji: emoji);
         FeedInteractionTracker.log(postId, 'glow');
       }
-      // Reconcile with server's authoritative state. Prevents drift when the
-      // server treats the call as a no-op (e.g. duplicate glow) or when the
-      // count differs from our local guess.
       final data = res['data'];
       if (res['success'] == true && data is Map) {
         final serverGlowed = data['has_glowed'] == true;
@@ -153,20 +163,27 @@ class _MomentCardState extends State<MomentCard> {
             _glowCount = serverCount;
           });
         }
-        // Mirror authoritative state back into the post map so parent
-        // widgets (detail modal, cached feed) read the correct values.
         widget.post['has_glowed'] = serverGlowed;
         widget.post['glow_count'] = serverCount;
+        if (emoji != null) widget.post['glow_emoji'] = emoji;
       }
     } catch (_) {
       if (mounted) {
         setState(() {
           _glowed = wasGlowed;
-          _glowCount += wasGlowed ? 1 : -1;
+          if (emoji == null) _glowCount += wasGlowed ? 1 : -1;
         });
       }
     }
     _glowing = false;
+  }
+
+  Future<void> _pickReaction() async {
+    HapticFeedback.selectionClick();
+    final picked = await NuruEmojiPicker.show(context);
+    if (picked != null) {
+      await _handleGlow(emoji: picked);
+    }
   }
 
   Future<void> _handleSave() async {
@@ -574,13 +591,7 @@ class _MomentCardState extends State<MomentCard> {
       ),
       child: Row(
         children: [
-          _svgActionButton(
-            onTap: _handleGlow,
-            svgAsset: _glowed ? 'assets/icons/heart-filled-icon.svg' : 'assets/icons/heart-icon.svg',
-            label: 'Glow',
-            isActive: _glowed,
-            activeColor: AppColors.error,
-          ),
+          _glowButton(),
           const SizedBox(width: 16),
           _svgActionButton(
             onTap: widget.onTap ?? () {},
@@ -626,6 +637,37 @@ class _MomentCardState extends State<MomentCard> {
           ),
           const SizedBox(width: 4),
           Text('Spark', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textTertiary, height: 1.2)),
+        ],
+      ),
+    );
+  }
+
+  Widget _glowButton() {
+    final color = _glowed ? AppColors.error : AppColors.textTertiary;
+    return GestureDetector(
+      onTap: () => _handleGlow(),
+      onLongPress: _pickReaction,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_glowed)
+            EmojiText(_glowEmoji, size: 16)
+          else
+            SvgPicture.asset(
+              'assets/icons/heart-icon.svg',
+              width: 18,
+              height: 18,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            ),
+          const SizedBox(width: 4),
+          Text('Glow',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: color,
+                height: 1.2,
+              )),
         ],
       ),
     );

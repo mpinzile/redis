@@ -19,6 +19,8 @@ import { showApiErrors } from "@/lib/api/showApiErrors";
 import { memberImportsApi, type MemberImportJob, type MemberImportMode } from "@/lib/api/memberImports";
 import readXlsxFile from "read-excel-file";
 import { Upload, Loader2, FileSpreadsheet, CheckCircle2, XCircle, Eye, EyeOff, Download, Info } from "lucide-react";
+import { startTask, updateTask, appendDetail, finishTask } from "@/lib/backgroundTasks/store";
+import DismissibleHint from "@/components/background/DismissibleHint";
 
 // Read a CSV or XLSX file in the browser into a 2D array of strings.
 // We always normalise to text rows so the same preview + CSV upload code
@@ -115,6 +117,7 @@ export default function MemberImportDialog({ eventId, mode, open, onClose, onCom
   const [previewPage, setPreviewPage] = useState(1);
   const PREVIEW_PAGE_SIZE = 20;
   const pollRef = useRef<number | null>(null);
+  const taskIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -171,10 +174,30 @@ export default function MemberImportDialog({ eventId, mode, open, onClose, onCom
     pollRef.current = window.setInterval(async () => {
       try {
         const r = await memberImportsApi.getJob(eventId, jobId);
-          if (r.success && r.data) {
+        if (r.success && r.data) {
           setJob(r.data);
+          const tid = taskIdRef.current;
+          if (tid) {
+            updateTask(tid, {
+              processed: r.data.processed_rows,
+              total: r.data.total_rows,
+              progress: r.data.total_rows ? r.data.processed_rows / r.data.total_rows : undefined,
+            });
+          }
           if (r.data.status === "completed" || r.data.status === "failed" || r.data.status === "partially_completed") {
             if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
+            if (tid) {
+              const s = r.data.summary || ({} as MemberImportJob["summary"]);
+              appendDetail(tid, {
+                level: r.data.status === "failed" ? "error" : (s.failed ? "warn" : "info"),
+                message: `${s.successful ?? 0} added · ${s.reused ?? 0} reused · ${s.duplicates ?? 0} dup · ${s.invalid_phone ?? 0} bad phone · ${s.failed ?? 0} failed`,
+              });
+              (r.data.errors || []).slice(0, 20).forEach((e) =>
+                appendDetail(tid, { level: "error", message: `Row ${e.row ?? "?"}: ${e.reason || e.message || "error"}` }),
+              );
+              finishTask(tid, r.data.status === "failed" ? "failed" : "success");
+              taskIdRef.current = null;
+            }
             onCompleted?.();
           }
         }
@@ -204,14 +227,24 @@ export default function MemberImportDialog({ eventId, mode, open, onClose, onCom
         sonnerToast.error("Server did not return a job id.");
         return;
       }
+      const totalRows = (res as any)?.total_rows ?? dataRowCount;
       setJob({
         job_id: jobId,
         mode,
         status: "queued",
         notify_sms: notifySms,
-        total_rows: (res as any)?.total_rows ?? 0,
+        total_rows: totalRows,
         processed_rows: 0,
         summary: { total: 0, successful: 0, reused: 0, duplicates: 0, invalid_phone: 0, failed: 0 },
+      });
+      taskIdRef.current = startTask({
+        title: `${mode === "committee" ? "Committee" : "Guest"} import — ${totalRows || dataRowCount} row${(totalRows || dataRowCount) === 1 ? "" : "s"}`,
+        subtitle: notifySms ? "Notifying new members via SMS" : "No SMS",
+        kind: "import",
+        total: totalRows,
+        progress: 0,
+        meta: { jobId, mode },
+        href: `/event-management/${eventId}`,
       });
       startPolling(jobId);
     } catch (err) {
@@ -520,16 +553,22 @@ export default function MemberImportDialog({ eventId, mode, open, onClose, onCom
           </div>
         )}
 
+        {(uploading || (job && !isDone)) && (
+          <div className="px-1 pt-2"><DismissibleHint /></div>
+        )}
+
         <DialogFooter>
           {!job ? (
             <>
-              <Button variant="outline" onClick={onClose} disabled={uploading}>Cancel</Button>
+              <Button variant="outline" onClick={onClose} disabled={uploading}>
+                {uploading ? "Dismiss (keep running)" : "Cancel"}
+              </Button>
               <Button onClick={handleUpload} disabled={!file || uploading || parsing || !!previewError || previewRows.length === 0}>
                 {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading</> : <><Upload className="w-4 h-4 mr-2" /> Start import</>}
               </Button>
             </>
           ) : (
-            <Button onClick={onClose} disabled={!isDone}>{isDone ? "Done" : "Running…"}</Button>
+            <Button onClick={onClose}>{isDone ? "Done" : "Dismiss (keep running)"}</Button>
           )}
         </DialogFooter>
       </DialogContent>

@@ -1970,9 +1970,139 @@ def get_contributor_import_status(event_id: str, job_id: str, db: Session = Depe
         "successful_rows": job.successful_rows,
         "failed_rows": job.failed_rows,
         "error_message": job.error_message,
+        "summary": (job.payload or {}).get("summary") or {},
         "started_at": job.started_at.isoformat() if job.started_at else None,
         "finished_at": job.finished_at.isoformat() if job.finished_at else None,
         "created_at": job.created_at.isoformat() if job.created_at else None,
+    })
+
+
+@router.post("/events/{event_id}/contributors/{ec_id}/resend-notification")
+def resend_contributor_notification(
+    event_id: str, ec_id: str,
+    body: dict = Body(default={}),
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+):
+    """Queue a single-row resend of the target/contribution notification.
+
+    Reuses the same Celery worker as bulk upload so message templates and
+    delivery channels (WhatsApp + SMS) are identical.
+    """
+    try:
+        eid = uuid.UUID(event_id)
+        ecid = uuid.UUID(ec_id)
+    except ValueError:
+        return standard_response(False, "Invalid id")
+
+    from utils.event_owner import user_can_manage_event
+    event = db.query(Event).filter(Event.id == eid).first()
+    if not event or not user_can_manage_event(event, current_user):
+        return standard_response(False, "Not authorised")
+
+    ec = db.query(EventContributor).filter(
+        EventContributor.id == ecid, EventContributor.event_id == eid,
+    ).first()
+    if not ec:
+        return standard_response(False, "Contributor not found")
+
+    from models import ContributorImportJob
+    job = ContributorImportJob(
+        id=uuid.uuid4(),
+        event_id=eid,
+        created_by=current_user.id,
+        status="queued",
+        mode="resend",
+        send_sms=True,
+        total_rows=1,
+        payload={"event_contributor_ids": [str(ecid)]},
+        errors=[],
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    import threading
+    def _dispatch(jid: str):
+        try:
+            from tasks.contributor_imports import resend_contributor_notifications
+            resend_contributor_notifications.delay(jid)
+        except Exception as e:
+            print(f"[resend] celery enqueue failed: {e}")
+            try:
+                from tasks.contributor_imports import resend_contributor_notifications as _r
+                _r.run(jid)
+            except Exception as ex:
+                print(f"[resend] inline run failed: {ex}")
+    threading.Thread(target=_dispatch, args=(str(job.id),), daemon=True).start()
+
+    return standard_response(True, "Resend queued", {
+        "job_id": str(job.id), "status": job.status, "total_rows": 1,
+    })
+
+
+@router.post("/events/{event_id}/contributors/resend-notifications")
+def bulk_resend_contributor_notifications(
+    event_id: str, body: dict = Body(...),
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+):
+    """Queue a bulk resend for the provided event_contributor_ids."""
+    try:
+        eid = uuid.UUID(event_id)
+    except ValueError:
+        return standard_response(False, "Invalid event id")
+
+    from utils.event_owner import user_can_manage_event
+    event = db.query(Event).filter(Event.id == eid).first()
+    if not event or not user_can_manage_event(event, current_user):
+        return standard_response(False, "Not authorised")
+
+    raw_ids = body.get("event_contributor_ids") or []
+    if not isinstance(raw_ids, list) or not raw_ids:
+        return standard_response(False, "event_contributor_ids is required")
+    if len(raw_ids) > 2000:
+        return standard_response(False, "Maximum 2000 recipients per resend")
+
+    cleaned: list[str] = []
+    for x in raw_ids:
+        try:
+            cleaned.append(str(uuid.UUID(str(x))))
+        except Exception:
+            continue
+    if not cleaned:
+        return standard_response(False, "No valid ids")
+
+    from models import ContributorImportJob
+    job = ContributorImportJob(
+        id=uuid.uuid4(),
+        event_id=eid,
+        created_by=current_user.id,
+        status="queued",
+        mode="resend",
+        send_sms=True,
+        total_rows=len(cleaned),
+        payload={"event_contributor_ids": cleaned},
+        errors=[],
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    import threading
+    def _dispatch(jid: str):
+        try:
+            from tasks.contributor_imports import resend_contributor_notifications
+            resend_contributor_notifications.delay(jid)
+        except Exception as e:
+            print(f"[resend] celery enqueue failed: {e}")
+            try:
+                from tasks.contributor_imports import resend_contributor_notifications as _r
+                _r.run(jid)
+            except Exception as ex:
+                print(f"[resend] inline run failed: {ex}")
+    threading.Thread(target=_dispatch, args=(str(job.id),), daemon=True).start()
+
+    return standard_response(True, "Resend queued", {
+        "job_id": str(job.id), "status": job.status, "total_rows": len(cleaned),
     })
 
 
@@ -2356,7 +2486,7 @@ def confirm_contributions(event_id: str, body: dict = Body(...), db: Session = D
             if ec:
                 from utils.offline_claims import contributor_notify_phones
                 msg = (
-                    f"Hello {ec.contributor.name if ec.contributor else 'there'}, your contribution of "
+                    f"Hello {(getattr(ec, 'display_name', None) or (ec.contributor.name if ec.contributor else 'there'))}, your contribution of "
                     f"{currency} {float(c.amount):,.0f} for {event.name} has been "
                     f"confirmed by the event organiser. Thank you!"
                 )
@@ -2377,7 +2507,7 @@ def confirm_contributions(event_id: str, body: dict = Body(...), db: Session = D
                     pledge_amount = float(ec.pledge_amount or 0)
                     post_payment_system_message(
                         db, eid,
-                        ec.contributor.name if ec.contributor else "Someone",
+                        (getattr(ec, "display_name", None) or (ec.contributor.name if ec.contributor else "Someone")),
                         float(c.amount or 0), pledge_amount,
                         total_paid_after, currency,
                     )
@@ -2449,7 +2579,7 @@ def reject_contributions(event_id: str, body: dict = Body(...), db: Session = De
                     from utils.offline_claims import contributor_notify_phones
                     why = f" Reason: {reason}." if reason else ""
                     msg = (
-                        f"Hello {ec.contributor.name if ec.contributor else 'there'}, "
+                        f"Hello {(getattr(ec, 'display_name', None) or (ec.contributor.name if ec.contributor else 'there'))}, "
                         f"a contribution record of {currency} {float(c.amount):,.0f} for {event.name} "
                         f"recorded by {recorder_name} could not be verified by the event organiser.{why} "
                         f"Please contact the organiser if you believe this is an error."
@@ -2615,7 +2745,7 @@ def get_contribution_report(
         if from_dt or to_dt:
             if paid_in_range > 0:
                 results.append({
-                    "name": ec.contributor.name if ec.contributor else "Unknown",
+                    "name": (getattr(ec, "display_name", None) or (ec.contributor.name if ec.contributor else "Unknown")),
                     "phone": ec.contributor.phone if ec.contributor else None,
                     "pledged": pledge,
                     "paid": paid_in_range,
@@ -2626,7 +2756,7 @@ def get_contribution_report(
             # those with no pledge/target and no payments yet. Owners want
             # the full roster on the PDF, not just active payers.
             results.append({
-                "name": ec.contributor.name if ec.contributor else "Unknown",
+                "name": (getattr(ec, "display_name", None) or (ec.contributor.name if ec.contributor else "Unknown")),
                 "phone": ec.contributor.phone if ec.contributor else None,
                 "pledged": pledge,
                 "paid": paid_in_range,
@@ -3464,7 +3594,7 @@ def send_share_link_sms(
         raise HTTPException(status_code=400, detail="This contributor doesn't have a phone number for the selected notify option.")
 
     pledge_val = float(ec.pledge_amount or 0)
-    contributor_name = ec.contributor.name or "there"
+    contributor_name = (getattr(ec, "display_name", None) or (ec.contributor.name if ec.contributor else None) or "there")
     event_title = event.name or "the event"
 
     try:
