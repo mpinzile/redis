@@ -14,7 +14,7 @@ import '../../../core/l10n/l10n_helper.dart';
 import '../report_preview_screen.dart';
 import '../../../widgets/app_select.dart';
 
-/// Full redesign — Budget tab.
+/// Full redesign - Budget tab.
 /// Flat surfaces, project SVG icons, skeleton loader, header summary with
 /// progress ring (actual vs estimated), status filter pills, modern item cards.
 const _kCategories = [

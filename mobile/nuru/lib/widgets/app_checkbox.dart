@@ -4,7 +4,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/text_styles.dart';
 
 /// Modern, reusable checkbox tile. Drop-in replacement for
-/// `CheckboxListTile` — same value/onChanged semantics but with a
+/// `CheckboxListTile` - same value/onChanged semantics but with a
 /// custom-painted check, no Material baggage, and a polished
 /// title/description layout.
 class AppCheckbox extends StatelessWidget {
@@ -31,7 +31,7 @@ class AppCheckbox extends StatelessWidget {
     this.dense = false,
   });
 
-  /// Standalone box (no label) — useful inside compact rows.
+  /// Standalone box (no label) - useful inside compact rows.
   factory AppCheckbox.box({
     Key? key,
     required bool value,

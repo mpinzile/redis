@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/services/location_service.dart';
+import '../../widgets/app_search_field.dart';
 
 class MapPickerScreen extends StatefulWidget {
   final double? initialLatitude;
@@ -233,45 +234,21 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Container(
-              height: 50,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 4)),
                   BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 1)),
                 ],
               ),
-              child: TextField(
+              child: AppSearchField(
                 controller: _searchCtrl,
-                focusNode: _searchFocus,
-                style: appText(size: 15, color: const Color(0xFF202124)),
-                decoration: InputDecoration(
-                  hintText: 'Search places...',
-                  hintStyle: appText(size: 15, color: const Color(0xFF9AA0A6)),
-                  filled: true,
-                  fillColor: Colors.transparent,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.only(left: 14, right: 8),
-                    child: Icon(Icons.search_rounded, color: Color(0xFF5F6368), size: 22),
-                  ),
-                  prefixIconConstraints: const BoxConstraints(minWidth: 44),
-                  suffixIcon: _searching
-                      ? const Padding(
-                          padding: EdgeInsets.all(14),
-                          child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1A73E8))))
-                      : _searchCtrl.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF5F6368)),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() { _searchResults = []; _showSearchResults = false; });
-                              },
-                            )
-                          : null,
-                ),
+                hint: 'Search places...',
+                loading: _searching,
+                onClear: () {
+                  _searchCtrl.clear();
+                  setState(() { _searchResults = []; _showSearchResults = false; });
+                },
                 onChanged: (v) {
                   if (v.length >= 3) _search(v);
                   if (v.isEmpty) setState(() { _searchResults = []; _showSearchResults = false; });

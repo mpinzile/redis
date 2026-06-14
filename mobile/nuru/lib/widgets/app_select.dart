@@ -26,7 +26,7 @@ class AppSelectOption<T> {
 /// Modern, reusable select input. Renders as a text-input style trigger and
 /// opens a polished bottom-sheet picker with optional search.
 ///
-/// Drop-in replacement for `DropdownButton`/`DropdownButtonFormField` —
+/// Drop-in replacement for `DropdownButton`/`DropdownButtonFormField` -
 /// preserves value/onChanged semantics so behaviour is unchanged.
 class AppSelect<T> extends StatelessWidget {
   final T? value;
@@ -60,7 +60,7 @@ class AppSelect<T> extends StatelessWidget {
     this.leadingIcon,
   });
 
-  /// Compatibility constructor — accepts the same `List<DropdownMenuItem<T>>`
+  /// Compatibility constructor - accepts the same `List<DropdownMenuItem<T>>`
   /// already used across the codebase. Lets us swap existing call sites
   /// without rewriting the items list.
   static AppSelect<T> fromItems<T>({

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// Horizontal scrollable pill-style tab bar — modern, clean
+/// Horizontal scrollable pill-style tab bar - modern, clean
 class PillTabs extends StatelessWidget {
   final List<String> tabs;
   final int selected;

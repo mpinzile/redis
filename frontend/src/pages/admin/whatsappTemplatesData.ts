@@ -331,11 +331,11 @@ export const TEMPLATES: WaTemplate[] = [
     status: "new",
     category: "AUTHENTICATION",
     body_sw:
-      "Meta AUTHENTICATION template — Copy Code button, security recommendation enabled, expiration 10 minutes.\n\nPlaceholders: {{1}} = code only.\nWhatsApp payload sends only the OTP code; no vendor name, organiser, amount, service, event, or minutes.",
+      "Meta AUTHENTICATION template · Copy Code button, security recommendation enabled, expiration 10 minutes.\n\nPlaceholders: {{1}} = code only.\nWhatsApp payload sends only the OTP code; no vendor name, organiser, amount, service, event, or minutes.",
     body_en:
-      "Meta AUTHENTICATION template — Copy Code button, security recommendation enabled, expiration 10 minutes.\n\nPlaceholders: {{1}} = code only.\nWhatsApp payload sends only the OTP code; no vendor name, organiser, amount, service, event, or minutes.",
+      "Meta AUTHENTICATION template · Copy Code button, security recommendation enabled, expiration 10 minutes.\n\nPlaceholders: {{1}} = code only.\nWhatsApp payload sends only the OTP code; no vendor name, organiser, amount, service, event, or minutes.",
     placeholders: ["code"],
-    backendRef: "api/routes/offline_payments.py (WA action vendor_otp_claim) · utils/sms.py::sms_vendor_otp_claim (SMS unchanged)",
+    backendRef: "api/routes/offline_payments.py (WA action vendor_otp_claim) - utils/sms.py::sms_vendor_otp_claim (SMS unchanged)",
   },
   {
     num: "33/34",
@@ -345,11 +345,11 @@ export const TEMPLATES: WaTemplate[] = [
     status: "new",
     category: "AUTHENTICATION",
     body_sw:
-      "Meta AUTHENTICATION template — Copy Code button, security recommendation enabled, expiration 10 minutes.\n\nPlaceholders: {{1}} = code only.\nWhatsApp payload sends only the OTP code; no vendor name, organiser, amount, service, event, or minutes.",
+      "Meta AUTHENTICATION template · Copy Code button, security recommendation enabled, expiration 10 minutes.\n\nPlaceholders: {{1}} = code only.\nWhatsApp payload sends only the OTP code; no vendor name, organiser, amount, service, event, or minutes.",
     body_en:
-      "Meta AUTHENTICATION template — Copy Code button, security recommendation enabled, expiration 10 minutes.\n\nPlaceholders: {{1}} = code only.\nWhatsApp payload sends only the OTP code; no vendor name, organiser, amount, service, event, or minutes.",
+      "Meta AUTHENTICATION template · Copy Code button, security recommendation enabled, expiration 10 minutes.\n\nPlaceholders: {{1}} = code only.\nWhatsApp payload sends only the OTP code; no vendor name, organiser, amount, service, event, or minutes.",
     placeholders: ["code"],
-    backendRef: "api/routes/offline_payments.py (WA action vendor_otp_resend) · utils/sms.py::sms_vendor_otp_resend (SMS unchanged)",
+    backendRef: "api/routes/offline_payments.py (WA action vendor_otp_resend) - utils/sms.py::sms_vendor_otp_resend (SMS unchanged)",
   },
   {
     num: "35/36",

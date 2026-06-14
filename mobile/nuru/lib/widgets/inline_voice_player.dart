@@ -57,7 +57,7 @@ class _InlineVoicePlayerState extends State<InlineVoicePlayer> {
     setState(() => _loading = true);
     try {
       if (_position == Duration.zero) {
-        // Cache the audio locally so re-opens are instant — without this,
+        // Cache the audio locally so re-opens are instant - without this,
         // every time the chat is opened the file would be re-downloaded.
         final localPath = await AudioFileCache.getLocalPath(widget.url);
         if (localPath != null && File(localPath).existsSync()) {

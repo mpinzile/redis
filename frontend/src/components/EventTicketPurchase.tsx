@@ -159,9 +159,9 @@ const EventTicketPurchase = ({ eventId, eventName, event }: EventTicketPurchaseP
                 )}
                 {!loading && (
                   <>
-                    <span>{" · "}{classes.length} class{classes.length !== 1 ? "es" : ""}</span>
+                    <span>{" - "}{classes.length} class{classes.length !== 1 ? "es" : ""}</span>
                     {totalAvailable > 0 && (
-                      <span className="hidden sm:inline"> · {totalAvailable} left</span>
+                      <span className="hidden sm:inline"> - {totalAvailable} left</span>
                     )}
                   </>
                 )}
@@ -227,9 +227,9 @@ const EventTicketPurchase = ({ eventId, eventName, event }: EventTicketPurchaseP
                 amount={(purchaseResult?.total_amount ?? reservation?.total_amount) || 0}
                 allowBank={false}
                 title={`Buy ${quantity} ${selectedClass.name} ticket${quantity > 1 ? "s" : ""}`}
-                description={`Ticket for ${displayName} — ${selectedClass.name} × ${quantity}`}
+                description={`Ticket for ${displayName} - ${selectedClass.name} × ${quantity}`}
                 onSuccess={() => {
-                  toast.success("Payment confirmed — your ticket is now issued.", {
+                  toast.success("Payment confirmed · your ticket is now issued.", {
                     description: "View it under My Tickets.",
                   });
                   setCheckoutOpen(false);
@@ -381,7 +381,7 @@ const EventTicketPurchase = ({ eventId, eventName, event }: EventTicketPurchaseP
                         ) : (
                           <Clock className="w-4 h-4" />
                         )}
-                        Reserve · pay later
+                        Reserve - pay later
                       </Button>
                       <p className="text-[11px] text-center text-muted-foreground">
                         Reserve to hold {quantity > 1 ? "these tickets" : "this ticket"} now and pay before the hold expires.

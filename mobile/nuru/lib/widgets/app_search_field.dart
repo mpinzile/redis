@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/app_icon.dart';
 
-/// AppSearchField — the canonical search input used across the app.
+/// AppSearchField - the canonical search input used across the app.
 /// Matches the "Search conversations" aesthetic: soft surface bg, rounded,
 /// custom SVG search icon, optional clear button.
 class AppSearchField extends StatelessWidget {

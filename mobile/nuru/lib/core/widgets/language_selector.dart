@@ -6,7 +6,7 @@ import '../theme/app_colors.dart';
 import '../../core/l10n/l10n_helper.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// Modern segmented language toggle — premium pill with sliding indicator.
+/// Modern segmented language toggle - premium pill with sliding indicator.
 class LanguageToggle extends StatelessWidget {
   final bool showLabel;
   final double size;
@@ -51,7 +51,7 @@ class LanguageToggle extends StatelessWidget {
               SizedBox(width: segW, height: segH),
             ],
           ),
-          // Sliding indicator — animates between EN and SW slots.
+          // Sliding indicator - animates between EN and SW slots.
           AnimatedPositioned(
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeOutCubic,

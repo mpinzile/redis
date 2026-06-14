@@ -9,7 +9,7 @@
 
 const REPLACEMENTS: Array<[RegExp, string]> = [
   // Withdrawals & approvals
-  [/withdrawal hold for pending admin approval/gi, "Withdrawal on hold — being reviewed by Nuru"],
+  [/withdrawal hold for pending admin approval/gi, "Withdrawal on hold · being reviewed by Nuru"],
   [/pending admin approval/gi, "being reviewed by Nuru"],
   [/admin approval/gi, "Nuru review"],
   [/awaiting admin/gi, "awaiting Nuru review"],

@@ -560,7 +560,7 @@ export default function SentCardsPanel({ eventId }: Props) {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {r.recipient_phone || "No phone"} · {formatDate(r.sent_at)}
+                    {r.recipient_phone || "No phone"} - {formatDate(r.sent_at)}
                   </p>
                   {r.rendered_card_url && (
                     <a

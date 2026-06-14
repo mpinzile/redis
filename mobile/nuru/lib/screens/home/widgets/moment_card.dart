@@ -15,7 +15,7 @@ import '../../events/event_public_view_screen.dart';
 import '../../../core/widgets/event_cover_image.dart';
 import '../../../core/l10n/l10n_helper.dart';
 
-/// Feed post card — clean, modern white card with subtle border
+/// Feed post card - clean, modern white card with subtle border
 class MomentCard extends StatefulWidget {
   final Map<String, dynamic> post;
   final VoidCallback? onTap;
@@ -47,7 +47,7 @@ class _MomentCardState extends State<MomentCard> {
     super.didUpdateWidget(oldWidget);
     // When the parent passes refreshed post data (e.g. after a silent feed
     // refresh that re-hydrates `has_glowed` / `has_saved` from the server),
-    // sync the local optimistic state — but never overwrite an in-flight
+    // sync the local optimistic state - but never overwrite an in-flight
     // glow/save toggle.
     if (_glowing || _saving) return;
     final newGlowed = widget.post['has_glowed'] == true;

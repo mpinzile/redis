@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/app_snackbar.dart';
 
 class TicketClassData {
@@ -179,7 +180,7 @@ class _TicketClassFormSheetState extends State<TicketClassFormSheet> {
 
               Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  _label('Price (TZS)'),
+                  _label('Price (${getActiveCurrency()})'),
                   _textField(_priceCtrl, '50,000', keyboard: TextInputType.number),
                 ])),
                 const SizedBox(width: 12),

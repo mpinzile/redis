@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Fade-through transition (200 ms) — matches the web's shared-axis feel
+/// Fade-through transition (200 ms) - matches the web's shared-axis feel
 /// for tab content swaps and detail navigation.
 class FadeThroughRoute<T> extends PageRouteBuilder<T> {
   FadeThroughRoute({required WidgetBuilder builder, RouteSettings? settings})

@@ -1,4 +1,4 @@
-// Card Designer document model — serialisable JSON describing a fully custom
+// Card Designer document model - serialisable JSON describing a fully custom
 // invitation card (canvas + ordered layers). Stored on events.invitation_content
 // under the 'design_doc' key so no backend schema change is required.
 //
@@ -506,7 +506,7 @@ class QrLayer extends CardLayer {
   }
 }
 
-/// Image layer — currently used only for background images uploaded from
+/// Image layer - currently used only for background images uploaded from
 /// device. Stored as a remote URL once the image is uploaded; v1 also accepts
 /// a local file:// path for preview before upload.
 class ImageLayer extends CardLayer {
@@ -645,7 +645,7 @@ class CardDesignDoc {
     );
   }
 
-  /// Truly blank canvas — no preset layers. User builds everything from
+  /// Truly blank canvas - no preset layers. User builds everything from
   /// scratch. Useful for the "Blank Canvas" entry on the designer launcher.
   factory CardDesignDoc.blank({CanvasSpec canvas = CanvasSpec.portrait}) {
     return CardDesignDoc(canvas: canvas, layers: const []);
@@ -735,7 +735,7 @@ class CardDesignDoc {
   }
 }
 
-/// Render context — real values used to substitute placeholders and provide
+/// Render context - real values used to substitute placeholders and provide
 /// the QR payload at render time. Built once per render (preview or download).
 class CardRenderContext {
   final String guestName;

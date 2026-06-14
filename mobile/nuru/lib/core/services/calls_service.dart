@@ -18,7 +18,7 @@ class CallsService {
     };
   }
 
-  /// POST /calls/start — caller initiates a 1:1 call inside a conversation.
+  /// POST /calls/start - caller initiates a 1:1 call inside a conversation.
   /// Returns `{ call: {...}, url, token, room }` on success so the client
   /// can immediately join the LiveKit room.
   static Future<Map<String, dynamic>> startCall({
@@ -37,7 +37,7 @@ class CallsService {
     }
   }
 
-  /// POST /calls/{id}/answer — callee accepts and gets their LiveKit token.
+  /// POST /calls/{id}/answer - callee accepts and gets their LiveKit token.
   static Future<Map<String, dynamic>> answer(String callId) async {
     try {
       final res = await http.post(
@@ -50,7 +50,7 @@ class CallsService {
     }
   }
 
-  /// POST /calls/{id}/decline — callee rejects a ringing call.
+  /// POST /calls/{id}/decline - callee rejects a ringing call.
   static Future<Map<String, dynamic>> decline(String callId) async {
     try {
       final res = await http.post(
@@ -63,7 +63,7 @@ class CallsService {
     }
   }
 
-  /// POST /calls/{id}/end — either party hangs up / cancels.
+  /// POST /calls/{id}/end - either party hangs up / cancels.
   static Future<Map<String, dynamic>> end(String callId) async {
     try {
       final res = await http.post(
@@ -76,7 +76,7 @@ class CallsService {
     }
   }
 
-  /// GET /calls/{id}/status — caller polls this so the screen dismisses
+  /// GET /calls/{id}/status - caller polls this so the screen dismisses
   /// the moment the callee declines / ends / the call times out.
   static Future<String?> getStatus(String callId) async {
     try {
@@ -94,7 +94,7 @@ class CallsService {
     }
   }
 
-  /// GET /calls/incoming — short-poll endpoint used by the global call poller
+  /// GET /calls/incoming - short-poll endpoint used by the global call poller
   /// to detect ringing calls. Returns `data: null` when there's nothing.
   static Future<Map<String, dynamic>?> getIncoming() async {
     try {
@@ -113,7 +113,7 @@ class CallsService {
     }
   }
 
-  /// GET /calls/conversation/{id} — call history rendered as in-thread bubbles.
+  /// GET /calls/conversation/{id} - call history rendered as in-thread bubbles.
   static Future<List<dynamic>> listForConversation(String conversationId) async {
     try {
       final res = await http.get(
@@ -128,7 +128,7 @@ class CallsService {
     return const [];
   }
 
-  /// POST /calls/devices — register an FCM/APNs/PushKit token for VoIP push.
+  /// POST /calls/devices - register an FCM/APNs/PushKit token for VoIP push.
   static Future<bool> registerDevice({
     required String platform,
     required String token,
@@ -153,7 +153,7 @@ class CallsService {
     }
   }
 
-  /// DELETE /calls/devices — unregister on logout.
+  /// DELETE /calls/devices - unregister on logout.
   static Future<bool> unregisterDevice({required String platform, required String token}) async {
     try {
       final res = await http.delete(

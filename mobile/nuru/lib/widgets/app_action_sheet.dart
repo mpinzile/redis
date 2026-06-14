@@ -25,7 +25,7 @@ class MenuAction<T> {
 }
 
 /// Modern bottom-sheet action picker. Drop-in replacement for
-/// PopupMenuButton — call [show] from any onTap and use the returned
+/// PopupMenuButton - call [show] from any onTap and use the returned
 /// value to drive the existing onSelected handler.
 class AppActionSheet {
   AppActionSheet._();

@@ -281,7 +281,7 @@ const MeetingDocuments = ({ eventId, meetingId, meetingTitle, meetingDescription
               ${item.description ? `<p>${item.description}</p>` : ''}
               <div class="agenda-meta">
                 ${item.duration_minutes ? `⏱ ${item.duration_minutes} min` : ''}
-                ${item.presenter ? ` · 👤 ${item.presenter.name}` : ''}
+                ${item.presenter ? ` - 👤 ${item.presenter.name}` : ''}
               </div>
             </div>
           </div>

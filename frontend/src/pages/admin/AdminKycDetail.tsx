@@ -27,7 +27,7 @@ export default function AdminKycDetail() {
   const [notes, setNotes] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
-  useAdminMeta(detail?.service_name ? `KYC — ${detail.service_name}` : "KYC Review");
+  useAdminMeta(detail?.service_name ? `KYC - ${detail.service_name}` : "KYC Review");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -52,7 +52,7 @@ export default function AdminKycDetail() {
     if (res.success) {
       const msg = actionDialog.type === "approve"
         ? res.data?.all_approved
-          ? "✅ All KYC items approved — service is now verified!"
+          ? "✅ All KYC items approved · service is now verified!"
           : `KYC item approved (${res.data?.approved_count}/${res.data?.total_count} complete)`
         : "KYC item rejected";
       toast.success(msg);

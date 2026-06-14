@@ -232,9 +232,9 @@ export default function AdminAdmins() {
                   {ROLES.map((r) => (
                     <SelectItem key={r} value={r}>
                       <span className="capitalize">{r}</span>
-                      {r === "admin" && " — Full access"}
-                      {r === "moderator" && " — Content moderation"}
-                      {r === "support" && " — Customer support"}
+                      {r === "admin" && " - Full access"}
+                      {r === "moderator" && " - Content moderation"}
+                      {r === "support" && " - Customer support"}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'secure_token_storage.dart';
 import 'api_config.dart';
 
-/// Messages API service — mirrors src/lib/api/messages.ts
+/// Messages API service - mirrors src/lib/api/messages.ts
 class MessagesService {
   static String get _baseUrl => ApiConfig.baseUrl;
 
@@ -16,7 +16,7 @@ class MessagesService {
     };
   }
 
-  /// GET /messages/ — list conversations (optional ``search``)
+  /// GET /messages/ - list conversations (optional ``search``)
   static Future<Map<String, dynamic>> getConversations({String? search}) async {
     try {
       final qp = <String, String>{};
@@ -29,7 +29,7 @@ class MessagesService {
     }
   }
 
-  /// GET /messages/:id — get messages for a conversation
+  /// GET /messages/:id - get messages for a conversation
   static Future<Map<String, dynamic>> getMessages(String conversationId, {int page = 1, int limit = 50}) async {
     try {
       final uri = Uri.parse('$_baseUrl/messages/$conversationId').replace(
@@ -42,7 +42,7 @@ class MessagesService {
     }
   }
 
-  /// POST /messages/:id — send a message
+  /// POST /messages/:id - send a message
   ///
   /// [encryptionVersion] is sent as `'plain'` by default for backward compatibility
   /// with older servers. Pass `'v1'` once the client uses the transport-framed envelope.
@@ -72,7 +72,7 @@ class MessagesService {
     }
   }
 
-  /// POST /messages/start — start a new conversation
+  /// POST /messages/start - start a new conversation
   static Future<Map<String, dynamic>> startConversation({
     required String recipientId,
     String? message,
@@ -93,7 +93,7 @@ class MessagesService {
     }
   }
 
-  /// PUT /messages/:id/read — mark as read
+  /// PUT /messages/:id/read - mark as read
   static Future<Map<String, dynamic>> markAsRead(String conversationId) async {
     try {
       final res = await http.put(
@@ -106,7 +106,7 @@ class MessagesService {
     }
   }
 
-  /// DELETE /messages/:id — hide a conversation on the caller's side only.
+  /// DELETE /messages/:id - hide a conversation on the caller's side only.
   /// The other participant still sees the chat. The conversation reappears
   /// for the caller if a new message arrives after this call.
   static Future<Map<String, dynamic>> hideConversation(String conversationId) async {

@@ -163,7 +163,7 @@ const ScoreboardPanel = ({ groupId }: { groupId: string }) => {
             <Progress value={summary.collection_rate || 0} className="h-2" />
             <p className="text-[11px] text-muted-foreground mt-2">
               {format(summary.total_paid)} collected of {format(summary.total_pledged)} pledged
-              {summary.budget ? ` · Budget ${format(summary.budget)}` : ""}
+              {summary.budget ? ` - Budget ${format(summary.budget)}` : ""}
             </p>
           </CardContent>
         </Card>
@@ -281,7 +281,7 @@ const ScoreboardPanel = ({ groupId }: { groupId: string }) => {
                         <span className="text-[10px] text-muted-foreground font-medium w-10 text-right">{pct}%</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Pledged {format(r.pledged)} · Balance {format(r.balance)}
+                        Pledged {format(r.pledged)} - Balance {format(r.balance)}
                       </p>
                     </div>
                   </motion.div>
@@ -293,7 +293,7 @@ const ScoreboardPanel = ({ groupId }: { groupId: string }) => {
           {!loading && totalPages > 1 && (
             <div className="px-4 py-2.5 border-t border-border flex items-center justify-between bg-muted/20">
               <p className="text-[11px] text-muted-foreground">
-                Page {safePage} of {totalPages} · showing {pageRows.length} of {filtered.length}
+                Page {safePage} of {totalPages} - showing {pageRows.length} of {filtered.length}
               </p>
               <div className="flex items-center gap-1">
                 <Button

@@ -5,7 +5,7 @@ import 'package:path_provider/path_provider.dart';
 /// Tiny on-disk cache for remote audio files (voice notes, etc.).
 ///
 /// Keeps downloads in the app's temporary directory keyed by a sanitized
-/// version of the URL so that subsequent plays are instant — without this
+/// version of the URL so that subsequent plays are instant - without this
 /// the audio player re-downloads the file every time the conversation is
 /// opened, which is what users notice as "slow voice notes".
 class AudioFileCache {

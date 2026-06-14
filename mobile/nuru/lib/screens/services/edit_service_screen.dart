@@ -21,7 +21,7 @@ import '../../providers/wallet_provider.dart';
 import '../../core/l10n/l10n_helper.dart';
 import '../../widgets/app_select.dart';
 
-/// Full-page Edit Service screen — matches Add Service card styling.
+/// Full-page Edit Service screen - matches Add Service card styling.
 class EditServiceScreen extends StatefulWidget {
   final Map<String, dynamic> service;
   const EditServiceScreen({super.key, required this.service});
@@ -423,7 +423,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
       if (ok) {
         AppSnackbar.success(
           context,
-          keyChanged ? 'Service updated — please upload KYC to re-verify' : 'Service updated',
+          keyChanged ? 'Service updated · please upload KYC to re-verify' : 'Service updated',
         );
         if (keyChanged) {
           Navigator.pushReplacement(

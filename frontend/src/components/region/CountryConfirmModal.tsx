@@ -158,7 +158,7 @@ const CountryConfirmModal = () => {
                               {region.name}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Wallet currency · {currency}
+                              Wallet currency - {currency}
                             </p>
                           </div>
                         </div>

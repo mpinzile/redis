@@ -4,7 +4,7 @@ import 'package:http_parser/http_parser.dart';
 import 'secure_token_storage.dart';
 import 'api_config.dart';
 
-/// Photo Libraries API service — mirrors src/lib/api/photoLibraries.ts
+/// Photo Libraries API service - mirrors src/lib/api/photoLibraries.ts
 class PhotoLibrariesService {
   static String get _baseUrl => ApiConfig.baseUrl;
   static final Map<String, Map<String, dynamic>> _cache = {};

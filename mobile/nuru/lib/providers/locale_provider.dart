@@ -26,7 +26,7 @@ class LocaleProvider extends ChangeNotifier {
     if (_locale.languageCode == languageCode) return;
     _locale = Locale(languageCode);
     notifyListeners(); // Notify immediately for instant UI update
-    // Persist in background — don't block UI
+    // Persist in background - don't block UI
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLocale, languageCode);
   }

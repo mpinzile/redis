@@ -417,7 +417,7 @@ export const OfflinePaymentClaimModal = ({
                       <X className="h-3.5 w-3.5" />
                     </button>
                     <p className="text-[11px] text-muted-foreground p-2 truncate">
-                      {receiptFile?.name} · {((receiptFile?.size ?? 0) / 1024).toFixed(0)} KB
+                      {receiptFile?.name} - {((receiptFile?.size ?? 0) / 1024).toFixed(0)} KB
                     </p>
                   </div>
                 ) : (
@@ -427,7 +427,7 @@ export const OfflinePaymentClaimModal = ({
                   >
                     <ImagePlus className="h-6 w-6 text-muted-foreground" />
                     <span className="text-xs font-medium text-foreground">Tap to attach a screenshot</span>
-                    <span className="text-[10px] text-muted-foreground">JPG, PNG or WebP · up to 5 MB</span>
+                    <span className="text-[10px] text-muted-foreground">JPG, PNG or WebP - up to 5 MB</span>
                   </label>
                 )}
                 <input

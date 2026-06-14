@@ -430,7 +430,7 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
       const isFiltered = res.data.is_filtered;
 
       const dateRangeLabel = isFiltered
-        ? `${reportDateFrom ? format(reportDateFrom, 'dd MMM yyyy') : 'Start'} — ${reportDateTo ? format(reportDateTo, 'dd MMM yyyy') : 'Present'}`
+        ? `${reportDateFrom ? format(reportDateFrom, 'dd MMM yyyy') : 'Start'} - ${reportDateTo ? format(reportDateTo, 'dd MMM yyyy') : 'Present'}`
         : 'All Time';
 
       const html = generateContributionReportHtml(
@@ -1098,7 +1098,7 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
                           onClick={() => setSelectedExistingId(c.id)}
                         >
                           <p className="font-medium">{c.name}</p>
-                          <p className="text-xs text-muted-foreground">{[c.email, c.phone].filter(Boolean).join(' · ')}</p>
+                          <p className="text-xs text-muted-foreground">{[c.email, c.phone].filter(Boolean).join(' - ')}</p>
                         </div>
                       ))}
                     </div>
@@ -1128,7 +1128,7 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
           <DialogHeader><DialogTitle>Record Payment for {paymentTarget?.contributor?.name}</DialogTitle></DialogHeader>
           {paymentTarget && (
             <div className="text-sm text-muted-foreground mb-2">
-              Pledge: {formatPrice(paymentTarget.pledge_amount)} · Paid so far: {formatPrice(paymentTarget.total_paid)} · Balance: {formatPrice(paymentTarget.balance)}
+              Pledge: {formatPrice(paymentTarget.pledge_amount)} - Paid so far: {formatPrice(paymentTarget.total_paid)} - Balance: {formatPrice(paymentTarget.balance)}
             </div>
           )}
           <div className="space-y-4 py-2">

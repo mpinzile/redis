@@ -163,7 +163,7 @@ const GuestPost = () => {
               </h3>
               <p className="text-xs text-muted-foreground">
                 {postTimeAgo}
-                {postLocation && <span className="inline-flex items-center gap-0.5"> · <MapPin className="w-3 h-3 inline" /> {postLocation}</span>}
+                {postLocation && <span className="inline-flex items-center gap-0.5"> - <MapPin className="w-3 h-3 inline" /> {postLocation}</span>}
               </p>
             </div>
           </div>

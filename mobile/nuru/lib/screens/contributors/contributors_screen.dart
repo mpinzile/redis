@@ -413,7 +413,7 @@ class _ContributorsScreenState extends State<ContributorsScreen>
 
     // The API enriches contributors with linked Nuru user info when the
     // contributor phone matches a registered Nuru account. Different
-    // versions expose this under slightly different keys — handle all.
+    // versions expose this under slightly different keys - handle all.
     final nuruUser = c['nuru_user'] is Map ? Map<String, dynamic>.from(c['nuru_user']) : null;
     final avatarUrl = (c['avatar_url'] ??
             c['user_avatar'] ??
@@ -448,7 +448,7 @@ class _ContributorsScreenState extends State<ContributorsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Name only — no verification-style pill next to usernames
+                // Name only - no verification-style pill next to usernames
                 // (per Nuru policy). The avatar ring already signals a linked
                 // Nuru account.
                 Text(
@@ -507,7 +507,7 @@ class _ContributorsScreenState extends State<ContributorsScreen>
               ],
             ),
           ),
-          // Inline edit + delete actions — surfaced directly so users see them
+          // Inline edit + delete actions - surfaced directly so users see them
           // at a glance instead of hidden behind a 3-dot menu.
           Column(
             mainAxisAlignment: MainAxisAlignment.start,

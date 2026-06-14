@@ -85,6 +85,13 @@ class Event(Base):
     # Structured "what to expect" entries shown on the public event view.
     what_to_expect = Column(JSONB, nullable=True)
     what_to_expect_notes = Column(Text, nullable=True)
+    # User-defined extra detail rows: list of {label, details} pairs that
+    # replaces the rigid dress_code / special_instructions pair on the
+    # create-event flow. ``dress_code`` and ``special_instructions`` remain
+    # for backwards compatibility with already-created events.
+    extra_details = Column(JSONB, nullable=True)
+    # Optional named guest of honor (free-text).
+    guest_of_honor = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

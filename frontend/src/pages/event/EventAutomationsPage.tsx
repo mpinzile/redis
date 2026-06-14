@@ -206,7 +206,7 @@ function AutomationRow({ a, onEdit, onDetail, onChanged }: {
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             {scheduleSummary(a)}
-            {a.last_run && ` · last run ${formatTime(a.last_run.started_at)} (${a.last_run.sent_count} sent / ${a.last_run.failed_count} failed)`}
+            {a.last_run && ` - last run ${formatTime(a.last_run.started_at)} (${a.last_run.sent_count} sent / ${a.last_run.failed_count} failed)`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -564,7 +564,7 @@ function AutomationDetailDialog({ eventId, automation, onClose }: {
                       <span className="ml-2 text-sm text-muted-foreground">{formatTime(r.started_at)}</span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {r.sent_count}/{r.total_recipients} sent · {r.failed_count} failed
+                      {r.sent_count}/{r.total_recipients} sent - {r.failed_count} failed
                     </div>
                   </div>
                 </div>
@@ -591,7 +591,7 @@ function AutomationDetailDialog({ eventId, automation, onClose }: {
                 <div key={r.id} className="flex items-center justify-between gap-2 p-2 rounded border text-sm">
                   <div>
                     <div className="font-medium">{r.name || r.phone}</div>
-                    <div className="text-xs text-muted-foreground">{r.phone} · {r.channel || "—"}{r.error ? ` · ${r.error}` : ""}</div>
+                    <div className="text-xs text-muted-foreground">{r.phone} - {r.channel || "—"}{r.error ? ` - ${r.error}` : ""}</div>
                   </div>
                   <Badge className={STATUS_BADGES[r.status] || ""}>{r.status}</Badge>
                 </div>

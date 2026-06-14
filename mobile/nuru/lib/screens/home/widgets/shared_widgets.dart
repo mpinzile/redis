@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// Section header — clean, minimal
+/// Section header - clean, minimal
 class SectionHeader extends StatelessWidget {
   final String title;
   final String? count;
@@ -55,7 +55,7 @@ class SectionHeader extends StatelessWidget {
   }
 }
 
-/// Empty state — clean, modern. Pass [iconAsset] to render a Nuru SVG icon
+/// Empty state - clean, modern. Pass [iconAsset] to render a Nuru SVG icon
 /// from `assets/icons/` (preferred); falls back to the Material [icon] if no
 /// asset is supplied. Keeps legacy callers compiling.
 class EmptyState extends StatelessWidget {

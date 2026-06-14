@@ -207,7 +207,7 @@ const MyReservations = () => {
           title={`Pay for ${checkout.reservation.ticket_class || "ticket"} × ${checkout.reservation.quantity}`}
           description={`Reservation ${checkout.reservation.ticket_code}`}
           onSuccess={() => {
-            toast.success("Payment confirmed — your ticket is now issued.");
+            toast.success("Payment confirmed · your ticket is now issued.");
             const paidId = checkout.reservation.id;
             setPaidIds((prev) => new Set(prev).add(paidId));
             setItems((prev) => prev.filter((x) => x.id !== paidId));

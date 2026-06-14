@@ -81,7 +81,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   Timer? _durationTimer;
   DateTime? _connectedAt;
 
-  // Local preview position — draggable corner tile.
+  // Local preview position - draggable corner tile.
   Offset _previewOffset = const Offset(16, 60);
 
   VideoTrack? _remoteVideoTrack;
@@ -491,7 +491,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     if (_remoteVideoTrack != null) {
       return VideoTrackRenderer(_remoteVideoTrack!, fit: VideoViewFit.cover);
     }
-    // Pre-connect / waiting state — gradient + big avatar + ringing label.
+    // Pre-connect / waiting state - gradient + big avatar + ringing label.
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(

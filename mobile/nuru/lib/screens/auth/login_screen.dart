@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } else {
       setState(() => _quickLoadingId = null);
-      AppSnackbar.error(context, 'Session expired — please sign in with your password.');
+      AppSnackbar.error(context, 'Session expired · please sign in with your password.');
       _credCtrl.text = acc.email ?? acc.phone ?? '';
     }
   }
@@ -331,7 +331,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: Scaffold(
         backgroundColor: Colors.white,
-        // Keep decorative footer pinned — don't push it up with keyboard
+        // Keep decorative footer pinned - don't push it up with keyboard
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
@@ -361,7 +361,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   return Stack(
                     children: [
-                      // Top-left back button — only when there's somewhere to go
+                      // Top-left back button - only when there's somewhere to go
                       if (canPop)
                         Positioned(
                           top: 6,
@@ -588,7 +588,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                      // Top-right language switcher — rendered last so the scroll view cannot intercept taps
+                      // Top-right language switcher - rendered last so the scroll view cannot intercept taps
                       Positioned(
                         top: 10,
                         right: hp,

@@ -10,7 +10,7 @@ import 'package:excel/excel.dart' as xl;
 import 'events_service.dart';
 
 /// Premium PDF & Excel report generator for Nuru Events.
-/// Design language: editorial, clean, modern — inspired by Stripe/Linear reports.
+/// Design language: editorial, clean, modern - inspired by Stripe/Linear reports.
 /// Aligned with web version report generators.
 class ReportGenerator {
   static final _currencyFormat = NumberFormat('#,##0', 'en');
@@ -65,9 +65,9 @@ class ReportGenerator {
   static String _timeNow() => DateFormat('h:mm a').format(DateTime.now());
 
   static String _formatDate(dynamic dateStr) {
-    if (dateStr == null) return '—';
+    if (dateStr == null) return '-';
     final s = dateStr.toString();
-    if (s.isEmpty) return '—';
+    if (s.isEmpty) return '-';
     try {
       return DateFormat('d MMM yyyy').format(DateTime.parse(s));
     } catch (_) {
@@ -94,7 +94,7 @@ class ReportGenerator {
     }
   }
 
-  /// Clean editorial header — no colored top bar. Logo + slogan on left,
+  /// Clean editorial header - no colored top bar. Logo + slogan on left,
   /// report type + event subtitle + date on right, separated by a hairline.
   static pw.Widget _coverHeader(String reportType, String subtitle, {Uint8List? logoBytes, String? eventTitle}) {
     return pw.Container(
@@ -166,7 +166,7 @@ class ReportGenerator {
     );
   }
 
-  /// Clean metric tile — no colored side strip. Accent/value colors accepted
+  /// Clean metric tile - no colored side strip. Accent/value colors accepted
   /// for signature compatibility but ignored to keep the look monochrome.
   static pw.Widget _metricCard(String label, String value, {PdfColor accent = _accentOrange, PdfColor? valueColor}) {
     return pw.Expanded(
@@ -193,7 +193,7 @@ class ReportGenerator {
     );
   }
 
-  /// Editorial section heading — no colored bar, just an uppercase title with
+  /// Editorial section heading - no colored bar, just an uppercase title with
   /// a thin underline rule. Keeps the document calm and readable.
   static pw.Widget _sectionHeading(String text) {
     return pw.Container(
@@ -208,7 +208,7 @@ class ReportGenerator {
     );
   }
 
-  /// Clean table — neutral header, hairline row separators, no row shading.
+  /// Clean table - neutral header, hairline row separators, no row shading.
   static pw.Widget _premiumTable({
     required List<String> headers,
     required List<List<String>> data,
@@ -250,7 +250,7 @@ class ReportGenerator {
     );
   }
 
-  /// Minimal status badge — outlined pill, single ink colour. No tinted fills.
+  /// Minimal status badge - outlined pill, single ink colour. No tinted fills.
   static pw.Widget _statusBadge(String status) {
     final normalized = status.toLowerCase().replaceAll('_', ' ');
     return pw.Container(
@@ -260,7 +260,7 @@ class ReportGenerator {
         borderRadius: pw.BorderRadius.circular(3),
       ),
       child: pw.Text(
-        normalized.isEmpty ? '—' : normalized[0].toUpperCase() + normalized.substring(1),
+        normalized.isEmpty ? '-' : normalized[0].toUpperCase() + normalized.substring(1),
         style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: _inkMed),
       ),
     );
@@ -308,7 +308,7 @@ class ReportGenerator {
     );
   }
 
-  /// "est." marker — small uppercase tag, no color fill.
+  /// "est." marker - small uppercase tag, no color fill.
   static pw.Widget _buildCellText(String text, int colIndex) {
     if (text.endsWith(' est.')) {
       final mainText = text.substring(0, text.length - 5);
@@ -327,7 +327,7 @@ class ReportGenerator {
     return pw.Text(text, style: pw.TextStyle(fontSize: 8.5, color: _ink));
   }
 
-  /// Summary total row — thin top rule, no fill, accent param ignored.
+  /// Summary total row - thin top rule, no fill, accent param ignored.
   static pw.Widget _summaryRow(String label, String value, {PdfColor accent = _ink}) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 9),
@@ -341,7 +341,7 @@ class ReportGenerator {
     );
   }
 
-  /// Minimal progress bar — no surrounding panel. Single ink fill.
+  /// Minimal progress bar - no surrounding panel. Single ink fill.
   static pw.Widget _progressBar(String label, double percentage, {PdfColor color = _accentOrange}) {
     final clamped = percentage.clamp(0.0, 100.0);
     return pw.Container(
@@ -382,7 +382,7 @@ class ReportGenerator {
     );
   }
 
-  /// Quiet note box — neutral border, no colored side bar or tinted fill.
+  /// Quiet note box - neutral border, no colored side bar or tinted fill.
   static pw.Widget _callout(String text, {PdfColor bg = _accentBlueSoft, PdfColor border = _accentBlue, PdfColor textColor = _inkMed}) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 14),
@@ -525,13 +525,13 @@ class ReportGenerator {
     }
   }
 
-  /// Helper: get effective cost (actual if > 0, else estimate) — matches web logic
+  /// Helper: get effective cost (actual if > 0, else estimate) - matches web logic
   static double _getEffectiveCost(Map<String, dynamic> item) {
     final actual = _toNum(item['actual_cost']);
     return actual > 0 ? actual : _toNum(item['estimated_cost']);
   }
 
-  /// Helper: is this an estimate? (no actual cost) — matches web "est." label
+  /// Helper: is this an estimate? (no actual cost) - matches web "est." label
   static bool _isEstimate(Map<String, dynamic> item) {
     final actual = _toNum(item['actual_cost']);
     return actual <= 0 && _toNum(item['estimated_cost']) > 0;
@@ -612,7 +612,7 @@ class ReportGenerator {
         ),
         pw.SizedBox(height: 18),
 
-        // Budget Items table — combined "Budget" column with "est." label (matches web)
+        // Budget Items table - combined "Budget" column with "est." label (matches web)
         _sectionHeading('Budget Items'),
         _premiumTableWithBadges(
           headers: ['S/N', 'Category', 'Item', 'Vendor', 'Budget', 'Status'],
@@ -755,7 +755,7 @@ class ReportGenerator {
             : pw.SizedBox(),
         footer: (ctx) => _pageFooter(ctx),
         build: (ctx) => [
-          // AI badge — neutral framed note
+          // AI badge - neutral framed note
           pw.Container(
             width: double.infinity,
             padding: const pw.EdgeInsets.all(12),
@@ -778,7 +778,7 @@ class ReportGenerator {
             ),
           ),
           pw.SizedBox(height: 16),
-          // Info bar — outline only, no fill
+          // Info bar - outline only, no fill
           pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: pw.BoxDecoration(
@@ -1324,7 +1324,7 @@ class ReportGenerator {
           : pw.SizedBox(),
       footer: (ctx) => _pageFooter(ctx),
       build: (ctx) => [
-        // Event Overview section (matches web — title + status + description)
+        // Event Overview section (matches web - title + status + description)
         _sectionHeading('Event Overview'),
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(vertical: 4),
@@ -1350,7 +1350,7 @@ class ReportGenerator {
             if (_s(event['status']).isNotEmpty) _detailRow('Status', _s(event['status'])),
             if (_s(event['start_date']).isNotEmpty) _detailRow('Start Date', _formatDate(event['start_date'])),
             if (_s(event['end_date']).isNotEmpty) _detailRow('End Date', _formatDate(event['end_date'])),
-            _detailRow('Time', '${_s(event['start_time']).isNotEmpty ? _s(event['start_time']) : '—'}${_s(event['end_time']).isNotEmpty ? ' — ${_s(event['end_time'])}' : ''}'),
+            _detailRow('Time', '${_s(event['start_time']).isNotEmpty ? _s(event['start_time']) : '-'}${_s(event['end_time']).isNotEmpty ? ' - ${_s(event['end_time'])}' : ''}'),
             if (_s(event['location'] ?? event['venue']).isNotEmpty) _detailRow('Location', _s(event['location'] ?? event['venue'])),
             if (_s(event['dress_code']).isNotEmpty) _detailRow('Dress Code', _s(event['dress_code'])),
             if (_s(event['special_instructions']).isNotEmpty) _detailRow('Special Instructions', _s(event['special_instructions'])),
@@ -1359,7 +1359,7 @@ class ReportGenerator {
         ),
         pw.SizedBox(height: 22),
 
-        // Guest summary (matches web — Expected, Total RSVPs, Confirmed, Pending, Declined, Checked In)
+        // Guest summary (matches web - Expected, Total RSVPs, Confirmed, Pending, Declined, Checked In)
         _sectionHeading('Guest Summary'),
         pw.Row(children: [
           _metricCard('Expected', '$expectedGuests', accent: _accentBlue),
@@ -1384,10 +1384,10 @@ class ReportGenerator {
         ),
         pw.SizedBox(height: 22),
 
-        // Financial summary (matches web — Budget, Total Collected, Contributors, Committee)
+        // Financial summary (matches web - Budget, Total Collected, Contributors, Committee)
         _sectionHeading('Financial Summary'),
         pw.Row(children: [
-          _metricCard('Event Budget', budget > 0 ? _fmt(budget) : '—', accent: _accentOrange),
+          _metricCard('Event Budget', budget > 0 ? _fmt(budget) : '-', accent: _accentOrange),
           pw.SizedBox(width: 8),
           _metricCard('Total Collected', _fmt(totalCollected), accent: _accentGreen, valueColor: _accentGreen),
         ]),
@@ -1533,7 +1533,7 @@ class ReportGenerator {
               _s(g['name']),
               _s(g['phone']),
               _s(g['rsvp_status'] ?? 'pending'),
-              _toNum(g['plus_ones']).toInt() > 0 ? '+${_toNum(g['plus_ones']).toInt()}' : '—',
+              _toNum(g['plus_ones']).toInt() > 0 ? '+${_toNum(g['plus_ones']).toInt()}' : '-',
               g['checked_in'] == true ? 'Yes' : 'No',
             ];
           }).toList(),

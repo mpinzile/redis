@@ -10,7 +10,7 @@ import '../theme/app_colors.dart';
 /// safe-area handling on Android & iOS, smooth animations and manual dismiss.
 ///
 /// Two API levels:
-///   1. Legacy one-liner: `AppSnackbar.error(context, 'msg')` — still works.
+///   1. Legacy one-liner: `AppSnackbar.error(context, 'msg')` - still works.
 ///   2. Rich:             `AppSnackbar.show(context, type: ..., title: ..., message: ..., actionLabel: ..., onAction: ...)`.
 class AppSnackbar {
   // ── Legacy API (kept for backward compatibility) ─────────────────────
@@ -108,7 +108,7 @@ class _AppSnackbarContent extends StatelessWidget {
         );
       case AppSnackbarType.warning:
         return _Style(
-          accent: const Color(0xFFD97706), // amber-600 — readable on white
+          accent: const Color(0xFFD97706), // amber-600 - readable on white
           icon: Icons.warning_rounded,
           fallbackTitle: 'Heads up',
         );
@@ -170,7 +170,7 @@ class _AppSnackbarContent extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Left accent stripe — subtle status indicator.
+                    // Left accent stripe - subtle status indicator.
                     Container(width: 4, color: s.accent),
                     Expanded(
                       child: Padding(

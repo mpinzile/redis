@@ -402,9 +402,13 @@ def _sync_target_after_payment(db: Session, tx: Transaction):
         if getattr(payer, "email", None):
             contact["email"] = payer.email
 
+        # Prefer the event-specific display name so contributions are stamped
+        # with the name the organiser entered for THIS event.
+        ec_display = (getattr(ec, "display_name", None) or "").strip()
         contributor_name = (
-            ec.contributor.name if ec.contributor and ec.contributor.name
-            else f"{(payer.first_name or '').strip()} {(payer.last_name or '').strip()}".strip()
+            ec_display
+            or (ec.contributor.name if ec.contributor and ec.contributor.name else None)
+            or f"{(payer.first_name or '').strip()} {(payer.last_name or '').strip()}".strip()
             or "Contributor"
         )
 
@@ -530,7 +534,7 @@ def _notify_event_contributor_payment_recorded(db: Session, tx: Transaction) -> 
         pledge = float(ec.pledge_amount or 0)
         currency = tx.currency_code or "TZS"
         event_name = event.name if event else "your event"
-        contributor_name = ec.contributor.name or _payer_label(payer)
+        contributor_name = (getattr(ec, "display_name", None) or ec.contributor.name or _payer_label(payer))
 
         for phone in recipients:
             try:

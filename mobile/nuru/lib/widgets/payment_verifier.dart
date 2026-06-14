@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import '../core/services/api_base.dart';
 
-/// PaymentVerifier — background poller (mirrors the web
+/// PaymentVerifier - background poller (mirrors the web
 /// `PaymentVerifierProvider`). Every 15s while the app is in the
 /// foreground it asks the backend for stale (>30s) pending transactions
 /// belonging to the current user, then touches each one's `/status`
@@ -66,7 +66,7 @@ class _PaymentVerifierState extends State<PaymentVerifier>
         try {
           await ApiBase.get('/payments/$id/status', fallbackError: '');
         } catch (_) {
-          // silent — try again next tick
+          // silent - try again next tick
         }
       }
     } catch (_) {

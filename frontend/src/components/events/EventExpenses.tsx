@@ -254,7 +254,7 @@ const EventExpenses = ({ eventId, eventTitle, eventBudget, totalRaised = 0, perm
       if (!res.success) { toast.error(res.message || 'Failed to fetch report'); return; }
 
       const dateRangeLabel = (reportDateFrom || reportDateTo)
-        ? `${reportDateFrom ? format(reportDateFrom, 'dd MMM yyyy') : 'Start'} — ${reportDateTo ? format(reportDateTo, 'dd MMM yyyy') : 'Present'}`
+        ? `${reportDateFrom ? format(reportDateFrom, 'dd MMM yyyy') : 'Start'} - ${reportDateTo ? format(reportDateTo, 'dd MMM yyyy') : 'Present'}`
         : undefined;
 
       const html = generateExpenseReportHtml(

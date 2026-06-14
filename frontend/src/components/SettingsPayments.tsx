@@ -158,7 +158,7 @@ const SettingsPayments = () => {
                     <span className="text-2xl leading-none">{region.flag}</span>
                     <div>
                       <p className="font-medium text-foreground">{region.name}</p>
-                      <p className="text-xs text-muted-foreground">Wallet · {ccy}</p>
+                      <p className="text-xs text-muted-foreground">Wallet - {ccy}</p>
                     </div>
                   </div>
                   {isSaving ? (
@@ -253,7 +253,7 @@ const ProfileRow = ({
             {(profile.method_type === "mobile_money"
               ? profile.network_name
               : profile.bank_name) ?? profile.method_type.replace("_", " ")}
-            {" · "}
+            {" - "}
             {profile.method_type === "mobile_money"
               ? profile.phone_number
               : profile.account_number}

@@ -16,7 +16,7 @@ const Index = () => {
   useMeta({
     title: "Nuru Workspace | Plan Smarter. Celebrate Better.",
     description:
-      "Nuru Workspace is the event operating system for organisers, vendors, contributors, guests and partners — one connected workspace from first idea to final celebration.",
+      "Nuru Workspace is the event operating system for organisers, vendors, contributors, guests and partners · one connected workspace from first idea to final celebration.",
   });
 
   // ── §3 The Problem Nuru Solves — verbatim recurring questions ──
@@ -37,7 +37,7 @@ const Index = () => {
       tag: "For organisers",
       title: "The command centre of your event.",
       body:
-        "Open a workspace for a wedding, conference, graduation, exhibition, family celebration or business event. Build budgets, invite guests, coordinate committees, collect contributions, sell tickets, and book vendors — all in one place. Control replaces confusion.",
+        "Open a workspace for a wedding, conference, graduation, exhibition, family celebration or business event. Build budgets, invite guests, coordinate committees, collect contributions, sell tickets, and book vendors · all in one place. Control replaces confusion.",
       points: [
         "Budgets that update in real time, before pressure becomes crisis.",
         "Cleaner RSVP and announcement workflows.",
@@ -61,7 +61,7 @@ const Index = () => {
       tag: "For partners",
       title: "Co-host events. Share revenue. See everything.",
       body:
-        "Hotels, venues, lodges and tourism operators can co-host events with agreed revenue-sharing logic. Sell room categories — Executive, Deluxe, packages — directly under the event experience, with shared, transparent visibility into sales and revenue performance.",
+        "Hotels, venues, lodges and tourism operators can co-host events with agreed revenue-sharing logic. Sell room categories · Executive, Deluxe, packages · directly under the event experience, with shared, transparent visibility into sales and revenue performance.",
       points: [
         "Accommodation and packages tied to the event itself.",
         "Transparent revenue sharing both sides can audit.",

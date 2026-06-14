@@ -11,7 +11,7 @@ import 'widgets/analytics_panel.dart';
 import 'widgets/members_sheet.dart';
 import '../../core/utils/event_groups_cache.dart';
 
-/// Premium event group workspace — Chat / Contributors / Analytics tabs.
+/// Premium event group workspace - Chat / Contributors / Analytics tabs.
 ///
 /// Visual: header with title + subtitle, hero card showing the event, then a
 /// pill-tab row. Body switches between the three panels. Every existing
@@ -30,10 +30,10 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
   Map<String, dynamic>? _group;
   List<dynamic> _members = [];
   // True only after the lightweight group fetch resolves. We never block
-  // the page on the heavier members / scoreboard / chat requests — those
+  // the page on the heavier members / scoreboard / chat requests - those
   // load progressively below the hero card.
   bool _loadingGroup = true;
-  // Tab controller bookkeeping — only rebuild when the tab count or the
+  // Tab controller bookkeeping - only rebuild when the tab count or the
   // viewer's organiser status actually changes. Recreating the controller
   // on every build leaks tickers and crashes the screen.
   int _lastTabCount = 0;
@@ -42,7 +42,7 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
   @override
   void initState() {
     super.initState();
-    // Seed from cache so the screen renders instantly on re-entry — the
+    // Seed from cache so the screen renders instantly on re-entry - the
     // background fetch below then refreshes silently.
     final cachedGroup = EventGroupsCache.getGroup(widget.groupId);
     final cachedMembers = EventGroupsCache.getMembers(widget.groupId);
@@ -98,7 +98,7 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
 
   // Lazily build the TabController once we know how many tabs the viewer
   // should see (organisers get 3, normal members only get 'Chat'). Only
-  // recreate when the count or the organiser flag actually changes — and
+  // recreate when the count or the organiser flag actually changes - and
   // always dispose the old controller first so we never leak a ticker.
   void _ensureTabs(int count, bool isOrganizer) {
     final shouldRecreate = _tabs == null
@@ -211,7 +211,7 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
             Text('Notifications',
                 style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             const SizedBox(height: 12),
-            Text('You\'re all caught up — no new notifications for this group.',
+            Text('You\'re all caught up · no new notifications for this group.',
                 style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
           ]),
         ),
@@ -265,7 +265,7 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
     final isAdmin = (viewer?['is_admin'] == true) ||
         (viewer?['role'] == 'organizer') ||
         (me != null && (me['is_admin'] == true || me['role'] == 'organizer'));
-    // Live event status — derived from the current event end date so that
+    // Live event status - derived from the current event end date so that
     // rescheduling the event forward immediately reopens the chat.
     final eventEndIso = (_group?['event'] is Map
             ? (_group!['event']['end_date'] ?? _group!['event']['start_date'])
@@ -451,7 +451,7 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
                 ),
 
                 // ─── Pill tabs (no icons) ───
-                // Non-organisers only ever see the chat workspace — the
+                // Non-organisers only ever see the chat workspace - the
                 // Contributors scoreboard and Analytics panel hold sensitive
                 // financial data. The same rule is enforced server-side.
                 if (isAdmin)
@@ -500,7 +500,7 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
                         isClosed: isClosed,
                       ),
 
-                    // ─── Members side panel — floating overlay (~62% width) ───
+                    // ─── Members side panel - floating overlay (~62% width) ───
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 240),
                       curve: Curves.easeOutCubic,
@@ -536,7 +536,7 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
                     ),
                   ]),
                 ),
-                // Composer is intentionally hidden on Contributors/Analytics —
+                // Composer is intentionally hidden on Contributors/Analytics -
                 // those tabs aren't chat surfaces, so the input only renders
                 // inside ChatPanel itself.
               ]),

@@ -4,7 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../providers/migration_provider.dart';
 import '../wallet/payout_profile_screen.dart';
 
-/// MigrationWelcomeSheet — mobile companion to MigrationWelcomeModal (web).
+/// MigrationWelcomeSheet - mobile companion to MigrationWelcomeModal (web).
 ///
 /// Premium bottom-sheet shown to legacy users who don't yet have a payment
 /// profile. Wording and dismissability harden with phase:
@@ -123,7 +123,7 @@ class MigrationWelcomeSheet extends StatelessWidget {
                       if (pending != null) ...[
                         const SizedBox(height: 10),
                         Text(
-                          'Pending balance: ${pending['currency'] ?? ''} ${pending['amount'] ?? 0} — payable once setup is complete.',
+                          'Pending balance: ${pending['currency'] ?? ''} ${pending['amount'] ?? 0} · payable once setup is complete.',
                           style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textPrimary,
@@ -136,7 +136,7 @@ class MigrationWelcomeSheet extends StatelessWidget {
               ],
               const SizedBox(height: 18),
               const _Benefit(icon: Icons.account_balance_wallet_outlined,
-                  text: 'Activate your wallet — all your earnings flow here'),
+                  text: 'Activate your wallet · all your earnings flow here'),
               const SizedBox(height: 10),
               const _Benefit(icon: Icons.arrow_forward,
                   text: 'Withdraw to mobile money or bank in minutes'),

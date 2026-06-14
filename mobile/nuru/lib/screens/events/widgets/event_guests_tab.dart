@@ -21,7 +21,7 @@ class EventGuestsTab extends StatefulWidget {
 }
 
 class _EventGuestsTabState extends State<EventGuestsTab> with AutomaticKeepAliveClientMixin {
-  /// Master guest list — fetched once. Filtering & search run client-side
+  /// Master guest list - fetched once. Filtering & search run client-side
   /// so tab/search interactions are instant (no round-trip).
   List<dynamic> _allGuests = [];
   Map<String, dynamic> _summary = {};

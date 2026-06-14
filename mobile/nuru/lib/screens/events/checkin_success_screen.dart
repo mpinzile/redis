@@ -17,7 +17,7 @@ class CheckinSuccessScreen extends StatelessWidget {
   });
 
   String _fmtDateTime(String? iso) {
-    if (iso == null || iso.isEmpty) return '—';
+    if (iso == null || iso.isEmpty) return '-';
     final dt = DateTime.tryParse(iso)?.toLocal();
     if (dt == null) return iso;
     const months = [
@@ -65,9 +65,9 @@ class CheckinSuccessScreen extends StatelessWidget {
                   _detailsCard([
                     _row('assets/icons/user-icon.svg', 'Guest Name', name),
                     _row(isTicket ? 'assets/icons/ticket-icon.svg' : 'assets/icons/users-icon.svg', 'Ticket Type', ticketClass),
-                    _row('assets/icons/ticket-icon.svg', 'Ticket ID', ticketId.isEmpty ? '—' : ticketId),
+                    _row('assets/icons/ticket-icon.svg', 'Ticket ID', ticketId.isEmpty ? '-' : ticketId),
                     if (qty > 1) _row('assets/icons/users-icon.svg', 'Number of Guests', '$qty'),
-                    _row('assets/icons/calendar-icon.svg', 'Event', eventName.isEmpty ? '—' : eventName),
+                    _row('assets/icons/calendar-icon.svg', 'Event', eventName.isEmpty ? '-' : eventName),
                     _row('assets/icons/clock-icon.svg', 'Checked In At', checkedInAt, last: true),
                   ]),
                   const SizedBox(height: 12),

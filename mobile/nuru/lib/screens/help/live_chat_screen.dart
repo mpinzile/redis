@@ -10,7 +10,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/services/api_service.dart';
 import '../../core/l10n/l10n_helper.dart';
 
-/// Live Chat screen — matches web LiveChat.tsx using /support/chat/* endpoints
+/// Live Chat screen - matches web LiveChat.tsx using /support/chat/* endpoints
 /// Resumes active chat sessions instead of creating new ones each time.
 class LiveChatScreen extends StatefulWidget {
   const LiveChatScreen({super.key});
@@ -110,7 +110,7 @@ class _LiveChatScreenState extends State<LiveChatScreen> {
         }
       }
 
-      // No active session — start a new one
+      // No active session - start a new one
       await _startNewChat();
     } catch (_) {
       await _startNewChat();
@@ -428,7 +428,7 @@ class _LiveChatScreenState extends State<LiveChatScreen> {
     );
   }
 
-  /// Input bar — consistent with messages_screen.dart style
+  /// Input bar - consistent with messages_screen.dart style
   Widget _inputBar() {
     return SafeArea(
       top: false,

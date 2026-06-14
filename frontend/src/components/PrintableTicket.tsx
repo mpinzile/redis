@@ -72,7 +72,7 @@ const PrintableTicket = ({ ticket, open, onClose }: PrintableTicketProps) => {
     if (!at) return 'Used at the gate';
     try {
       const d = new Date(at);
-      return `Used · ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+      return `Used - ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
     } catch {
       return 'Used at the gate';
     }

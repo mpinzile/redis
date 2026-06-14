@@ -13,7 +13,7 @@ import '../../../core/widgets/event_cover_image.dart';
 import '../../../core/l10n/l10n_helper.dart';
 import '../../events/event_public_view_screen.dart';
 
-/// Full-screen modal for post detail with scrollable echoes — matches web PostDetail
+/// Full-screen modal for post detail with scrollable echoes - matches web PostDetail
 class PostDetailModal extends StatefulWidget {
   final Map<String, dynamic> post;
 
@@ -643,7 +643,7 @@ class _PostDetailModalState extends State<PostDetailModal> {
   }
 }
 
-// Single Echo (Comment) Widget — threaded with replies
+// Single Echo (Comment) Widget - threaded with replies
 class _EchoItemWidget extends StatefulWidget {
   final Map<String, dynamic> comment;
   final String postId;

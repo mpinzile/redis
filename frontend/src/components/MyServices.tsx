@@ -356,7 +356,7 @@ const MyServices = () => {
                 {!isVerified && (
                   <Button variant="outline" size="sm" className="w-full text-xs border-amber-300 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
                     onClick={() => navigate(`/services/verify/${service.id}/${service.service_type_id || 'default'}`)}>
-                    Activate · {service.verification_progress || 0}%
+                    Activate - {service.verification_progress || 0}%
                   </Button>
                 )}
 
@@ -518,7 +518,7 @@ const MyServices = () => {
                         <Upload className="w-7 h-7 text-primary" />
                       </div>
                       <p className="font-semibold text-foreground mb-1">Click to upload photos</p>
-                      <p className="text-xs text-muted-foreground">PNG, JPG or WebP · Max 5MB per file</p>
+                      <p className="text-xs text-muted-foreground">PNG, JPG or WebP - Max 5MB per file</p>
                     </>
                   )}
                   <input
@@ -670,7 +670,7 @@ const MyServices = () => {
                       </div>
                     </div>
                     <p className="font-semibold text-foreground mb-1">Add intro clip</p>
-                    <p className="text-xs text-muted-foreground">Video or audio · Max 1 minute</p>
+                    <p className="text-xs text-muted-foreground">Video or audio - Max 1 minute</p>
                     <input ref={mediaFileRef} type="file" accept="video/*,audio/*" className="hidden" onChange={handleMediaSelect} />
                   </div>
                 )}

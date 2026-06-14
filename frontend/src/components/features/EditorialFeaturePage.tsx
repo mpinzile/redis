@@ -26,7 +26,7 @@ export interface EditorialFeatureSection {
 }
 
 export interface EditorialFeaturePageProps {
-  /** Mono kicker shown over the hero title, e.g. "Service · 04". */
+  /** Mono kicker shown over the hero title, e.g. "Service - 04". */
   kicker: string;
   /** Hero display title. Use a single short sentence. */
   title: string;

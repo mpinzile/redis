@@ -23,7 +23,7 @@ String _prettyTag(String raw) {
       .join(' ');
 }
 
-/// Redesigned My Contributions list — premium ticket-stub aesthetic with
+/// Redesigned My Contributions list - premium ticket-stub aesthetic with
 /// summary header, filter chips and dashed-perforation cards.
 class MyContributionPaymentsTab extends StatefulWidget {
   const MyContributionPaymentsTab({super.key});
@@ -296,7 +296,7 @@ class _MyContributionPaymentsTabState extends State<MyContributionPaymentsTab>
             border: Border.all(color: _filter == 'all' ? _hair : _navy),
           ),
           child: Center(
-            // Direct SvgPicture (rather than AppIcon) — on iOS, AppIcon's
+            // Direct SvgPicture (rather than AppIcon) - on iOS, AppIcon's
             // colorFilter rendering on stroke-only SVGs occasionally
             // produced an invisible glyph. Using SvgPicture.asset with an
             // explicit srcIn ColorFilter is reliable on both platforms.
@@ -531,7 +531,7 @@ class _MyContributionPaymentsTabState extends State<MyContributionPaymentsTab>
         : 0.0;
     final code = (p['transaction_code'] ?? '').toString();
     final eventName = (p['event_name'] ?? '').toString();
-    // Always show a clean fixed label — event name is rendered separately
+    // Always show a clean fixed label - event name is rendered separately
     // as the subtitle, and the raw backend description
     // (`Nuru · Event Contribution · For {event} · by {payer} · ref …`)
     // would otherwise duplicate it.

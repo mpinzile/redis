@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Stores a small, non-sensitive snapshot per account in SharedPreferences
 /// (id, display name, avatar, email/phone) and keeps each account's
 /// refresh token in FlutterSecureStorage so the user can resume their
-/// session with a single tap — no password retype.
+/// session with a single tap - no password retype.
 ///
 /// Saved accounts survive sign-out on purpose: the whole point of this
 /// feature is to make coming back fast. Users can remove individual

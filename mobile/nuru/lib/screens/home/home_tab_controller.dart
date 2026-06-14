@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 /// Global controller for the Home shell's bottom-navigation index.
 ///
-/// Lets any screen — even one pushed on top of Home via MaterialPageRoute —
+/// Lets any screen - even one pushed on top of Home via MaterialPageRoute -
 /// switch the active bottom-nav tab without needing a BuildContext that
 /// reaches the HomeScreen's State.
 ///
@@ -20,7 +20,7 @@ class HomeTabController {
 
   /// Monotonically increasing counter so HomeScreen reacts even when the
   /// requested tab is the same as the current one (e.g. user on Tickets
-  /// taps "My Tickets" again — we still want to pop pushed routes).
+  /// taps "My Tickets" again - we still want to pop pushed routes).
   static final ValueNotifier<int> requestSeq = ValueNotifier<int>(0);
 
   /// Last requested tab. Read by HomeScreen on each [requestSeq] tick.

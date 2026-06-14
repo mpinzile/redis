@@ -11,7 +11,7 @@ import '../../../core/services/events_service.dart';
 /// (and optional location / max budget) so organisers can compare options
 /// without leaving the create flow.
 ///
-/// Pure presentation — does not mutate the parent form. The parent is free
+/// Pure presentation - does not mutate the parent form. The parent is free
 /// to wire the [onToggleService] callback to track suggested-service IDs if
 /// it later wants to attach them to the new event.
 class EventRecommendationsCard extends StatefulWidget {

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 
-/// ExpandingSearchAction — AppBar action that toggles between a search icon
+/// ExpandingSearchAction - AppBar action that toggles between a search icon
 /// and an inline debounced text input. Use as one of the [actions] on a
 /// [NuruSubPageAppBar] / [AppBar].
 ///

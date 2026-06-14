@@ -138,7 +138,7 @@ export default function PublicContribute() {
       toast.error(res.message || "Could not start the payment. Please try again.");
       return;
     }
-    toast.message("Check your phone — enter your mobile money PIN to approve.");
+    toast.message("Check your phone · enter your mobile money PIN to approve.");
     setActiveTx({
       id: res.data.transaction.id,
       transaction_code: res.data.transaction.transaction_code,
@@ -293,7 +293,7 @@ export default function PublicContribute() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">Pay with Mobile Money</p>
-                <p className="text-[11px] text-muted-foreground">M-Pesa · Mixx by Yas · Airtel Money · HaloPesa</p>
+                <p className="text-[11px] text-muted-foreground">M-Pesa - Mixx by Yas - Airtel Money - HaloPesa</p>
               </div>
             </div>
 
@@ -368,7 +368,7 @@ export default function PublicContribute() {
                       <StatusIcon status={tx.status} />
                       <div className="min-w-0">
                         <p className="font-medium text-foreground truncate">{formatMoney(tx.currency_code, tx.gross_amount)}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{friendlyStatus(tx.status)} · {tx.transaction_code}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{friendlyStatus(tx.status)} - {tx.transaction_code}</p>
                       </div>
                     </div>
                     {tx.created_at && (

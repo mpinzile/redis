@@ -87,11 +87,11 @@ export function VendorOfflinePaymentsPanel({ eventId }: { eventId?: string | nul
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-foreground">{format(p.amount)}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {p.service_title} · {p.recorded_by_name || "Organiser"}
+                        {p.service_title} - {p.recorded_by_name || "Organiser"}
                       </div>
                       {p.method && (
                         <div className="text-[11px] text-muted-foreground capitalize mt-0.5">
-                          via {p.method.replace("_", " ")}{p.reference ? ` · ${p.reference}` : ""}
+                          via {p.method.replace("_", " ")}{p.reference ? ` - ${p.reference}` : ""}
                         </div>
                       )}
                     </div>
@@ -120,7 +120,7 @@ export function VendorOfflinePaymentsPanel({ eventId }: { eventId?: string | nul
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-foreground">{format(p.amount)}</div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {p.service_title}{p.method ? ` · ${p.method.replace("_", " ")}` : ""}
+                      {p.service_title}{p.method ? ` - ${p.method.replace("_", " ")}` : ""}
                     </div>
                     <div className="text-[11px] text-muted-foreground">
                       Paid offline — not added to wallet

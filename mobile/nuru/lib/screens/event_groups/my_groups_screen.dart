@@ -66,7 +66,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
 
   String _timeAgo(String? iso) {
     if (iso == null || iso.isEmpty) return '';
-    // Backend returns naive UTC ISO strings — coerce to UTC then convert to local.
+    // Backend returns naive UTC ISO strings - coerce to UTC then convert to local.
     var s = iso;
     if (!s.endsWith('Z') && !RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(s)) {
       if (s.contains('T')) {
@@ -286,7 +286,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
         ? 'No messages yet'
         : (lastMsg['message_type'] == 'image' ? '📷 Image' : (lastMsg['content'] ?? '').toString());
     final unread = (g['unread_count'] ?? 0) as int;
-    // Live closed status — derived from the event date so reschedules
+    // Live closed status - derived from the event date so reschedules
     // immediately reopen the chat instead of staying locked.
     final endIso = (g['event_end_date'] ?? g['event_start_date'])?.toString();
     DateTime? endAt;

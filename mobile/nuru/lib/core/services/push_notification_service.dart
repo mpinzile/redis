@@ -11,7 +11,7 @@ import 'api_base.dart';
 import 'secure_token_storage.dart';
 import '../../screens/meetings/meeting_details_screen.dart';
 
-/// Top-level background handler — required by FCM. Must be a top-level fn.
+/// Top-level background handler - required by FCM. Must be a top-level fn.
 @pragma('vm:entry-point')
 Future<void> _firebaseBgHandler(RemoteMessage message) async {
   // Ensure Firebase is up in the background isolate.
@@ -124,7 +124,7 @@ class PushNotificationService {
       final token = _lastToken ?? await FirebaseMessaging.instance.getToken();
       if (token == null || token.isEmpty) return;
       _lastToken = token;
-      // Log a redacted preview only — never the full FCM token.
+      // Log a redacted preview only - never the full FCM token.
       debugPrint('[push] FCM token => ${_redact(token)}');
       await _registerToken(token);
     } catch (e) {
@@ -177,7 +177,7 @@ class PushNotificationService {
   Future<void> _registerToken(String token) async {
     final auth = await SecureTokenStorage.getToken();
     if (auth == null) {
-      debugPrint('[push] skip register — no auth token (user not signed in yet)');
+      debugPrint('[push] skip register · no auth token (user not signed in yet)');
       return;
     }
     try {
@@ -215,7 +215,7 @@ class PushNotificationService {
     // WhatsApp-style: render the sender's avatar as the notification's
     // largeIcon when the backend supplies one (chat messages, social
     // notifications, etc.). Falls back to the app icon if missing or the
-    // fetch fails — push must never block on the network.
+    // fetch fails - push must never block on the network.
     final avatarUrl = (m.data['sender_avatar'] ?? n?.android?.imageUrl ?? '').toString();
     AndroidBitmap<Object>? largeIcon;
     if (avatarUrl.isNotEmpty) {

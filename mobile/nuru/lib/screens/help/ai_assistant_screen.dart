@@ -1176,7 +1176,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         alignment: right ? Alignment.centerRight : Alignment.centerLeft,
         child: Text(
-          text.isEmpty ? '—' : text,
+          text.isEmpty ? '-' : text,
           style: _f(
             size: header ? 11 : 12.5,
             weight: header ? FontWeight.w700 : FontWeight.w500,

@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 /// Nuru Typography System
-/// Plus Jakarta Sans — unified font for all text across the app
+/// Plus Jakarta Sans - unified font for all text across the app
 class AppTheme {
   // ── Heading style ──
   static TextStyle heading({

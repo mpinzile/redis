@@ -59,7 +59,7 @@ const ServiceDetail = () => {
 
   useWorkspaceMeta({
     title: service?.title || 'My Service',
-    description: `Manage ${service?.title || 'your service'} — availability, packages, and reviews.`
+    description: `Manage ${service?.title || 'your service'} - availability, packages, and reviews.`
   });
 
   useEffect(() => {

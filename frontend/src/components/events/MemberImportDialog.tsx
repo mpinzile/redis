@@ -188,7 +188,7 @@ export default function MemberImportDialog({ eventId, mode, open, onClose, onCom
       return;
     }
     if (previewError || !previewRows.length) {
-      sonnerToast.error(previewError || "Nothing to import — the file looks empty.");
+      sonnerToast.error(previewError || "Nothing to import · the file looks empty.");
       return;
     }
     setUploading(true);
@@ -410,7 +410,7 @@ export default function MemberImportDialog({ eventId, mode, open, onClose, onCom
                       {totalPages > 1 && (
                         <div className="flex items-center justify-between gap-2 px-3 py-2 text-[11px] border-t bg-muted/20">
                           <span className="text-muted-foreground">
-                            Rows {fromRow}–{toRow} of {dataRowCount} · page {page} of {totalPages}
+                            Rows {fromRow}–{toRow} of {dataRowCount} - page {page} of {totalPages}
                           </span>
                           <div className="flex items-center gap-1">
                             <Button
@@ -490,7 +490,7 @@ export default function MemberImportDialog({ eventId, mode, open, onClose, onCom
               <span className="font-medium capitalize">{job.status}</span>
               {job.total_rows > 0 && (
                 <span className="text-muted-foreground">
-                  · {job.processed_rows}/{job.total_rows} rows
+                  - {job.processed_rows}/{job.total_rows} rows
                 </span>
               )}
             </div>
@@ -509,7 +509,7 @@ export default function MemberImportDialog({ eventId, mode, open, onClose, onCom
                 <p className="font-medium">Issues</p>
                 {job.errors.slice(0, 50).map((e, i) => (
                   <div key={i} className="text-muted-foreground">
-                    Row {e.row ?? "?"}{e.name ? ` · ${e.name}` : ""}{e.phone ? ` · ${e.phone}` : ""} — {e.reason || e.message || "unknown"}
+                    Row {e.row ?? "?"}{e.name ? ` - ${e.name}` : ""}{e.phone ? ` - ${e.phone}` : ""} — {e.reason || e.message || "unknown"}
                   </div>
                 ))}
                 {job.errors.length > 50 && (
@@ -597,7 +597,7 @@ function FileDropzone({ file, onFile }: { file: File | null; onFile: (f: File | 
               <span className="text-primary">Click to upload</span>
               <span className="hidden sm:inline"> or drag and drop</span>
             </p>
-            <p className="text-[11px] text-muted-foreground">CSV or XLSX · up to ~5 MB</p>
+            <p className="text-[11px] text-muted-foreground">CSV or XLSX - up to ~5 MB</p>
           </div>
         </button>
       ) : (
@@ -608,7 +608,7 @@ function FileDropzone({ file, onFile }: { file: File | null; onFile: (f: File | 
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium truncate">{file.name}</p>
             <p className="text-[11px] text-muted-foreground">
-              {ext} · {Math.max(1, Math.round(file.size / 1024))} KB
+              {ext} - {Math.max(1, Math.round(file.size / 1024))} KB
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">

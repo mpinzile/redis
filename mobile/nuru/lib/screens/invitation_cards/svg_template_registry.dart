@@ -1,4 +1,4 @@
-// SVG Invitation Card Template Registry — mobile mirror of
+// SVG Invitation Card Template Registry - mobile mirror of
 // src/components/invitation-cards/SvgTemplateRegistry.ts
 //
 // Same template IDs, categories and field mapping so any choice an organiser

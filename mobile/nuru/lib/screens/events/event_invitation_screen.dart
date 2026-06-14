@@ -20,7 +20,7 @@ import '../../features/card_designer/card_designer_screen.dart';
 import '../../features/card_designer/card_renderer.dart';
 import '../../features/card_designer/model.dart';
 
-/// "Create Invitation" screen — premium designer where organisers pick a
+/// "Create Invitation" screen - premium designer where organisers pick a
 /// template variant per event type and persist that choice on the event so
 /// preview, share, and download all render the same card.
 class EventInvitationScreen extends StatefulWidget {
@@ -74,7 +74,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
   String _organizer = '';
   Color _accent = const Color(0xFFD4AF37);
   String? _serverTemplateId;
-  // Editable copy overrides — persisted as events.invitation_content (JSONB).
+  // Editable copy overrides - persisted as events.invitation_content (JSONB).
   InvitationContent _overrides = const InvitationContent();
 
   final GlobalKey _captureKey = GlobalKey();
@@ -584,7 +584,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
   Widget _content() {
     return Column(children: [
       const SizedBox(height: 6),
-      // Event-type tabs — same visual style as the home feed (PillTabs)
+      // Event-type tabs - same visual style as the home feed (PillTabs)
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: PillTabs(
@@ -601,7 +601,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
         ),
       ),
 
-      // Swipeable card variants — bespoke SVG templates from the registry
+      // Swipeable card variants - bespoke SVG templates from the registry
       Expanded(
         child: Builder(builder: (_) {
           final tpls = _templatesForActiveType();
@@ -631,7 +631,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
                 },
               ),
             ),
-            // Visible "now editing" template header — shows the user exactly
+            // Visible "now editing" template header - shows the user exactly
             // which SVG template they are customising and lets them browse all.
             if (count > 0)
               Padding(
@@ -674,7 +674,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
         }),
       ),
 
-      // Editor toolbar — Designer / Template / Copy / Layout / Style / Details
+      // Editor toolbar - Designer / Template / Copy / Layout / Style / Details
       Padding(
         padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
         child: Row(
@@ -758,7 +758,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
     );
   }
 
-  // ── Template picker — full grid with thumbnails of every bespoke SVG.
+  // ── Template picker - full grid with thumbnails of every bespoke SVG.
   void _showTemplatePicker() {
     final tpls = _templatesForActiveType();
     showModalBottomSheet(
@@ -880,7 +880,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
     );
   }
 
-  // ── Copy editor — every editable text field on the bespoke SVG card.
+  // ── Copy editor - every editable text field on the bespoke SVG card.
   void _showCopySheet() {
     final headline = TextEditingController(text: _overrides.headline ?? '');
     final sub = TextEditingController(text: _overrides.subHeadline ?? '');
@@ -1048,7 +1048,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
     );
   }
 
-  // ── QR & Layout designer — drag/resize the QR and toggle text elements ──
+  // ── QR & Layout designer - drag/resize the QR and toggle text elements ──
   void _showQrLayoutSheet() async {
     final list = _templatesForActiveType();
     if (list.isEmpty) return;
@@ -1210,7 +1210,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
                     color: AppColors.textTertiary,
                     fontWeight: FontWeight.w600))),
         Expanded(
-            child: Text(v.isEmpty ? '—' : v,
+            child: Text(v.isEmpty ? '-' : v,
                 style: GoogleFonts.inter(
                     fontSize: 13,
                     color: AppColors.textPrimary,
@@ -1218,7 +1218,7 @@ class _EventInvitationScreenState extends State<EventInvitationScreen> {
       ]),
     );
   }
-  // Legacy hand-painted card variants removed — invitations now render from
+  // Legacy hand-painted card variants removed - invitations now render from
   // the bespoke SVG template registry (see _renderTemplate above).
 
 }
@@ -1320,7 +1320,7 @@ class _FullScreenPreview extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Visible "now editing" template header — sits between the carousel and the
+// Visible "now editing" template header - sits between the carousel and the
 // editor toolbar so the organiser always sees which bespoke SVG template they
 // are customising. Designed in the editorial aesthetic: soft cream surface,
 // gold rule, small uppercase index, large display name.
@@ -1449,7 +1449,7 @@ class _NowEditingHeader extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// QR & Layout designer sheet — drag the QR around the card with your finger,
+// QR & Layout designer sheet - drag the QR around the card with your finger,
 // resize it with a slider, and toggle off any hardcoded text element you do
 // not want on your invitation. All choices persist in events.invitation_content.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1649,7 +1649,7 @@ class _QrLayoutSheetState extends State<_QrLayoutSheet> {
             ),
           ),
         ),
-        // Drag handle on top of the QR — same square in screen coords.
+        // Drag handle on top of the QR - same square in screen coords.
         Positioned(
           left: _x * scale,
           top: _y * scale,
@@ -1837,7 +1837,7 @@ class _QrLayoutSheetState extends State<_QrLayoutSheet> {
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
                 Text(
-                  e.sample.isEmpty ? '—' : e.sample,
+                  e.sample.isEmpty ? '-' : e.sample,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(

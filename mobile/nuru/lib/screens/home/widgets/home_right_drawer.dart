@@ -1321,7 +1321,7 @@ class _SuggestionMiniCardState extends State<_SuggestionMiniCard> {
             Text(
               fullName.isNotEmpty
                   ? fullName
-                  : (username.isNotEmpty ? '@$username' : '—'),
+                  : (username.isNotEmpty ? '@$username' : '-'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

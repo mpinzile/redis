@@ -289,9 +289,9 @@ class _MeetingDocumentsScreenState extends State<MeetingDocumentsScreen> with Si
         footer: (context) => _buildPdfFooter(context),
         build: (context) => [
           pw.Row(children: [
-            _metricCard('Date', dateStr != null ? DateFormat('EEE, MMM d, yyyy').format(dateStr) : '—', accent: _accentBlue, small: true),
+            _metricCard('Date', dateStr != null ? DateFormat('EEE, MMM d, yyyy').format(dateStr) : '-', accent: _accentBlue, small: true),
             pw.SizedBox(width: 8),
-            _metricCard('Time', dateStr != null ? DateFormat('h:mm a').format(dateStr) : '—', accent: _accentPurple, small: true),
+            _metricCard('Time', dateStr != null ? DateFormat('h:mm a').format(dateStr) : '-', accent: _accentPurple, small: true),
             pw.SizedBox(width: 8),
             _metricCard('Agenda Items', '${_agendaItems.length}', accent: _accentOrange),
           ]),

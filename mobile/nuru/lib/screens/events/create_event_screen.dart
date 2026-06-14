@@ -20,8 +20,7 @@ import 'event_detail_screen.dart';
 import 'map_picker_screen.dart';
 import 'widgets/ticket_class_form.dart';
 import 'widgets/event_ticketing_card.dart';
-import 'widgets/event_recommendations_card.dart';
-import 'widgets/card_template_picker.dart';
+// Recommendations + card-template pickers removed from create flow.
 import '../../core/l10n/l10n_helper.dart';
 import '../../core/utils/money_format.dart';
 
@@ -43,15 +42,24 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _venueCtrl = TextEditingController();
   final _expectedGuestsCtrl = TextEditingController();
   final _budgetCtrl = TextEditingController();
+  // Legacy controllers kept so we can still hydrate old events that only
+  // stored ``dress_code`` / ``special_instructions``. New events use the
+  // flexible ``_extraDetailsItems`` list below instead.
   final _dressCodeCtrl = TextEditingController();
   final _specialInstructionsCtrl = TextEditingController();
   final _reminderContactPhoneCtrl = TextEditingController();
   final _contributionPaymentInstructionsCtrl = TextEditingController();
   final _whatToExpectNotesCtrl = TextEditingController();
   final List<Map<String, String>> _whatToExpectItems = [];
+  int? _wteExpandedIndex;
   static const List<String> _wteIconChoices = [
     'star','calendar','clock','heart','camera','users','microphone','user'
   ];
+  // Free-form extra detail rows ({label, details}) - replaces dress_code /
+  // special_instructions on the create UI.
+  final List<Map<String, String>> _extraDetailsItems = [];
+  int? _extraExpandedIndex;
+  final _guestOfHonorCtrl = TextEditingController();
   String? _eventTypeId;
   String _visibility = 'private';
   DateTime? _startDate;
@@ -89,6 +97,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   List<Map<String, dynamic>> _vendorResults = [];
   bool _vendorSearching = false;
 
+  // Vendor IDs (user_service.id) the organiser wants to invite as sponsors.
+  // Sent to POST /user-events/{id}/sponsors after the event is saved.
+  final Set<String> _sponsorVendorIds = {};
+
   // 5-step wizard: 0 Basic, 1 When & Where, 2 Tickets, 3 Vendors, 4 Preview
   int _step = 0;
   static const List<String> _stepTitles = ['Basic Info', 'When & Where', 'Tickets', 'Vendors', 'Preview'];
@@ -96,7 +108,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     ['Basic Information', 'Tell us about your event.'],
     ['When & Where', 'Set the date, time and venue. Venue can be added later.'],
     ['Tickets & Visibility', 'Set up tickets and choose who can see your event.'],
-    ['Vendors', 'Add service providers now or later. They will be notified to confirm.'],
+    ['Vendors & Sponsors', 'Pick service providers and, if you like, invite some of them as sponsors. Everyone will be notified to confirm.'],
     ['Preview', 'Review your event details before publishing.'],
   ];
 
@@ -127,7 +139,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       if (data is Map) {
         setState(() => _populateFromEvent(Map<String, dynamic>.from(data)));
       }
-    } catch (_) {/* ignore — populate already ran from initial payload */}
+    } catch (_) {/* ignore - populate already ran from initial payload */}
   }
 
   Future<void> _loadExistingTicketClasses() async {
@@ -154,6 +166,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     _reminderContactPhoneCtrl.text = extractStr(e['reminder_contact_phone']);
     _contributionPaymentInstructionsCtrl.text = extractStr(e['contribution_payment_instructions']);
     _whatToExpectNotesCtrl.text = extractStr(e['what_to_expect_notes']);
+    _guestOfHonorCtrl.text = extractStr(e['guest_of_honor']);
     _whatToExpectItems.clear();
     final rawWte = e['what_to_expect'];
     if (rawWte is List) {
@@ -167,6 +180,31 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             'description': (it['description'] ?? '').toString(),
           });
         }
+      }
+    }
+    // Extra details - prefer the new column; fall back to legacy dress_code
+    // / special_instructions so users editing old events see them as rows
+    // they can keep, edit, or delete.
+    _extraDetailsItems.clear();
+    final rawExtras = e['extra_details'];
+    if (rawExtras is List) {
+      for (final it in rawExtras) {
+        if (it is Map) {
+          final label = (it['label'] ?? '').toString().trim();
+          final details = (it['details'] ?? it['description'] ?? '').toString().trim();
+          if (label.isEmpty || details.isEmpty) continue;
+          _extraDetailsItems.add({'label': label, 'details': details});
+        }
+      }
+    }
+    if (_extraDetailsItems.isEmpty) {
+      final legacyDress = extractStr(e['dress_code']);
+      final legacyInstr = extractStr(e['special_instructions']);
+      if (legacyDress.isNotEmpty) {
+        _extraDetailsItems.add({'label': 'Dress code', 'details': legacyDress});
+      }
+      if (legacyInstr.isNotEmpty) {
+        _extraDetailsItems.add({'label': 'Special instructions', 'details': legacyInstr});
       }
     }
     String _toIntStr(dynamic v) {
@@ -358,8 +396,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       return false;
     }
 
+    if (_sellsTickets && _ticketClasses.isEmpty) {
+      AppSnackbar.error(context, 'Add at least one ticket class or turn off ticketing');
+      return false;
+    }
+
     return true;
   }
+
 
   // ── Event-owner search & registration ──────────────────────────────
   void _onOwnerSearchChanged(String q) {
@@ -458,6 +502,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     _budgetCtrl.dispose();
     _dressCodeCtrl.dispose();
     _specialInstructionsCtrl.dispose();
+    _guestOfHonorCtrl.dispose();
     _reminderContactPhoneCtrl.dispose();
     _contributionPaymentInstructionsCtrl.dispose();
     _whatToExpectNotesCtrl.dispose();
@@ -512,12 +557,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         budget: budget,
         sellsTickets: _sellsTickets,
         isPublic: _isPublic,
-        dressCode: _dressCodeCtrl.text.trim().isEmpty ? null : _dressCodeCtrl.text.trim(),
-        specialInstructions: _specialInstructionsCtrl.text.trim().isEmpty ? null : _specialInstructionsCtrl.text.trim(),
+        // Legacy fields are explicitly cleared whenever the user touches
+        // extra_details so we never double-render old values.
+        dressCode: '',
+        specialInstructions: '',
         reminderContactPhone: _reminderContactPhoneCtrl.text.trim().isEmpty ? null : _reminderContactPhoneCtrl.text.trim(),
         contributionPaymentInstructions: _contributionPaymentInstructionsCtrl.text.trim(),
         whatToExpect: _wtePayload(),
         whatToExpectNotes: _whatToExpectNotesCtrl.text.trim(),
+        extraDetails: _extraDetailsPayload() ?? const [],
+        guestOfHonor: _guestOfHonorCtrl.text.trim(),
         time: timeStr,
         imagePath: _imagePath,
         venueLatitude: _venueLatitude,
@@ -551,12 +600,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         budget: budget,
         sellsTickets: _sellsTickets,
         isPublic: _isPublic,
-        dressCode: _dressCodeCtrl.text.trim().isEmpty ? null : _dressCodeCtrl.text.trim(),
-        specialInstructions: _specialInstructionsCtrl.text.trim().isEmpty ? null : _specialInstructionsCtrl.text.trim(),
+        dressCode: null,
+        specialInstructions: null,
         reminderContactPhone: _reminderContactPhoneCtrl.text.trim().isEmpty ? null : _reminderContactPhoneCtrl.text.trim(),
         contributionPaymentInstructions: _contributionPaymentInstructionsCtrl.text.trim().isEmpty ? null : _contributionPaymentInstructionsCtrl.text.trim(),
         whatToExpect: _wtePayload(),
         whatToExpectNotes: _whatToExpectNotesCtrl.text.trim().isEmpty ? null : _whatToExpectNotesCtrl.text.trim(),
+        extraDetails: _extraDetailsPayload(),
+        guestOfHonor: _guestOfHonorCtrl.text.trim().isEmpty ? null : _guestOfHonorCtrl.text.trim(),
         time: timeStr,
         imagePath: _imagePath,
         venueLatitude: _venueLatitude,
@@ -578,6 +629,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         }
         if (createdId != null && _selectedVendors.isNotEmpty && !_isEdit) {
           await _assignSelectedVendors(createdId);
+        }
+        if (createdId != null && _sponsorVendorIds.isNotEmpty) {
+          await _inviteSelectedSponsors(createdId);
         }
         AppSnackbar.success(context, asDraft ? 'Draft saved' : (_isEdit ? 'Event updated' : 'Event created'));
         if (asDraft) {
@@ -663,10 +717,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       final idx = _selectedVendors.indexWhere((s) => s['id']?.toString() == id);
       if (idx >= 0) {
         _selectedVendors.removeAt(idx);
+        _sponsorVendorIds.remove(id);
       } else {
         _selectedVendors.add(v);
       }
     });
+  }
+
+  Future<void> _inviteSelectedSponsors(String eventId) async {
+    for (final id in _sponsorVendorIds) {
+      try {
+        await EventsService.inviteSponsor(eventId, {'user_service_id': id});
+      } catch (_) {/* silent - surfaced from the sponsors tab later */}
+    }
   }
 
   String? _vendorImage(Map<String, dynamic> m) {
@@ -701,41 +764,46 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           style: appText(size: 11.5, color: AppColors.textTertiary, height: 1.4)),
         const SizedBox(height: 14),
         Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
-            color: AppColors.surfaceVariant.withOpacity(0.6),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.borderLight),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: const Color(0xFFEDEDEF), width: 1),
           ),
-          child: TextField(
-            controller: _vendorSearchCtrl,
-            onChanged: _onVendorSearchChanged,
-            autocorrect: false,
-            style: appText(size: 14),
-            decoration: InputDecoration(
-              hintText: 'Search vendors by name or service',
-              hintStyle: appText(size: 13, color: AppColors.textHint),
-              prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.textHint),
-              suffixIcon: _vendorSearching
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
-                    )
-                  : (_vendorSearchCtrl.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textHint),
-                          onPressed: () {
-                            _vendorSearchCtrl.clear();
-                            _runVendorSearch();
-                          },
-                        )
-                      : null),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              filled: false,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(children: [
+            SvgPicture.asset('assets/icons/search-icon.svg', width: 18, height: 18,
+                colorFilter: const ColorFilter.mode(Color(0xFF8E8E93), BlendMode.srcIn)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                controller: _vendorSearchCtrl,
+                onChanged: _onVendorSearchChanged,
+                autocorrect: false,
+                cursorColor: Colors.black,
+                textAlignVertical: TextAlignVertical.center,
+                style: appText(size: 14),
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  hintText: 'Search vendors by name or service',
+                  hintStyle: appText(size: 14, color: const Color(0xFF9E9E9E)),
+                ),
+              ),
             ),
-          ),
+            if (_vendorSearching)
+              const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+            else if (_vendorSearchCtrl.text.isNotEmpty)
+              GestureDetector(
+                onTap: () { _vendorSearchCtrl.clear(); _runVendorSearch(); },
+                child: SvgPicture.asset('assets/icons/close-icon.svg', width: 16, height: 16,
+                    colorFilter: const ColorFilter.mode(Color(0xFF8E8E93), BlendMode.srcIn)),
+              ),
+          ]),
         ),
         const SizedBox(height: 14),
         if (_vendorSearching && _vendorResults.isEmpty)
@@ -804,115 +872,198 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     final rating = v['rating'];
     final image = _vendorImage(v);
 
+    final outerRadius = 14.0;
+    final borderWidth = selected ? 1.5 : 1.0;
+    final innerRadius = outerRadius - borderWidth;
     return GestureDetector(
       onTap: () => _toggleVendor(v),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(outerRadius),
           border: Border.all(
             color: selected ? AppColors.primary : AppColors.borderLight,
-            width: selected ? 1.5 : 1,
+            width: borderWidth,
           ),
           boxShadow: selected
               ? [BoxShadow(color: AppColors.primary.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2))]
               : null,
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          AspectRatio(
-            aspectRatio: 1.4,
-            child: Stack(children: [
-              Positioned.fill(
-                child: image != null
-                    ? Image.network(image, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(color: AppColors.surfaceVariant))
-                    : Container(color: AppColors.surfaceVariant),
-              ),
-              Positioned(
-                top: 6, right: 6,
-                child: Container(
-                  width: 24, height: 24,
-                  decoration: BoxDecoration(
-                    color: selected ? AppColors.primary : Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: selected ? AppColors.primary : AppColors.borderLight, width: 1.2),
-                  ),
-                  child: Icon(
-                    selected ? Icons.check_rounded : Icons.add_rounded,
-                    size: 14,
-                    color: selected ? Colors.white : AppColors.textSecondary,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(innerRadius),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            AspectRatio(
+              aspectRatio: 1.4,
+              child: Stack(children: [
+                Positioned.fill(
+                  child: image != null
+                      ? Image.network(image, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(color: AppColors.surfaceVariant))
+                      : Container(color: AppColors.surfaceVariant),
+                ),
+                Positioned(
+                  top: 6, right: 6,
+                  child: Container(
+                    width: 24, height: 24,
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.primary : Colors.white.withOpacity(0.95),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: selected ? AppColors.primary : AppColors.borderLight, width: 1.2),
+                    ),
+                    child: Center(
+                      child: SvgPicture.asset(
+                        selected ? 'assets/icons/check-icon.svg' : 'assets/icons/plus-icon.svg',
+                        width: 12, height: 12,
+                        colorFilter: ColorFilter.mode(
+                          selected ? Colors.white : AppColors.textSecondary,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: appText(size: 12.5, weight: FontWeight.w700, height: 1.25)),
-              if (category.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(category, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: appText(size: 10, color: AppColors.textTertiary)),
-              ],
-              const SizedBox(height: 6),
-              Row(children: [
-                if (rating != null) ...[
-                  const Icon(Icons.star_rounded, size: 11, color: Color(0xFFE8A33D)),
-                  const SizedBox(width: 2),
-                  Text(double.tryParse(rating.toString())?.toStringAsFixed(1) ?? '$rating',
-                    style: appText(size: 10, weight: FontWeight.w700)),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: appText(size: 12.5, weight: FontWeight.w700, height: 1.25)),
+                if (category.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(category, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: appText(size: 10, color: AppColors.textTertiary)),
+                ],
+                const SizedBox(height: 6),
+                Row(children: [
+                  if (rating != null) ...[
+                    SvgPicture.asset('assets/icons/star-icon.svg', width: 11, height: 11,
+                        colorFilter: const ColorFilter.mode(Color(0xFFE8A33D), BlendMode.srcIn)),
+                    const SizedBox(width: 2),
+                    Text(double.tryParse(rating.toString())?.toStringAsFixed(1) ?? '$rating',
+                      style: appText(size: 10, weight: FontWeight.w700)),
+                  ],
+                ]),
+                if (price != null) ...[
+                  const SizedBox(height: 4),
+                  Text('From ${getActiveCurrency()} ${_formatNum(price)}',
+                    style: appText(size: 11.5, weight: FontWeight.w800, color: AppColors.primary)),
                 ],
               ]),
-              if (price != null) ...[
-                const SizedBox(height: 4),
-                Text('From ${getActiveCurrency()} ${_formatNum(price)}',
-                  style: appText(size: 11.5, weight: FontWeight.w800, color: AppColors.primary)),
-              ],
-            ]),
-          ),
-        ]),
+            ),
+          ]),
+        ),
       ),
     );
   }
 
   Widget _selectedVendorTile(Map<String, dynamic> v) {
+    final id = v['id']?.toString() ?? '';
     final title = (v['title'] ?? v['name'] ?? 'Service').toString();
     final providerName = (v['provider']?['name'] ?? v['provider_name'] ?? '').toString();
     final img = _vendorImage(v);
+    final isSponsor = _sponsorVendorIds.contains(id);
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: SizedBox(
-            width: 44, height: 44,
-            child: img != null
-                ? Image.network(img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: AppColors.surfaceVariant))
-                : Container(color: AppColors.surfaceVariant, child: const Icon(Icons.image_outlined, size: 18, color: AppColors.textHint)),
-          ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isSponsor ? const Color(0xFFE8A33D) : AppColors.border,
+          width: isSponsor ? 1.4 : 1,
         ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: appText(size: 13, weight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-          if (providerName.isNotEmpty)
-            Text(providerName, style: appText(size: 11, color: AppColors.textTertiary), maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text(
-            'Will be notified to confirm booking',
-            style: appText(size: 10, color: AppColors.primary, weight: FontWeight.w600),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: 52, height: 52,
+              child: img != null
+                  ? Image.network(img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: AppColors.surfaceVariant))
+                  : Container(color: AppColors.surfaceVariant,
+                      child: Center(child: SvgPicture.asset('assets/icons/image-icon.svg', width: 18, height: 18,
+                          colorFilter: const ColorFilter.mode(AppColors.textHint, BlendMode.srcIn)))),
+            ),
           ),
-        ])),
-        IconButton(
-          icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textHint),
-          onPressed: () => _toggleVendor(v),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: appText(size: 13, weight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+            if (providerName.isNotEmpty)
+              Text(providerName, style: appText(size: 11, color: AppColors.textTertiary), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(
+              isSponsor
+                  ? 'Will be invited as a sponsor for this event'
+                  : 'Will be notified to confirm booking',
+              style: appText(
+                size: 10,
+                color: isSponsor ? const Color(0xFFB8791E) : AppColors.primary,
+                weight: FontWeight.w600,
+              ),
+            ),
+          ])),
+          IconButton(
+            icon: SvgPicture.asset('assets/icons/close-icon.svg', width: 16, height: 16,
+                colorFilter: const ColorFilter.mode(AppColors.textHint, BlendMode.srcIn)),
+            onPressed: () => _toggleVendor(v),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () {
+            if (id.isEmpty) return;
+            setState(() {
+              if (isSponsor) {
+                _sponsorVendorIds.remove(id);
+              } else {
+                _sponsorVendorIds.add(id);
+              }
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSponsor
+                  ? const Color(0xFFFFF6E5)
+                  : AppColors.surfaceVariant.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isSponsor ? const Color(0xFFE8A33D) : AppColors.borderLight,
+              ),
+            ),
+            child: Row(children: [
+              SvgPicture.asset(
+                'assets/icons/star-icon.svg',
+                width: 14, height: 14,
+                colorFilter: ColorFilter.mode(
+                  isSponsor ? const Color(0xFFE8A33D) : AppColors.textSecondary,
+                  BlendMode.srcIn,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isSponsor ? 'Sponsor invite · will be sent after saving' : 'Invite as a sponsor',
+                  style: appText(
+                    size: 12,
+                    weight: FontWeight.w700,
+                    color: isSponsor ? const Color(0xFFB8791E) : AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              SvgPicture.asset(
+                isSponsor ? 'assets/icons/check-icon.svg' : 'assets/icons/plus-icon.svg',
+                width: 14, height: 14,
+                colorFilter: ColorFilter.mode(
+                  isSponsor ? const Color(0xFFE8A33D) : AppColors.textTertiary,
+                  BlendMode.srcIn,
+                ),
+              ),
+            ]),
+          ),
         ),
       ]),
     );
@@ -998,23 +1149,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             ticketClasses: _ticketClasses,
             onTicketClassesChanged: (v) => setState(() => _ticketClasses = v),
           ),
-          const SizedBox(height: 16),
-          EventRecommendationsCard(
-            eventTypeId: _eventTypeId,
-            eventTypeName: _apiEventTypes
-                .firstWhere((t) => t['id']?.toString() == _eventTypeId, orElse: () => <String, dynamic>{})['name']
-                ?.toString(),
-            location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
-            maxBudget: num.tryParse(_budgetCtrl.text.trim().replaceAll(RegExp(r'[^0-9.]'), '')),
-          ),
-          const SizedBox(height: 16),
-          CardTemplatePicker(
-            eventId: widget.editEvent?['id']?.toString(),
-            eventTypeKey: _apiEventTypes
-                .firstWhere((t) => t['id']?.toString() == _eventTypeId, orElse: () => <String, dynamic>{})['name']
-                ?.toString()
-                .toLowerCase(),
-          ),
+          // Service recommendations & invitation card picker moved out of
+          // create flow - they live on the event detail screen after the
+          // event is saved.
         ]);
       case 3:
         return _buildVendorsStep();
@@ -1070,7 +1207,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               ),
               alignment: Alignment.center,
               child: done
-                  ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                  ? SvgPicture.asset('assets/icons/check-icon.svg', width: 14, height: 14,
+                      colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))
                   : Text('${idx + 1}', style: appText(size: 12, weight: FontWeight.w700, color: active ? Colors.white : AppColors.textTertiary)),
             ),
             const SizedBox(height: 6),
@@ -1156,6 +1294,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           AppSnackbar.error(context, 'End date cannot be earlier than start date'); return false;
         }
         return true;
+      case 2:
+        if (_sellsTickets && _ticketClasses.isEmpty) {
+          AppSnackbar.error(context, 'Add at least one ticket class or turn off ticketing');
+          return false;
+        }
+        return true;
       default:
         return true;
     }
@@ -1236,10 +1380,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         if (_budgetCtrl.text.trim().isNotEmpty)
           _previewRow('assets/icons/card-icon.svg',
               'Budget: ${formatMoney(num.tryParse(_budgetCtrl.text.replaceAll(RegExp(r"[^0-9.]"), "")) ?? 0)}'),
-        if (_dressCodeCtrl.text.trim().isNotEmpty)
-          _previewRow('assets/icons/tag-icon.svg', 'Dress code: ${_dressCodeCtrl.text.trim()}'),
-        if (_specialInstructionsCtrl.text.trim().isNotEmpty)
-          _previewRow('assets/icons/info-icon.svg', _specialInstructionsCtrl.text.trim()),
+        if (_guestOfHonorCtrl.text.trim().isNotEmpty)
+          _previewRow('assets/icons/user-icon.svg', 'Guest of honor: ${_guestOfHonorCtrl.text.trim()}'),
+        ..._extraDetailsItems.where((m) => (m['label'] ?? '').trim().isNotEmpty && (m['details'] ?? '').trim().isNotEmpty).map(
+          (m) => _previewRow('assets/icons/info-icon.svg', '${m['label']!.trim()}: ${m['details']!.trim()}'),
+        ),
         if (_reminderContactPhoneCtrl.text.trim().isNotEmpty)
           _previewRow('assets/icons/phone-icon.svg', 'Reminder contact: ${_reminderContactPhoneCtrl.text.trim()}'),
       ]),
@@ -1265,6 +1410,20 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             );
           }),
       ]),
+      if (_whatToExpectItems.any((m) => (m['label'] ?? '').trim().isNotEmpty) ||
+          _whatToExpectNotesCtrl.text.trim().isNotEmpty)
+        _previewSection('What to expect', [
+          ..._whatToExpectItems
+              .where((m) => (m['label'] ?? '').trim().isNotEmpty)
+              .map((m) {
+            final label = m['label']!.trim();
+            final desc = (m['description'] ?? '').trim();
+            return _previewRow('assets/icons/sparkles-icon.svg',
+                desc.isEmpty ? label : '$label: $desc');
+          }),
+          if (_whatToExpectNotesCtrl.text.trim().isNotEmpty)
+            _previewRow('assets/icons/info-icon.svg', _whatToExpectNotesCtrl.text.trim()),
+        ]),
       if (_selectedVendors.isNotEmpty)
         _previewSection('Vendors (${_selectedVendors.length})',
           _selectedVendors.map((v) {
@@ -1411,11 +1570,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             await _syncTicketClasses(eventId);
           }
           break;
-        case 3: // Vendors — assigning vendors during edit isn't part of PATCH;
+        case 3: // Vendors - assigning vendors during edit isn't part of PATCH;
                 // delegated to the dedicated vendor flows. No-op here.
           res = {'success': true};
           break;
-        case 4: // Preview — fall back to full save
+        case 4: // Preview - fall back to full save
           await _save();
           setState(() => _saving = false);
           return;
@@ -1425,7 +1584,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
       // Always include extras / image / guests / budget if they belong to the
       // currently visible step. (Expected guests/budget live on step 0 via the
-      // dynamic builder — fold them in for completeness.)
+      // dynamic builder - fold them in for completeness.)
       if (_step == 0) {
         final expectedGuests = int.tryParse(_expectedGuestsCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''));
         final budget = double.tryParse(_budgetCtrl.text.replaceAll(RegExp(r'[^0-9.]'), ''));
@@ -1435,12 +1594,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             expectedGuests: expectedGuests,
             budget: budget,
             imagePath: _imagePath,
-            dressCode: _dressCodeCtrl.text.trim().isEmpty ? null : _dressCodeCtrl.text.trim(),
-            specialInstructions: _specialInstructionsCtrl.text.trim().isEmpty ? null : _specialInstructionsCtrl.text.trim(),
+            dressCode: '',
+            specialInstructions: '',
             reminderContactPhone: _reminderContactPhoneCtrl.text.trim().isEmpty ? null : _reminderContactPhoneCtrl.text.trim(),
             contributionPaymentInstructions: _contributionPaymentInstructionsCtrl.text.trim(),
             whatToExpect: _wtePayload(),
             whatToExpectNotes: _whatToExpectNotesCtrl.text.trim(),
+            extraDetails: _extraDetailsPayload() ?? const [],
+            guestOfHonor: _guestOfHonorCtrl.text.trim(),
           );
         }
       }
@@ -1469,6 +1630,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       const SizedBox(height: 16),
       _label(context.tr('description')),
       _input(_descCtrl, context.tr('describe_event'), maxLines: 4),
+      const SizedBox(height: 16),
+      _label('Guest of honor (optional)'),
+      _input(_guestOfHonorCtrl, 'e.g. Hon. Jane Mwangi, Bishop Yusuf, Mr. & Mrs. Juma'),
+      const SizedBox(height: 4),
+      Text(
+        'Shown on the public event page when filled.',
+        style: appText(size: 11, color: AppColors.textTertiary),
+      ),
     ]));
   }
 
@@ -1552,7 +1721,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             decoration: InputDecoration(
               hintText: 'Search by name, email or phone…',
               hintStyle: appText(size: 13, color: AppColors.textHint),
-              prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.textHint),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.all(12),
+                child: SvgPicture.asset('assets/icons/search-icon.svg', width: 16, height: 16,
+                    colorFilter: const ColorFilter.mode(AppColors.textHint, BlendMode.srcIn)),
+              ),
               suffixIcon: _ownerSearching
                   ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)))
                   : null,
@@ -1603,7 +1776,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: () => setState(() => _showOwnerRegister = true),
-              icon: const Icon(Icons.person_add_alt_1, size: 16),
+              icon: SvgPicture.asset('assets/icons/user-add-icon.svg', width: 14, height: 14,
+                  colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
               label: Text('Register new owner', style: appText(size: 13, weight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
@@ -1671,7 +1845,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           border: Border.all(color: _venueLatitude != null ? AppColors.primary.withOpacity(0.3) : AppColors.border),
         ),
         child: Row(children: [
-          Icon(Icons.map_outlined, size: 18, color: _venueLatitude != null ? AppColors.primary : AppColors.textTertiary),
+          SvgPicture.asset('assets/icons/location-icon.svg', width: 18, height: 18,
+              colorFilter: ColorFilter.mode(
+                _venueLatitude != null ? AppColors.primary : AppColors.textTertiary,
+                BlendMode.srcIn,
+              )),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(
@@ -1684,7 +1862,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           if (_venueLatitude != null)
             GestureDetector(
               onTap: () => setState(() { _venueLatitude = null; _venueLongitude = null; _venueAddress = null; }),
-              child: const Icon(Icons.close, size: 16, color: AppColors.textTertiary),
+              child: SvgPicture.asset('assets/icons/close-icon.svg', width: 14, height: 14,
+                  colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
             ),
         ]),
       ),
@@ -1733,7 +1912,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                        child: const Icon(Icons.close, size: 16, color: Colors.white),
+                        child: SvgPicture.asset('assets/icons/close-icon.svg', width: 14, height: 14,
+                            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
                       ),
                     ),
                   ),
@@ -1758,7 +1938,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     Container(
                       width: 44, height: 44,
                       decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
-                      child: const Icon(Icons.add_photo_alternate_outlined, size: 22, color: AppColors.primary),
+                      child: SvgPicture.asset('assets/icons/image-icon.svg', width: 22, height: 22,
+                          colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
                     ),
                     const SizedBox(height: 10),
                     Text(context.tr('tap_to_upload'), style: appText(size: 14, weight: FontWeight.w600, color: AppColors.textPrimary)),
@@ -1801,10 +1982,13 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   Widget _buildOptionalDetailsCard() {
     return _card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _label(context.tr('additional_details')),
-      _input(_dressCodeCtrl, context.tr('dress_code_hint')),
-      const SizedBox(height: 12),
-      _input(_specialInstructionsCtrl, context.tr('special_instructions_hint'), maxLines: 3),
-      const SizedBox(height: 16),
+      Text(
+        'Add any extra rows guests should see · e.g. Dress code · Black tie, Parking · Free at venue, Gifts · Bring envelopes.',
+        style: appText(size: 12, color: AppColors.textTertiary, height: 1.4),
+      ),
+      const SizedBox(height: 14),
+      _extraDetailsEditor(),
+      const SizedBox(height: 20),
       _label('Reminder contact phone (optional)'),
       _input(_reminderContactPhoneCtrl, 'e.g. +255712345678. Used in reminder messages instead of your number.', keyboardType: TextInputType.phone),
       const SizedBox(height: 16),
@@ -1813,6 +1997,191 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       const SizedBox(height: 20),
       _whatToExpectSection(),
     ]));
+  }
+
+  Widget _extraDetailsEditor() {
+    OutlineInputBorder _border([Color? c]) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: c ?? AppColors.border),
+    );
+
+    Widget rowEditor(int i, Map<String, String> item) {
+      final label = (item['label'] ?? '').trim();
+      final details = (item['details'] ?? '').trim();
+      final expanded = _extraExpandedIndex == i || label.isEmpty || details.isEmpty;
+
+      if (!expanded) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text('${i + 1}',
+                  style: appText(size: 13, weight: FontWeight.w800, color: AppColors.primary)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: appText(size: 14.5, weight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text(details, maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: appText(size: 12.5, color: AppColors.textSecondary, height: 1.35)),
+            ])),
+            IconButton(
+              onPressed: () => setState(() => _extraExpandedIndex = i),
+              icon: SvgPicture.asset('assets/icons/pen-icon.svg',
+                  width: 18, height: 18,
+                  colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
+              tooltip: 'Edit',
+            ),
+            IconButton(
+              onPressed: () => setState(() {
+                _extraDetailsItems.removeAt(i);
+                if (_extraExpandedIndex == i) _extraExpandedIndex = null;
+              }),
+              icon: SvgPicture.asset('assets/icons/close-icon.svg',
+                  width: 18, height: 18,
+                  colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
+              tooltip: 'Remove',
+            ),
+          ]),
+        );
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text('${i + 1}',
+                  style: appText(size: 13, weight: FontWeight.w800, color: AppColors.primary)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(
+              'Row ${i + 1}',
+              style: appText(size: 12, weight: FontWeight.w700, color: AppColors.textTertiary),
+            )),
+            GestureDetector(
+              onTap: () => setState(() {
+                _extraDetailsItems.removeAt(i);
+                if (_extraExpandedIndex == i) _extraExpandedIndex = null;
+              }),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: SvgPicture.asset('assets/icons/close-icon.svg',
+                    width: 18, height: 18,
+                    colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: ValueKey('extra_label_$i'),
+            initialValue: item['label'],
+            onChanged: (v) => item['label'] = v,
+            style: appText(size: 15),
+            decoration: InputDecoration(
+              hintText: 'Label · e.g. Dress code, Parking, Gifts',
+              hintStyle: appText(size: 14, color: AppColors.textHint),
+              filled: true, fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: _border(),
+              enabledBorder: _border(),
+              focusedBorder: _border(AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            key: ValueKey('extra_details_$i'),
+            initialValue: item['details'],
+            onChanged: (v) => item['details'] = v,
+            style: appText(size: 14, color: AppColors.textSecondary, height: 1.4),
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Details · what guests should know about this row',
+              hintStyle: appText(size: 13, color: AppColors.textHint),
+              filled: true, fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: _border(),
+              enabledBorder: _border(),
+              focusedBorder: _border(AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+            TextButton(
+              onPressed: (label.trim().isEmpty || details.trim().isEmpty)
+                  ? null
+                  : () => setState(() => _extraExpandedIndex = null),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+              child: const Text('Done'),
+            ),
+          ]),
+        ]),
+      );
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      ..._extraDetailsItems.asMap().entries.map((e) => rowEditor(e.key, e.value)),
+      if (_extraDetailsItems.length < 20)
+        GestureDetector(
+          onTap: () {
+            final emptyIdx = _extraDetailsItems.indexWhere(
+              (m) => (m['label'] ?? '').trim().isEmpty || (m['details'] ?? '').trim().isEmpty,
+            );
+            setState(() {
+              if (emptyIdx >= 0) {
+                _extraExpandedIndex = emptyIdx;
+              } else {
+                _extraDetailsItems.add({'label': '', 'details': ''});
+                _extraExpandedIndex = _extraDetailsItems.length - 1;
+              }
+            });
+          },
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset('assets/icons/plus-icon.svg', width: 18, height: 18,
+                    colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
+                const SizedBox(width: 8),
+                Text(
+                  _extraDetailsItems.isEmpty ? 'Add detail row' : 'Add another row',
+                  style: appText(size: 14, weight: FontWeight.w800, color: AppColors.primary),
+                ),
+              ],
+            ),
+          ),
+        ),
+    ]);
   }
 
   List<Map<String, dynamic>>? _wtePayload() {
@@ -1829,127 +2198,202 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     return out.isEmpty ? null : out;
   }
 
+  List<Map<String, dynamic>>? _extraDetailsPayload() {
+    final out = <Map<String, dynamic>>[];
+    for (final it in _extraDetailsItems) {
+      final label = (it['label'] ?? '').trim();
+      final details = (it['details'] ?? '').trim();
+      if (label.isEmpty || details.isEmpty) continue;
+      out.add({'label': label, 'details': details});
+    }
+    return out.isEmpty ? null : out;
+  }
+
   Widget _whatToExpectSection() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _label('What to expect (optional)'),
       Text(
-        'Add a short list so guests know what to look forward to. Leave blank to hide this section.',
+        'Give guests a short preview of highlights. Leave blank to hide this section.',
         style: appText(size: 12, color: AppColors.textTertiary),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 14),
       ..._whatToExpectItems.asMap().entries.map((entry) {
         final i = entry.key;
         final item = entry.value;
         final iconName = (item['icon'] ?? 'star').toString();
         final isDefaultIcon = iconName == 'star' || iconName == 'sparkle';
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border, width: 1),
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Header row: number badge + label input + remove
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                // Number / icon badge
-                GestureDetector(
-                  onTap: () => _pickWteIcon(i),
-                  child: Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border, width: 1),
-                    ),
-                    child: Center(
-                      child: isDefaultIcon
-                          ? Text('${i + 1}',
-                              style: appText(size: 14, weight: FontWeight.w800, color: AppColors.textPrimary))
-                          : SvgPicture.asset(
-                              'assets/icons/$iconName-icon.svg',
-                              width: 16, height: 16,
-                              colorFilter: const ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn),
-                            ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: item['label'],
-                    onChanged: (v) => item['label'] = v,
-                    style: appText(size: 15, weight: FontWeight.w700, color: AppColors.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'e.g. Live music',
-                      hintStyle: appText(size: 14, color: AppColors.textHint, weight: FontWeight.w500),
-                      isDense: true,
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() => _whatToExpectItems.removeAt(i)),
-                  behavior: HitTestBehavior.opaque,
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(Icons.close_rounded, size: 18, color: AppColors.textTertiary),
-                  ),
-                ),
-              ]),
+        final label = (item['label'] ?? '').trim();
+        final desc = (item['description'] ?? '').trim();
+        final expanded = _wteExpandedIndex == i || label.isEmpty;
+
+        Widget iconTile({double size = 44, double inner = 20}) => GestureDetector(
+          onTap: () => _pickWteIcon(i),
+          child: Container(
+            width: size, height: size,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(12),
             ),
-            Container(height: 1, color: AppColors.border),
-            // Description row
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-              child: TextFormField(
-                initialValue: item['description'],
-                onChanged: (v) => item['description'] = v,
-                style: appText(size: 13, color: AppColors.textSecondary, height: 1.4),
-                maxLines: 2,
-                decoration: InputDecoration(
-                  hintText: 'Add a short description (optional)',
-                  hintStyle: appText(size: 13, color: AppColors.textHint),
-                  isDense: true,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
+            child: Center(
+              child: isDefaultIcon
+                  ? Text('${i + 1}', style: appText(size: 14, weight: FontWeight.w800, color: AppColors.primary))
+                  : SvgPicture.asset('assets/icons/$iconName-icon.svg',
+                      width: inner, height: inner,
+                      colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
+            ),
+          ),
+        );
+
+        if (!expanded) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border, width: 1),
+            ),
+            child: Row(children: [
+              iconTile(size: 38, inner: 18),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: appText(size: 14.5, weight: FontWeight.w700, color: AppColors.textPrimary)),
+                if (desc.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: appText(size: 12, color: AppColors.textTertiary)),
+                ],
+              ])),
+              IconButton(
+                onPressed: () => setState(() => _wteExpandedIndex = i),
+                icon: SvgPicture.asset('assets/icons/pen-icon.svg',
+                    width: 18, height: 18,
+                    colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
+                tooltip: 'Edit',
+              ),
+              IconButton(
+                onPressed: () => setState(() {
+                  _whatToExpectItems.removeAt(i);
+                  if (_wteExpandedIndex == i) _wteExpandedIndex = null;
+                }),
+                icon: SvgPicture.asset('assets/icons/close-icon.svg',
+                    width: 18, height: 18,
+                    colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
+                tooltip: 'Remove',
+              ),
+            ]),
+          );
+        }
+
+        // Expanded editor - flat surface, full-size inputs matching the rest of the form.
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              iconTile(),
+              const SizedBox(width: 12),
+              Expanded(child: Text(
+                'Item ${i + 1} · tap icon to change',
+                style: appText(size: 12, weight: FontWeight.w700, color: AppColors.textTertiary),
+              )),
+              GestureDetector(
+                onTap: () => setState(() {
+                  _whatToExpectItems.removeAt(i);
+                  if (_wteExpandedIndex == i) _wteExpandedIndex = null;
+                }),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: SvgPicture.asset('assets/icons/close-icon.svg',
+                      width: 18, height: 18,
+                      colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
                 ),
               ),
+            ]),
+            const SizedBox(height: 12),
+            TextFormField(
+              key: ValueKey('wte_label_$i'),
+              initialValue: item['label'],
+              onChanged: (v) => item['label'] = v,
+              style: appText(size: 15),
+              decoration: InputDecoration(
+                hintText: 'e.g. Live music',
+                hintStyle: appText(size: 14, color: AppColors.textHint),
+                filled: true, fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+              ),
             ),
+            const SizedBox(height: 10),
+            TextFormField(
+              key: ValueKey('wte_desc_$i'),
+              initialValue: item['description'],
+              onChanged: (v) => item['description'] = v,
+              style: appText(size: 14, color: AppColors.textSecondary, height: 1.4),
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'Short description (optional)',
+                hintStyle: appText(size: 13, color: AppColors.textHint),
+                filled: true, fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              TextButton(
+                onPressed: label.trim().isEmpty
+                    ? null
+                    : () => setState(() => _wteExpandedIndex = null),
+                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                child: const Text('Done'),
+              ),
+            ]),
           ]),
         );
       }),
       if (_whatToExpectItems.length < 12)
         GestureDetector(
-          onTap: () => setState(() => _whatToExpectItems.add({'icon': 'star', 'label': '', 'description': ''})),
+          onTap: () {
+            // If user has an empty draft already, just focus it.
+            final emptyIdx = _whatToExpectItems.indexWhere((m) => (m['label'] ?? '').trim().isEmpty);
+            setState(() {
+              if (emptyIdx >= 0) {
+                _wteExpandedIndex = emptyIdx;
+              } else {
+                _whatToExpectItems.add({'icon': 'star', 'label': '', 'description': ''});
+                _wteExpandedIndex = _whatToExpectItems.length - 1;
+              }
+            });
+          },
           behavior: HitTestBehavior.opaque,
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.primarySoft,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.border,
-                width: 1,
-                style: BorderStyle.solid,
-              ),
             ),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.add_rounded, size: 18, color: AppColors.textPrimary),
+              SvgPicture.asset('assets/icons/plus-icon.svg', width: 18, height: 18,
+                  colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
               const SizedBox(width: 8),
-              Text('Add item', style: appText(size: 14, weight: FontWeight.w700, color: AppColors.textPrimary)),
+              Text(_whatToExpectItems.isEmpty ? 'Add first item' : 'Add another',
+                  style: appText(size: 14, weight: FontWeight.w800, color: AppColors.primary)),
             ]),
           ),
         ),
       const SizedBox(height: 18),
       _label('Notes (optional)'),
-      _input(_whatToExpectNotesCtrl, 'Anything else guests should know — schedule notes, parking, dress code reminders, etc.', maxLines: 3),
+      _input(_whatToExpectNotesCtrl, 'Anything else guests should know · schedule notes, parking, dress code, etc.', maxLines: 3),
     ]);
   }
+
 
 
   Future<void> _pickWteIcon(int index) async {

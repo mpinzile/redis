@@ -1,5 +1,5 @@
 /**
- * Members drawer — list members grouped/badged by role (organizer · committee · contributor).
+ * Members drawer — list members grouped/badged by role (organizer - committee - contributor).
  * Admins can remove non-organizer members and add event contributors who aren't yet in the group.
  */
 import { useEffect, useState, useMemo } from "react";

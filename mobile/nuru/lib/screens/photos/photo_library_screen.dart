@@ -15,7 +15,7 @@ import 'upload_to_library_screen.dart';
 import 'media_viewer_screen.dart';
 import 'transfers_screen.dart';
 
-/// Photo Library Detail — gallery grouped by date, with action row + tabs.
+/// Photo Library Detail - gallery grouped by date, with action row + tabs.
 class PhotoLibraryScreen extends StatefulWidget {
   final String libraryId;
   final String? libraryName;

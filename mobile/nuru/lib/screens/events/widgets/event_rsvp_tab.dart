@@ -16,7 +16,7 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/l10n/l10n_helper.dart';
 import '../report_preview_screen.dart';
 
-/// RSVP tab — full redesign.
+/// RSVP tab - full redesign.
 /// Flat surfaces, project SVG icons only, no material icons, no gradients.
 class EventRsvpTab extends StatefulWidget {
   final String eventId;
@@ -27,7 +27,7 @@ class EventRsvpTab extends StatefulWidget {
 }
 
 class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClientMixin {
-  /// Master list — fetched once. All filtering/search is client-side so the
+  /// Master list - fetched once. All filtering/search is client-side so the
   /// tabs respond instantly without hitting the backend on every tap.
   List<dynamic> _allGuests = [];
   Map<String, dynamic> _summary = {};
@@ -47,7 +47,7 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
 
   Future<void> _load({bool background = false}) async {
     if (!background) setState(() => _loading = true);
-    // Fetch every guest in one shot (paginate server-side) — filtering &
+    // Fetch every guest in one shot (paginate server-side) - filtering &
     // searching then happen instantly on the client.
     final List<dynamic> all = [];
     Map<String, dynamic> summary = {};
@@ -245,7 +245,7 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
         onChanged: (_) => setState(() {}),
       );
 
-  // ─── filter pills — self-scrolls active into view ─────────────
+  // ─── filter pills - self-scrolls active into view ─────────────
   Widget _filterStrip() {
     const opts = [
       ['all', 'All', null],
@@ -595,7 +595,7 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
   Future<void> _generateReport(String format) async {
     setState(() => _generating = true);
     AppSnackbar.success(context, 'Generating ${format == 'xlsx' ? 'Excel' : 'PDF'} report...');
-    // We already hold every guest in memory — feed them straight to the report.
+    // We already hold every guest in memory - feed them straight to the report.
     final res = await ReportGenerator.generateRsvpReport(
       widget.eventId,
       format: format,

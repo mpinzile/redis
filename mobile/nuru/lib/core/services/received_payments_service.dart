@@ -1,6 +1,6 @@
 import 'api_base.dart';
 
-/// ReceivedPaymentsService — fetches money landing on a beneficiary's
+/// ReceivedPaymentsService - fetches money landing on a beneficiary's
 /// events (contributions / tickets) or services. The wallet is reserved
 /// for top-ups only; everything else is surfaced via these endpoints.
 class ReceivedPaymentsService {

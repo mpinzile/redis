@@ -40,7 +40,7 @@ TextStyle _f({
     );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Onboarding screen — logic preserved (skip / next / completeOnboarding / routes)
+// Onboarding screen - logic preserved (skip / next / completeOnboarding / routes)
 // ─────────────────────────────────────────────────────────────────────────────
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -176,7 +176,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// Shared title widget — gold-highlighted keywords (no translation key changes)
+// Shared title widget - gold-highlighted keywords (no translation key changes)
 // ═════════════════════════════════════════════════════════════════════════════
 class _HighlightedTitle extends StatelessWidget {
   final String text;
@@ -222,7 +222,7 @@ class _HighlightedTitle extends StatelessWidget {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// PAGE 1 — Brand Introduction
+// PAGE 1 - Brand Introduction
 // Full-bleed hero image at bottom, top-only rounded corners, soft top blur fade.
 // Floating white feature panel overlaps bottom of image.
 // ═════════════════════════════════════════════════════════════════════════════
@@ -306,7 +306,7 @@ class _Page1BrandIntro extends StatelessWidget {
                     ),
                     SizedBox(height: box.maxHeight * 0.024),
 
-                    // Title — exact reference text
+                    // Title - exact reference text
                     FadeIn(
                       duration: const Duration(milliseconds: 480),
                       delay: const Duration(milliseconds: 80),
@@ -466,7 +466,7 @@ class _FeaturePanel extends StatelessWidget {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// PAGE 2 — Workspace ecosystem with skyline footer
+// PAGE 2 - Workspace ecosystem with skyline footer
 // ═════════════════════════════════════════════════════════════════════════════
 class _Page2Workspace extends StatelessWidget {
   const _Page2Workspace();
@@ -769,7 +769,7 @@ class _DottedCirclePainter extends CustomPainter {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// PAGE 3 — Collaboration with phone mockup, floating chips, plant + shapes
+// PAGE 3 - Collaboration with phone mockup, floating chips, plant + shapes
 // CTA + Sign in footer live ONLY on this page.
 // ═════════════════════════════════════════════════════════════════════════════
 class _Page3Collaboration extends StatelessWidget {
@@ -841,7 +841,7 @@ class _Page3Collaboration extends StatelessWidget {
                 // Bottom space reserved for the page indicator dots
                 const SizedBox(height: 44),
 
-                // CTA button — last page only
+                // CTA button - last page only
                 SizedBox(
                   width: double.infinity,
                   height: 58,

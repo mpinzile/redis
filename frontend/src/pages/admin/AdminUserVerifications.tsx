@@ -93,7 +93,7 @@ export default function AdminUserVerifications() {
     if (res.success) {
       if (actionDialog.type === "approve") {
         const msg = res.data?.identity_verified
-          ? "✅ Front ID approved — user identity verified!"
+          ? "✅ Front ID approved · user identity verified!"
           : `Document approved (${res.data?.approved_count}/${res.data?.total_count})`;
         toast.success(msg);
       } else {
@@ -159,7 +159,7 @@ export default function AdminUserVerifications() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground text-sm">{submission.user?.name || "—"}</p>
-                  <p className="text-xs text-muted-foreground">{submission.user?.email} · {submission.document_type} · #{submission.document_number}</p>
+                  <p className="text-xs text-muted-foreground">{submission.user?.email} - {submission.document_type} - #{submission.document_number}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-xs text-muted-foreground">{submission.documents.length} doc{submission.documents.length !== 1 ? "s" : ""}</span>

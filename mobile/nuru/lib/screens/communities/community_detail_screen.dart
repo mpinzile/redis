@@ -16,7 +16,7 @@ import '../../core/services/social_service.dart';
 import '../../core/l10n/l10n_helper.dart';
 import '../../providers/auth_provider.dart';
 
-/// Community detail — pixel match to "Decorators Hub" mockup.
+/// Community detail - pixel match to "Decorators Hub" mockup.
 /// Cover image with overlapping circular avatar, verified badge,
 /// underline tabs (Feed / Discussions / Resources / Events / Members / About),
 /// compose row + quick actions + post stream.
@@ -87,7 +87,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
       case 4: // Members
         await _loadMembers();
         return;
-      case 5: // About — uses _community
+      case 5: // About - uses _community
         final res = await SocialService.getCommunityDetail(widget.communityId);
         if (!mounted) return;
         if (res['success'] == true) {
@@ -218,7 +218,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     try {
       await Share.share(shareText, subject: 'Post from $name');
     } catch (_) {}
-    // Record share count in background — don't reload feed (keeps post visible).
+    // Record share count in background - don't reload feed (keeps post visible).
     SocialService.shareCommunityPost(widget.communityId, id);
   }
 
@@ -1076,7 +1076,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     final description = c['description']?.toString() ?? 'No description';
     final createdAt = c['created_at']?.toString() ?? '';
     final visibility = c['is_public'] == false ? 'Private' : 'Public';
-    final category = c['category']?.toString() ?? '—';
+    final category = c['category']?.toString() ?? '-';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

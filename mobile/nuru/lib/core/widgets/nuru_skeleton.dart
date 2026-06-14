@@ -2,7 +2,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-/// NuruSkeleton — modern shimmer skeleton loaders used across data-loading
+/// NuruSkeleton - modern shimmer skeleton loaders used across data-loading
 /// screens. Provides primitive boxes plus a set of curated presets (list
 /// tile, event card, grid tile, profile header, stat tiles, message row)
 /// so every screen feels coherent.

@@ -10,7 +10,7 @@ import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/nuru_refresh_indicator.dart';
 import '../../../core/widgets/app_snackbar.dart';
 
-/// Event Sponsors tab — full redesign.
+/// Event Sponsors tab - full redesign.
 /// Flat surfaces, project SVG icons only, no gradients, no material icons.
 class EventSponsorsTab extends StatefulWidget {
   final String eventId;

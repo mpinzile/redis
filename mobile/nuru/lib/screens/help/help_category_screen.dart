@@ -259,7 +259,7 @@ class HelpCategoryContent {
           HelpStep('Create or join an event',
               'Tap the + button to start a new event, or open an invitation link to RSVP and contribute to one you were invited to.'),
           HelpStep('Set up your wallet',
-              'Open Wallet to add a payout method. You only need this to receive money — paying is free and instant via M-Pesa, Airtel Money, Tigo Pesa or card.'),
+              'Open Wallet to add a payout method. You only need this to receive money · paying is free and instant via M-Pesa, Airtel Money, Tigo Pesa or card.'),
         ],
         tips: [
           'Add a profile photo so organisers recognise you in their guest list.',
@@ -278,7 +278,7 @@ class HelpCategoryContent {
           HelpStep('Edit your profile',
               'Profile tab → Edit Profile. Change your name, bio, photo, gender and date of birth.'),
           HelpStep('Switch language',
-              'Settings → Language. Nuru speaks English and Kiswahili — the whole app updates instantly.'),
+              'Settings → Language. Nuru speaks English and Kiswahili · the whole app updates instantly.'),
           HelpStep('Manage notifications',
               'Settings → Notifications. Mute event reminders, payments, social activity or messages independently.'),
           HelpStep('Change your password',
@@ -287,7 +287,7 @@ class HelpCategoryContent {
               'Settings → Privacy → Delete Account. We hold the request for 30 days so you can reactivate if you change your mind.'),
         ],
         tips: [
-          'Keep your phone number up to date — we use it for OTP login and payment confirmations.',
+          'Keep your phone number up to date · we use it for OTP login and payment confirmations.',
           'Verified accounts unlock service listings, ticket payouts and event sponsorship.',
         ],
       );
@@ -312,7 +312,7 @@ class HelpCategoryContent {
         ],
         tips: [
           'Receipts for every contribution are saved automatically and can be shared as a PDF.',
-          'If a payment is stuck on Pending for over 5 minutes, pull to refresh — it usually clears itself.',
+          'If a payment is stuck on Pending for over 5 minutes, pull to refresh · it usually clears itself.',
           'Use "Pending Pledge" to see what you still owe at a glance.',
         ],
       );
@@ -322,7 +322,7 @@ class HelpCategoryContent {
         title: 'Events & Tickets',
         tagline: 'PLAN AND ATTEND',
         intro:
-            "Create events, invite guests, sell tickets and check attendees in — all from your phone.",
+            "Create events, invite guests, sell tickets and check attendees in · all from your phone.",
         steps: [
           HelpStep('Create an event',
               'Home → + → New Event. Add a title, date, venue (with map), cover photo and event type.'),
@@ -336,7 +336,7 @@ class HelpCategoryContent {
               'Event day: open Guests → Check-In. Scan the QR code or tap the guest to mark them used.'),
         ],
         tips: [
-          'Each invitation has a unique RSVP link — sharing the same link twice still counts as one guest.',
+          'Each invitation has a unique RSVP link · sharing the same link twice still counts as one guest.',
           'Tickets become "used" the moment a guest is checked in by QR scan or manually.',
         ],
       );
@@ -360,7 +360,7 @@ class HelpCategoryContent {
               'OTP login plus device-bound sessions mean even a leaked password cannot sign someone else in as you.'),
         ],
         tips: [
-          'Never share your OTP code — Nuru staff will never ask for it.',
+          'Never share your OTP code · Nuru staff will never ask for it.',
           'Pay only inside the app. If a vendor asks for direct mobile money, decline and report them.',
           'You can request a full export or deletion of your data at any time from Settings → Privacy.',
         ],

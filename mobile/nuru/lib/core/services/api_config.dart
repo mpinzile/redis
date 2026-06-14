@@ -4,7 +4,7 @@
 class ApiConfig {
   ApiConfig._();
 
-  // Obfuscated URL parts — assembled at runtime
+  // Obfuscated URL parts - assembled at runtime
   static const _p = 'https://';
   static const _h1 = 'nuruapi';
   static const _h2 = 'nuru';

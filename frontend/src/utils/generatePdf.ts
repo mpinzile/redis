@@ -491,7 +491,7 @@ export const generateReceiptHtml = (tx: ReceiptTransactionLike): string => {
   const verifyUrl = `https://${host}/shared/receipt/${tx.transaction_code}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=0&ecc=H&data=${encodeURIComponent(verifyUrl)}`;
 
-  const description = tx.payment_description || tx.description || `Nuru · ${purpose}`;
+  const description = tx.payment_description || tx.description || `Nuru - ${purpose}`;
   const methodLabel = tx.provider_name || tx.method_type || '—';
 
   // ── Mobile-app inspired dark-navy receipt ──

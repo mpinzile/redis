@@ -279,7 +279,7 @@ export default function WhatsappLogs() {
       toast({
         title: "Bulk resend queued",
         description: `Queued ${data?.queued ?? 0}` +
-          (data?.skipped ? ` · skipped ${data.skipped}` : "") +
+          (data?.skipped ? ` - skipped ${data.skipped}` : "") +
           ". Each retry runs on its own worker, so large batches send in parallel.",
       });
       setBulkResendOpen(false);
@@ -626,7 +626,7 @@ export default function WhatsappLogs() {
             <span className="font-semibold">{selected.size}</span> selected
             {retryableSelected.length > 0 && (
               <span className="ml-2 text-amber-700/80">
-                · {retryableSelected.length} retryable
+                - {retryableSelected.length} retryable
               </span>
             )}
           </div>
@@ -659,7 +659,7 @@ export default function WhatsappLogs() {
             <Checkbox checked={allSelectedOnPage} onCheckedChange={(v) => toggleSelectAll(!!v)} />
           </div>
           <div className="col-span-3">Recipient</div>
-          <div className="col-span-3">Purpose · Event</div>
+          <div className="col-span-3">Purpose - Event</div>
           <div className="col-span-2">Type / Template</div>
           <div className="col-span-2">Status</div>
           <div className="col-span-1 text-right">Actions</div>
@@ -713,7 +713,7 @@ export default function WhatsappLogs() {
                       </div>
                       <div className="text-xs text-slate-600 truncate mt-1">
                         {PURPOSE_LABEL[log.message_purpose || ""] ?? (CATEGORY_LABEL[log.category] ?? log.category)}
-                        {log.event_name_snapshot && <span className="text-slate-400"> · {log.event_name_snapshot}</span>}
+                        {log.event_name_snapshot && <span className="text-slate-400"> - {log.event_name_snapshot}</span>}
                       </div>
                       {preview && (
                         <div className="text-[11px] text-slate-500 line-clamp-2 mt-1 break-words">{preview}</div>
@@ -729,7 +729,7 @@ export default function WhatsappLogs() {
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-[11px] text-slate-400">
                           {log.updated_at ? getTimeAgo(log.updated_at) : "—"}
-                          {log.retry_count > 0 && <> · Retry × {log.retry_count}</>}
+                          {log.retry_count > 0 && <> - Retry × {log.retry_count}</>}
                         </span>
                         <div className="flex gap-1.5">
                           <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => onOpenLog(log.id)}>
@@ -800,7 +800,7 @@ export default function WhatsappLogs() {
                       <StatusPill status={log.status} />
                       <div className="text-[11px] text-slate-500 mt-1">
                         {log.updated_at ? getTimeAgo(log.updated_at) : "—"}
-                        {log.retry_count > 0 && <> · ×{log.retry_count}</>}
+                        {log.retry_count > 0 && <> - ×{log.retry_count}</>}
                       </div>
                     </div>
                     <div className="col-span-1 flex justify-end gap-1.5">
@@ -833,7 +833,7 @@ export default function WhatsappLogs() {
         {pagination && pagination.total_pages > 1 && (
           <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
             <div className="text-slate-500">
-              Page {pagination.current_page} of {pagination.total_pages} · {pagination.total} total
+              Page {pagination.current_page} of {pagination.total_pages} - {pagination.total} total
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={pagination.current_page <= 1}
@@ -936,7 +936,7 @@ export default function WhatsappLogs() {
                   <div className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-1">SMS fallback</div>
                   <div className="text-sm text-amber-900">
                     Channel: <span className="font-medium">{activeLog.fallback_channel ?? "sms"}</span>
-                    {" · "}Status: <span className="font-medium">{activeLog.fallback_status ?? "—"}</span>
+                    {" - "}Status: <span className="font-medium">{activeLog.fallback_status ?? "—"}</span>
                   </div>
                   {activeLog.fallback_provider && (
                     <div className="text-xs text-amber-800 mt-0.5">Provider: {activeLog.fallback_provider}</div>

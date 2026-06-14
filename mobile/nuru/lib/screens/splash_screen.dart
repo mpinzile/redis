@@ -8,7 +8,7 @@ import 'onboarding/onboarding_screen.dart';
 import 'auth/login_screen.dart';
 import 'home/home_screen.dart';
 
-/// Minimal, elegant splash — edge-to-edge, white bg blends with system bars
+/// Minimal, elegant splash - edge-to-edge, white bg blends with system bars
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -50,7 +50,7 @@ class _SplashScreenState extends State<SplashScreen>
     }
     if (!mounted) return;
     if (auth.isLoading) {
-      debugPrint('[Splash] auth check timed out — defaulting to safe route');
+      debugPrint('[Splash] auth check timed out · defaulting to safe route');
     } else {
       debugPrint('[Splash] auth check completed (loggedIn=${auth.isLoggedIn})');
     }

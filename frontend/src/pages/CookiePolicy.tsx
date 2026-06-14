@@ -43,7 +43,7 @@ const CookiePolicy = () => {
       content: [
         "These cookies help us understand how users interact with the platform.",
         "They collect information such as pages visited, time spent, and navigation patterns.",
-        "Data is aggregated and anonymised — it does not personally identify you.",
+        "Data is aggregated and anonymised · it does not personally identify you.",
         "We use this data to improve platform performance and user experience."
       ]
     },

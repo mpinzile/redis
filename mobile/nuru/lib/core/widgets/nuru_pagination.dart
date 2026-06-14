@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 
-/// NuruPagination — a small, modern pager designed to be reused anywhere a
+/// NuruPagination - a small, modern pager designed to be reused anywhere a
 /// list view paginates server-side. Renders Prev / numbered pages with
 /// ellipses for long ranges / Next, styled with the Nuru palette.
 ///

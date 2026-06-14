@@ -118,7 +118,7 @@ const MyGroups = () => {
             <p className="text-xs text-muted-foreground mt-0.5">
               {groups.length === 0 && !loading
                 ? "All event chat workspaces"
-                : `${groups.length} group${groups.length !== 1 ? "s" : ""}${unreadGroups > 0 ? ` · ${unreadGroups} with new messages` : ""}`}
+                : `${groups.length} group${groups.length !== 1 ? "s" : ""}${unreadGroups > 0 ? ` - ${unreadGroups} with new messages` : ""}`}
             </p>
           </div>
         </div>
@@ -249,7 +249,7 @@ const MyGroups = () => {
                     </span>
                     {g.event_name && (
                       <span className="text-[10.5px] text-muted-foreground/80 truncate ml-auto">
-                        · {g.event_name}
+                        - {g.event_name}
                       </span>
                     )}
                   </div>

@@ -340,7 +340,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// EDIT PROFILE — Redesigned with hero avatar, segmented form cards
+// EDIT PROFILE - Redesigned with hero avatar, segmented form cards
 class _EditProfileSection extends StatefulWidget {
   final Map<String, dynamic>? profile;
   final VoidCallback? onUpdated;
@@ -585,7 +585,7 @@ class _EditProfileSectionState extends State<_EditProfileSection> {
       return;
     }
 
-    // Check if phone changed — phone requires separate verification
+    // Check if phone changed - phone requires separate verification
     final phoneChanged = _hasChanged('phone');
     final newPhone = _phoneCtrl.text.trim();
 
@@ -1229,7 +1229,7 @@ class _ChangePasswordSectionState extends State<_ChangePasswordSection> {
 // ─── Reusable widgets ───────────────────────────────────────────────────
 
 /// Resolve a Material icon to a project SVG asset path. Returns null when
-/// no matching SVG exists — callers should fall back to the Material icon.
+/// no matching SVG exists - callers should fall back to the Material icon.
 String? _svgForIcon(IconData? icon) {
   if (icon == null) return null;
   final map = <int, String>{
@@ -2373,7 +2373,7 @@ class _SecuritySectionState extends State<_SecuritySection> {
           child: _settingsToggle(
             title: 'Authenticator app (TOTP)',
             subtitle: _twoFA
-                ? 'Enabled — extra protection on every sign-in'
+                ? 'Enabled · extra protection on every sign-in'
                 : 'Add a 6-digit code from your authenticator app',
             value: _twoFA,
             onChanged: (_) => _toggle2FA(),

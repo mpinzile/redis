@@ -18,11 +18,11 @@ import 'payment_confirmation_screen.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-/// MakePaymentScreen — full-screen replacement for the legacy `CheckoutSheet`
+/// MakePaymentScreen - full-screen replacement for the legacy `CheckoutSheet`
 /// that mirrors the canonical "Make Payment" mockup.
 ///
 /// Behaviourally identical to `CheckoutSheet` (same /payments/initiate call,
-/// same status-poll loop, same wallet/MoMo/bank routing) — only the
+/// same status-poll loop, same wallet/MoMo/bank routing) - only the
 /// presentation layer is new. All callers can swap
 /// `showModalBottomSheet(builder: CheckoutSheet(...))` for
 /// `Navigator.push(MakePaymentScreen(...))` with no other changes.
@@ -39,7 +39,7 @@ class MakePaymentScreen extends StatefulWidget {
 
   /// Optional payment-summary metadata so the cream summary card can render
   /// a rich preview (event thumb, ticket-class line, schedule line). Pass
-  /// what you have — anything missing is hidden gracefully.
+  /// what you have - anything missing is hidden gracefully.
   final String? summaryImageUrl;
   final String? summarySubtitle;
   final String? summaryMeta;
@@ -311,7 +311,7 @@ class _MakePaymentScreenState extends State<MakePaymentScreen> {
       final txId = tx['id']?.toString() ?? '';
       final txCode = tx['transaction_code']?.toString() ?? '';
 
-      // Wallet payments succeed synchronously — for everything else we hand
+      // Wallet payments succeed synchronously - for everything else we hand
       // off to the dedicated PaymentConfirmationScreen which polls the
       // status. We use `pushReplacement` so back from confirmation goes to
       // whatever opened the make-payment flow, not back into this form.

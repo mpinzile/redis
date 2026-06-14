@@ -5,14 +5,14 @@ const Payments = () => {
   useMeta({
     title: "Built-in Payments & Contributions | Nuru",
     description:
-      "Mobile money, cards and bank transfers — built into every Nuru event. Contributions, deposits, ticket sales and vendor payouts, settled in 24 hours with full audit trail.",
+      "Mobile money, cards and bank transfers · built into every Nuru event. Contributions, deposits, ticket sales and vendor payouts, settled in 24 hours with full audit trail.",
   });
 
   return (
     <EditorialFeaturePage
-      kicker="Service · 05 — Payments"
+      kicker="Service - 05 - Payments"
       title="Money that behaves like a bank, feels like family."
-      lead="Mobile money, cards and bank transfers, built into every workspace. Contributions, ticket sales, deposits and payouts settle within 24 hours — with receipts, dispute protection and a complete audit trail."
+      lead="Mobile money, cards and bank transfers, built into every workspace. Contributions, ticket sales, deposits and payouts settle within 24 hours · with receipts, dispute protection and a complete audit trail."
       specs={[
         { label: "Methods", value: "M-Pesa · Airtel · Mixx by Yas · Card · Bank" },
         { label: "Settlement", value: "≤ 24 hours" },
@@ -22,7 +22,7 @@ const Payments = () => {
       sections={[
         {
           title: "Every channel families actually use.",
-          lead: "Contributors choose the method that's natural for them — phone, card or bank — and the money lands in the same place.",
+          lead: "Contributors choose the method that's natural for them · phone, card or bank · and the money lands in the same place.",
           bullets: [
             "M-Pesa, Airtel Money, Mixx by Yas, Halopesa.",
             "Visa and Mastercard, debit and credit.",

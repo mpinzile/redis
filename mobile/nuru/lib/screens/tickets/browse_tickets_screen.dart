@@ -162,7 +162,7 @@ class _BrowseTicketsScreenState extends State<BrowseTicketsScreen> {
     return const EmptyStateIllustration(
       variant: 'tickets',
       title: 'No ticketed events found',
-      subtitle: 'Check back soon — fresh events drop every week.',
+      subtitle: 'Check back soon · fresh events drop every week.',
     );
   }
 
@@ -508,7 +508,7 @@ class _TicketClassesSheetState extends State<_TicketClassesSheet> {
             amount: totalAmount,
             allowBank: false,
             title: 'Buy $_quantity ${_selectedClassName()} ticket${_quantity > 1 ? 's' : ''}',
-            description: 'Ticket for ${widget.eventName} — ${_selectedClassName()} × $_quantity',
+            description: 'Ticket for ${widget.eventName} · ${_selectedClassName()} × $_quantity',
             summaryImageUrl: widget.coverImage,
             summarySubtitle: '${_selectedClassName()} × $_quantity',
             summaryMeta: widget.eventName,
@@ -538,7 +538,7 @@ class _TicketClassesSheetState extends State<_TicketClassesSheet> {
               if (mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Payment confirmed — your ticket is now issued.'),
+                  content: Text('Payment confirmed · your ticket is now issued.'),
                 ));
               }
             },

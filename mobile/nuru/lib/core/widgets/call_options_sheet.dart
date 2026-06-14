@@ -8,9 +8,9 @@ import '../theme/text_styles.dart';
 import 'app_snackbar.dart';
 
 /// Reusable bottom sheet that lets the user contact a person via:
-///   • Nuru voice call (in-app)   — uses the Nuru logo
-///   • WhatsApp                   — uses the brand-colored WhatsApp SVG
-///   • Phone (normal dialer)      — uses the project call-icon SVG
+///   • Nuru voice call (in-app)   - uses the Nuru logo
+///   • WhatsApp                   - uses the brand-colored WhatsApp SVG
+///   • Phone (normal dialer)      - uses the project call-icon SVG
 ///
 /// Drop in anywhere a phone number is shown (RSVP, contributors, vendors…):
 ///   showCallOptions(context, name: 'Alice', phone: '+255712…',
@@ -18,7 +18,7 @@ import 'app_snackbar.dart';
 ///
 /// The sheet performs a backend lookup `/users/by-phone/{phone}` on open so
 /// that a contributor saved under a nickname still resolves to their real
-/// Nuru account (avatar + nuru user id) — the phone is the source of truth.
+/// Nuru account (avatar + nuru user id) - the phone is the source of truth.
 Future<void> showCallOptions(
   BuildContext context, {
   required String name,
@@ -69,7 +69,7 @@ class _CallOptionsSheetState extends State<_CallOptionsSheet> {
     _lookup();
   }
 
-  /// Phone is the source of truth — even if the organiser saved the
+  /// Phone is the source of truth - even if the organiser saved the
   /// contributor under a nickname, look up their real Nuru account so
   /// the avatar + ability to start a Nuru call work correctly.
   Future<void> _lookup() async {
@@ -98,7 +98,7 @@ class _CallOptionsSheetState extends State<_CallOptionsSheet> {
     });
   }
 
-  /// Digits used by WhatsApp's deep link — no '+' allowed.
+  /// Digits used by WhatsApp's deep link · no '+' allowed.
   String get _waDigits => widget.phone.replaceAll(RegExp(r'\D'), '');
 
   /// Phone string used by the native dialer. If the number already includes

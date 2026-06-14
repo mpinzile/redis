@@ -9,7 +9,7 @@ import '../../core/widgets/nuru_subpage_app_bar.dart';
 import '../../core/widgets/nuru_skeleton.dart';
 import '../../providers/wallet_provider.dart';
 
-/// PayoutProfileScreen — manage saved mobile money / bank accounts that Nuru
+/// PayoutProfileScreen - manage saved mobile money / bank accounts that Nuru
 /// uses to send the user money. Mirrors the web `SettingsPayments` page.
 class PayoutProfileScreen extends StatefulWidget {
   const PayoutProfileScreen({super.key});
@@ -142,7 +142,7 @@ class _PayoutProfileScreenState extends State<PayoutProfileScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Premium payout method card — provider-branded, credit-card inspired tile.
+// Premium payout method card - provider-branded, credit-card inspired tile.
 // ---------------------------------------------------------------------------
 class _PayoutMethodCard extends StatelessWidget {
   final Map<String, dynamic> profile;
@@ -386,7 +386,7 @@ class _PayoutMethodCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                _holder.isEmpty ? '—' : _holder,
+                                _holder.isEmpty ? '-' : _holder,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -403,7 +403,7 @@ class _PayoutMethodCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              _currency.isEmpty ? '—' : _currency,
+                              _currency.isEmpty ? '-' : _currency,
                               style: TextStyle(
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w700,
@@ -514,7 +514,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-/// Branded color palette per provider — mirrors make_payment_screen.
+/// Branded color palette per provider - mirrors make_payment_screen.
 ({Color bg, Color bg2, Color fg}) _brandFor(String name) {
   final n = name.toLowerCase();
   if (n.contains('mpesa') || n.contains('m-pesa') || n.contains('vodacom')) {
@@ -728,7 +728,7 @@ class _AddProfileSheetState extends State<_AddProfileSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Method switcher — pill segmented
+                    // Method switcher - pill segmented
                     _MethodSwitcher(
                       value: _method,
                       onChanged: (v) {

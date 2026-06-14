@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'secure_token_storage.dart';
 
-/// Service-Delivery OTP — Phase 1.3
+/// Service-Delivery OTP - Phase 1.3
 /// Mandatory in-person check-in code that gates escrow release.
 class DeliveryOtpService {
   static String get _baseUrl => ApiConfig.baseUrl;

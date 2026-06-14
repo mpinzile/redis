@@ -175,7 +175,7 @@ export default function PublicContributionReceipt() {
             Back
           </Link>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">Nuru · {state.host}</span>
+            <span className="text-sm font-semibold text-foreground">Nuru - {state.host}</span>
           </div>
           <Button
             variant="ghost"

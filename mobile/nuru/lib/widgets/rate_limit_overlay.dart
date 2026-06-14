@@ -148,7 +148,7 @@ class _RateLimitDialogState extends State<_RateLimitDialog> {
                     ],
                   ),
                   Text(
-                    canRetry ? '—' : _format(_remaining),
+                    canRetry ? '-' : _format(_remaining),
                     style: const TextStyle(
                       fontFamily: 'monospace',
                       fontWeight: FontWeight.bold,

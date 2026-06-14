@@ -14,7 +14,7 @@ import 'payout_profile_screen.dart';
 import 'payment_history_screen.dart';
 import '../migration/migration_banner.dart';
 
-/// WalletScreen — premium dashboard mirroring the web `/wallet` page.
+/// WalletScreen - premium dashboard mirroring the web `/wallet` page.
 /// Shows balance hero, quick actions, ledger + transactions tabs.
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -94,7 +94,7 @@ class _WalletScreenState extends State<WalletScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Static (non-scrolling) header — like event detail page.
+                // Static (non-scrolling) header - like event detail page.
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                   child: Column(
@@ -627,7 +627,7 @@ class _LedgerList extends StatelessWidget {
   }
 }
 
-/// Redesigned ledger row — a card mirroring the transaction card style so
+/// Redesigned ledger row - a card mirroring the transaction card style so
 /// the two tabs look consistent, with a purpose-aware icon, clear
 /// signed amount, running balance pill and reference tag.
 class _LedgerCard extends StatelessWidget {
@@ -945,7 +945,7 @@ class _TransactionCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      code.isEmpty ? '—' : code,
+                      code.isEmpty ? '-' : code,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -1011,7 +1011,7 @@ class _StatusChip extends StatelessWidget {
         bg = AppColors.surfaceMuted;
         fg = AppColors.textSecondary;
     }
-    final label = status.isEmpty ? '—' : status;
+    final label = status.isEmpty ? '-' : status;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

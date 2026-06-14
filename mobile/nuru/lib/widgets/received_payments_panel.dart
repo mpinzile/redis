@@ -4,10 +4,10 @@ import '../core/services/received_payments_service.dart';
 import '../core/services/offline_payments_service.dart';
 import '../core/widgets/nuru_skeleton.dart';
 
-/// ReceivedPaymentsPanel — drop-in widget that shows a paginated list of
+/// ReceivedPaymentsPanel - drop-in widget that shows a paginated list of
 /// payments received for an event (contributions/tickets) or a service.
 /// Mirrors the web `ReceivedPaymentsPanel`. Wallet balance is **not**
-/// affected by these payments — they live here only.
+/// affected by these payments - they live here only.
 enum ReceivedPaymentsSource { eventContributions, eventTickets, service }
 
 class ReceivedPaymentsPanel extends StatefulWidget {
@@ -204,7 +204,7 @@ class _ReceivedPaymentsPanelState extends State<ReceivedPaymentsPanel> {
               const SizedBox(height: 12),
               Text('Offline payments', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 2),
-              Text('Paid outside platform — not added to wallet.', style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
+              Text('Paid outside platform · not added to wallet.', style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
               const SizedBox(height: 8),
               for (final p in _offlineItems) _OfflinePaymentTile(payment: p),
             ],
@@ -263,7 +263,7 @@ class _PaymentTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      payment['payer_name']?.toString() ?? '—',
+                      payment['payer_name']?.toString() ?? '-',
                       style: theme.textTheme.bodyMedium
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
@@ -352,7 +352,7 @@ class _OfflinePaymentTile extends StatelessWidget {
       child: Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(_money(amount, currency), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
-          Text('Paid offline — not in wallet', style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
+          Text('Paid offline · not in wallet', style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
         ])),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

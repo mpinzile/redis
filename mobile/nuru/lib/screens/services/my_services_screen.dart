@@ -28,7 +28,7 @@ import '../../core/widgets/nuru_refresh.dart';
 import '../../core/l10n/l10n_helper.dart';
 import '../migration/migration_banner.dart';
 
-/// MyServicesScreen — 2026 redesign matching the mockup pixel-close.
+/// MyServicesScreen - 2026 redesign matching the mockup pixel-close.
 ///
 /// Layout (per mockup):
 ///   • AppBar: "My Services" + search action + gold "Add New" link
@@ -37,14 +37,14 @@ import '../migration/migration_banner.dart';
 ///   • "My Services" section heading
 ///   • Stack of compact service rows: 70×70 thumbnail · title · description
 ///     · "From TZS X" · 3-dot menu · gold Edit pill
-///   • Verification banner (compact) when not verified — keeps activation
+///   • Verification banner (compact) when not verified - keeps activation
 ///     flow visible (critical, do not remove)
 ///   • "Recent Reviews" link → opens reviews bottom sheet (relocated, not
 ///     removed)
 ///
 /// Every existing feature (View / Edit / Manage Photos / Intro Clip /
 /// Add Package / My Events / Photo Libraries / Verification / Reviews) is
-/// reachable through the per-card 3-dot menu sheet — nothing was deleted.
+/// reachable through the per-card 3-dot menu sheet - nothing was deleted.
 class MyServicesScreen extends StatefulWidget {
   const MyServicesScreen({super.key});
 
@@ -561,7 +561,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
               Expanded(child: _heroStat('$completionRate%', 'Completion Rate')),
             ],
           ),
-          // Manage Bookings CTA — only shown when there are pending bookings.
+          // Manage Bookings CTA - only shown when there are pending bookings.
           if (pendingBookings > 0) ...[
             const SizedBox(height: 14),
             GestureDetector(
@@ -893,7 +893,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                                 ],
                               ),
                             ),
-                            // Edit pill — fully rounded, primary colored text & border
+                            // Edit pill - fully rounded, primary colored text & border
                             GestureDetector(
                               onTap: () async {
                                 final result = await Navigator.push(
@@ -947,7 +947,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
             ),
           ),
         ),
-        // Inline activation banner — preserved (critical flow).
+        // Inline activation banner - preserved (critical flow).
           if (!isVerified)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -994,7 +994,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                 ),
               ),
             ),
-          // Hairline divider — starts where the thumbnail ends, runs to the right edge.
+          // Hairline divider - starts where the thumbnail ends, runs to the right edge.
           if (!isLast)
             Padding(
               padding: const EdgeInsets.only(left: 94, right: 4),
@@ -1484,7 +1484,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
     );
   }
 
-  // ─── Manage sheet (3-dot menu) — every existing per-card action ──
+  // ─── Manage sheet (3-dot menu) - every existing per-card action ──
   Future<void> _openManageSheet(Map<String, dynamic> service) async {
     final serviceId = service['id']?.toString() ?? '';
     if (serviceId.isEmpty) return;

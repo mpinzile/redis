@@ -193,7 +193,7 @@ const MyMeetingsSection = ({ navigate }: { navigate: (path: string) => void }) =
                   {meeting.event_name || 'Event'}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-muted-foreground">{scheduledDate} · {scheduledTime}</span>
+                  <span className="text-[10px] text-muted-foreground">{scheduledDate} - {scheduledTime}</span>
                   <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                     <Users className="w-2.5 h-2.5" /> {meeting.participant_count}
                   </span>
@@ -293,7 +293,7 @@ const MyTicketsSection = ({ navigate }: { navigate: (path: string) => void }) =>
                     </span>
                     {event?.start_time && (
                       <span className="text-[11px] text-muted-foreground">
-                        · {event.start_time.slice(0, 5)}
+                        - {event.start_time.slice(0, 5)}
                       </span>
                     )}
                   </div>

@@ -339,7 +339,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
             ],
           ),
         ),
-        // (Floating Add Contributor FAB removed — Add Contributor action lives in the header.)
+        // (Floating Add Contributor FAB removed - Add Contributor action lives in the header.)
         DeletingOverlay(visible: _actionLoading, label: 'Processing...'),
       ],
     );
@@ -913,7 +913,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
 
   /// Bottom sheet that lets the host generate / share / SMS / revoke a guest
   /// payment link for ONE contributor. The plain token is returned by the
-  /// server only once per generation — if the host closes the sheet without
+  /// server only once per generation - if the host closes the sheet without
   /// sharing, regenerating rotates the token (the previous URL stops working).
   Future<void> _showShareLinkSheet(Map<String, dynamic> ec) async {
     final ecId = ec['id']?.toString() ?? '';
@@ -1285,7 +1285,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        '$name — Payment History',
+                        '$name · Payment History',
                         style: appText(size: 17, weight: FontWeight.w700),
                       ),
                       const SizedBox(height: 16),
@@ -2154,7 +2154,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
           ),
           const SizedBox(height: 12),
 
-          // Case selector — 4 chips, horizontally scrollable to fit the
+          // Case selector - 4 chips, horizontally scrollable to fit the
           // extra "Not Pledged" target without crushing the layout.
           SizedBox(
             height: 78,

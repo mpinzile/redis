@@ -13,7 +13,7 @@ import '../../core/widgets/app_snackbar.dart';
 import '../../core/services/api_service.dart';
 import '../../core/l10n/l10n_helper.dart';
 
-/// Manage service portfolio photos — add/remove images
+/// Manage service portfolio photos - add/remove images
 class ManagePhotosScreen extends StatefulWidget {
   final String serviceId;
   final String serviceName;

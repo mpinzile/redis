@@ -204,16 +204,10 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                     db.add(contributor)
                     db.flush()
                 else:
-                    changed = False
-                    if name and contributor.name != name:
-                        contributor.name = name
-                        changed = True
-                    # Backfill / update phone on the matched contributor so
-                    # subsequent uploads stay in sync.
+                    # Never overwrite the global ``name`` — per-event names
+                    # live on EventContributor.display_name. We only backfill
+                    # the global phone so subsequent uploads stay in sync.
                     if phone and contributor.phone != phone:
-                        # Guard against violating the (user_id, phone) unique
-                        # constraint — if another row already owns this phone,
-                        # keep the original phone instead of overwriting.
                         clash = (
                             db.query(UserContributor.id)
                             .filter(
@@ -225,9 +219,7 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                         )
                         if not clash:
                             contributor.phone = phone
-                            changed = True
-                    if changed:
-                        contributor.updated_at = now
+                            contributor.updated_at = now
 
                 if not ec:
                     ec = (
@@ -239,8 +231,18 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                         .first()
                     )
 
+                # Resolve per-event display name. NULL when it would just
+                # duplicate the global name so explicit overrides remain
+                # distinguishable.
+                desired_display = name if (name and name != contributor.name) else None
+
                 if mode == "targets":
                     if ec:
+                        # Update display_name if the uploaded row carries a
+                        # different name than what this event currently shows.
+                        current_effective = (ec.display_name or contributor.name or "").strip()
+                        if name and name != current_effective:
+                            ec.display_name = desired_display
                         old_pledge = float(ec.pledge_amount or 0)
                         ec.pledge_amount = amount
                         ec.updated_at = now
@@ -248,7 +250,7 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                             ec.contributor = contributor
                             notifications.append({
                                 "event_contributor": ec,
-                                "contributor_name": contributor.name,
+                                "contributor_name": (ec.display_name or contributor.name),
                                 "amount": amount,
                                 "old_pledge": old_pledge,
                                 "kind": "updated" if old_pledge > 0 and amount > old_pledge else "set",
@@ -258,6 +260,7 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                             id=uuid.uuid4(),
                             event_id=event.id,
                             contributor_id=contributor.id,
+                            display_name=desired_display,
                             pledge_amount=amount,
                             secondary_phone=getattr(contributor, "secondary_phone", None),
                             notify_target=getattr(contributor, "notify_target", None) or "primary",
@@ -270,7 +273,7 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                             ec.contributor = contributor
                             notifications.append({
                                 "event_contributor": ec,
-                                "contributor_name": contributor.name,
+                                "contributor_name": (ec.display_name or contributor.name),
                                 "amount": amount,
                                 "old_pledge": 0,
                                 "kind": "set",
@@ -281,6 +284,7 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                             id=uuid.uuid4(),
                             event_id=event.id,
                             contributor_id=contributor.id,
+                            display_name=desired_display,
                             pledge_amount=0,
                             secondary_phone=getattr(contributor, "secondary_phone", None),
                             notify_target=getattr(contributor, "notify_target", None) or "primary",
@@ -289,6 +293,11 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                         )
                         db.add(ec)
                         db.flush()
+                    else:
+                        current_effective = (ec.display_name or contributor.name or "").strip()
+                        if name and name != current_effective:
+                            ec.display_name = desired_display
+                            ec.updated_at = now
                     # Contribution recording delegates to existing helpers
                     # to keep semantics aligned with the inline path.
                     if amount > 0:
@@ -305,7 +314,7 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                                 id=uuid.uuid4(),
                                 event_id=event.id,
                                 event_contributor_id=ec.id,
-                                contributor_name=contributor.name,
+                                contributor_name=(ec.display_name or contributor.name),
                                 amount=amount,
                                 payment_method=pm,
                                 confirmation_status=ContributionStatusEnum.confirmed,
@@ -318,7 +327,7 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                                 ec.contributor = contributor
                                 notifications.append({
                                     "event_contributor": ec,
-                                    "contributor_name": contributor.name,
+                                    "contributor_name": (ec.display_name or contributor.name),
                                     "amount": amount,
                                     "total_paid": total_paid_before + amount,
                                     "pledge": float(ec.pledge_amount or 0),

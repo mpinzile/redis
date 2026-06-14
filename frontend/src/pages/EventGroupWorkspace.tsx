@@ -76,7 +76,7 @@ const EventGroupWorkspace = () => {
     const prev = document.title;
     if (group?.name) {
       const evt = group?.event?.name || group?.event_name;
-      document.title = evt ? `${group.name} · ${evt} — Nuru` : `${group.name} — Nuru`;
+      document.title = evt ? `${group.name} - ${evt} - Nuru` : `${group.name} - Nuru`;
     }
     return () => { document.title = prev; };
   }, [group?.name, group?.event?.name, group?.event_name]);
@@ -105,7 +105,7 @@ const EventGroupWorkspace = () => {
       const url = `${window.location.origin}/g/${res.data.token}`;
       try {
         await navigator.clipboard.writeText(url);
-        toast.success("Invite link copied — share with committee & contributors");
+        toast.success("Invite link copied · share with committee & contributors");
       } catch {
         toast.success("Invite link ready", { description: url });
       }
@@ -118,7 +118,7 @@ const EventGroupWorkspace = () => {
     if (!groupId || !group) return;
     const next = !group.is_closed;
     if (!next && eventEnded) {
-      toast.error("Event has ended — cannot reopen this group");
+      toast.error("Event has ended · cannot reopen this group");
       return;
     }
     const res = await eventGroupsApi.update(groupId, { is_closed: next });
@@ -163,7 +163,7 @@ const EventGroupWorkspace = () => {
                 )}
               </div>
               <p className="text-xs text-muted-foreground truncate">
-                {members.length} member{members.length !== 1 ? "s" : ""} · {group.event?.name || group.event_name || ""}
+                {members.length} member{members.length !== 1 ? "s" : ""} - {group.event?.name || group.event_name || ""}
               </p>
             </div>
           </div>

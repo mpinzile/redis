@@ -26,7 +26,7 @@ const features: Feature[] = [
     tag: "Workspace",
     title: "Event Planning",
     blurb:
-      "Open a workspace for any occasion. Budgets, timelines, committees, vendors and contributions — all coordinated in one transparent surface.",
+      "Open a workspace for any occasion. Budgets, timelines, committees, vendors and contributions · all coordinated in one transparent surface.",
     to: "/features/event-planning",
     for: "Organisers",
   },
@@ -62,7 +62,7 @@ const features: Feature[] = [
     tag: "Money",
     title: "Built-in Payments",
     blurb:
-      "Mobile money, cards and bank transfers — held securely, released on milestones, recorded to the shilling.",
+      "Mobile money, cards and bank transfers · held securely, released on milestones, recorded to the shilling.",
     to: "/features/payments",
     for: "Organisers · Vendors · Contributors",
   },
@@ -80,7 +80,7 @@ const features: Feature[] = [
     tag: "Community",
     title: "Event Groups",
     blurb:
-      "Public, private and invite-only groups for committees, contributors and guests — with shared files, polls and announcements.",
+      "Public, private and invite-only groups for committees, contributors and guests · with shared files, polls and announcements.",
     to: "/features/event-groups",
     for: "Organisers · Committees",
   },
@@ -98,7 +98,7 @@ const features: Feature[] = [
     tag: "Protection",
     title: "Trust & Protection",
     blurb:
-      "Identity checks, dispute resolution, audit trails and structured release windows — fairness built into the system.",
+      "Identity checks, dispute resolution, audit trails and structured release windows · fairness built into the system.",
     to: "/features/trust",
     for: "Everyone",
   },
@@ -108,7 +108,7 @@ const FeaturesIndex = () => {
   useMeta({
     title: "Features | Nuru Workspace",
     description:
-      "Every Nuru capability in one directory — event planning, vendors, invitations, NFC cards, payments, meetings, groups, ticketing and trust.",
+      "Every Nuru capability in one directory · event planning, vendors, invitations, NFC cards, payments, meetings, groups, ticketing and trust.",
   });
 
   return (
@@ -166,7 +166,7 @@ const FeaturesIndex = () => {
                   <div className="flex items-start justify-between mb-10">
                     <div>
                       <div className="text-[10px] tracking-[0.28em] uppercase text-muted-foreground font-mono mb-2">
-                        № {f.num} · {f.tag}
+                        № {f.num} - {f.tag}
                       </div>
                       <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground/70 font-mono">
                         For {f.for}

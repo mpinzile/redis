@@ -48,7 +48,7 @@ export default function AdminPaymentsOverview() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          Refreshes every minute · {isFetching && "Updating…"}
+          Refreshes every minute - {isFetching && "Updating…"}
         </p>
         <button
           onClick={() => refetch()}
@@ -63,7 +63,7 @@ export default function AdminPaymentsOverview() {
         <KpiCard
           icon={Banknote} tone="primary"
           label="Today (gross)" value={fmtMoney(data.today.gross, "TZS")}
-          sub={`${data.today.count} payments · net ${fmtMoney(data.today.net, "TZS")}`}
+          sub={`${data.today.count} payments - net ${fmtMoney(data.today.net, "TZS")}`}
         />
         <KpiCard
           icon={Coins} tone="success"

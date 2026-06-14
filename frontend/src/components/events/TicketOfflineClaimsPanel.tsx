@@ -59,7 +59,7 @@ const TicketOfflineClaimsPanel = ({ eventId }: Props) => {
     try {
       const res = await ticketOfflineClaimsApi.confirm(claim.id);
       if (res.success) {
-        toast.success("Claim confirmed — ticket issued.");
+        toast.success("Claim confirmed · ticket issued.");
         load();
       } else {
         toast.error(res.message || "Could not confirm claim.");
@@ -146,11 +146,11 @@ const TicketOfflineClaimsPanel = ({ eventId }: Props) => {
                   <p className="text-sm text-muted-foreground">
                     {formatPrice(c.amount)} ·{" "}
                     {c.payment_channel === "bank" ? "Bank" : "Mobile money"}
-                    {c.provider_name ? ` · ${c.provider_name}` : ""}
+                    {c.provider_name ? ` - ${c.provider_name}` : ""}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1 break-all">
                     Ref: <span className="font-mono">{c.transaction_code}</span>
-                    {c.payer_account ? ` · From ${c.payer_account}` : ""}
+                    {c.payer_account ? ` - From ${c.payer_account}` : ""}
                   </p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
                     {c.claimant_phone && (

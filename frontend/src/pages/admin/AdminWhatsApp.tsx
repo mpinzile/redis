@@ -651,7 +651,7 @@ export default function AdminWhatsApp() {
               </motion.div>
             </div>
             <p className="text-[10px] text-muted-foreground/40 text-center mt-1.5">
-              Press Enter to send · Shift+Enter for new line
+              Press Enter to send - Shift+Enter for new line
             </p>
           </div>
         </>

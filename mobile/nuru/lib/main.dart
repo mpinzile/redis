@@ -74,7 +74,7 @@ class _NuruAppState extends State<NuruApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // IMPORTANT: do NOT request runtime permissions at app launch.
       // Apple App Review (Guideline 2.1a) rejected v1.0(3) on iPad as
-      // "irresponsive upon launch" — back-to-back permission dialogs from
+      // "irresponsive upon launch" - back-to-back permission dialogs from
       // location, camera, photos, mic and notifications made the UI appear
       // frozen. Each feature now requests its own permission lazily when
       // the user first taps it (camera inside the QR scanner screen, mic
@@ -82,10 +82,10 @@ class _NuruAppState extends State<NuruApp> {
       // location when sharing a place, etc.).
       DeepLinkService.instance.init(NuruApp.navigatorKey);
       // Global voice-call ringer: polls the backend for incoming calls and
-      // shows CallKit / a full-screen ringer. Safe to start before login —
+      // shows CallKit / a full-screen ringer. Safe to start before login -
       // the poll endpoint returns null while unauthenticated.
       IncomingCallService.instance.start(NuruApp.navigatorKey);
-      // Push notifications (FCM) — show every backend notification on the
+      // Push notifications (FCM) - show every backend notification on the
       // device. `initialise` internally requests the notification permission,
       // which is the only OS prompt we want during a cold start.
       PushNotificationService.instance
@@ -98,7 +98,7 @@ class _NuruAppState extends State<NuruApp> {
 
   @override
   Widget build(BuildContext context) {
-    // We intentionally do NOT pass `locale` to MaterialApp — Swahili isn't in
+    // We intentionally do NOT pass `locale` to MaterialApp - Swahili isn't in
     // Flutter's bundled Material localizations. Instead, `LocaleProvider` is a
     // ChangeNotifier and every screen that uses translations calls
     // `context.watch<LocaleProvider>()` (via `context.trw(...)`), which rebuilds

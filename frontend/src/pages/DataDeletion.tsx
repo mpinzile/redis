@@ -134,7 +134,7 @@ const DataDeletion = () => {
               </div>
               <div>
                 <label htmlFor="reason" className="block text-sm font-medium mb-2">Reason / details (optional)</label>
-                <Textarea id="reason" maxLength={2000} value={form.reason} onChange={update("reason")} placeholder="Tell us anything that helps us process your request faster — e.g., specific data you want removed." rows={5} className="rounded-xl resize-none" />
+                <Textarea id="reason" maxLength={2000} value={form.reason} onChange={update("reason")} placeholder="Tell us anything that helps us process your request faster · e.g., specific data you want removed." rows={5} className="rounded-xl resize-none" />
               </div>
               <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto rounded-full h-12 px-8">
                 {isSubmitting ? (

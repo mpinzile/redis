@@ -113,7 +113,7 @@ const MigrationWelcomeModal = () => {
 
             {/* Benefits */}
             <div className="px-6 py-5 space-y-3">
-              <Benefit icon={<WalletIcon className="h-4 w-4" />} text={`Activate your wallet — ${totalItems > 0 ? "all your earnings flow here" : "ready for your first sale"}`} />
+              <Benefit icon={<WalletIcon className="h-4 w-4" />} text={`Activate your wallet - ${totalItems > 0 ? "all your earnings flow here" : "ready for your first sale"}`} />
               <Benefit icon={<ArrowRight className="h-4 w-4" />} text="Withdraw to mobile money or bank in minutes" />
               <Benefit icon={<ShieldCheck className="h-4 w-4" />} text="Bank-grade security & full transaction history" />
             </div>

@@ -28,7 +28,7 @@ String? _regionFromDeviceLocale() {
   return null;
 }
 
-/// CountryConfirmSheet — first-login prompt asking the user to confirm
+/// CountryConfirmSheet - first-login prompt asking the user to confirm
 /// their country (Tanzania or Kenya). Detection priority:
 ///   1. Backend migration_status.country_guess (phone+ip+history-aware)
 ///   2. Phone prefix on the user record
@@ -78,7 +78,7 @@ class _CountryConfirmSheetState extends State<CountryConfirmSheet> {
         setState(() { _selected = fromLocale; _source = 'locale'; });
         return;
       }
-      // 4) Default TZ — user may override.
+      // 4) Default TZ - user may override.
       setState(() { _selected = 'TZ'; _source = 'manual'; });
     });
   }

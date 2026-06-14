@@ -53,7 +53,7 @@ List<Map<String, dynamic>> _responseItems(
 ///
 /// Mirrors the web EventAutomationsPage end-to-end: list, create, edit,
 /// preview, schedule, enable/disable, send-now, and run history with
-/// per-recipient drill-down. Custom SVG icons only — no Lucide/Material
+/// per-recipient drill-down. Custom SVG icons only - no Lucide/Material
 /// glyphs in the visible UI.
 class EventAutomationsTab extends StatefulWidget {
   final String eventId;
@@ -1424,7 +1424,7 @@ class _AutomationDetailSheetState extends State<_AutomationDetailSheet> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${r['phone'] ?? ''} • ${r['channel'] ?? '—'}'
+                                      '${r['phone'] ?? ''} • ${r['channel'] ?? '-'}'
                                       '${r['error'] != null ? ' • ${r['error']}' : ''}',
                                       style: _f(size: 10.5, color: AppColors.textTertiary),
                                       maxLines: 2,
@@ -2046,7 +2046,7 @@ String _scheduleSummary(Map<String, dynamic> a) {
 }
 
 String _formatTime(String? iso) {
-  if (iso == null || iso.isEmpty) return '—';
+  if (iso == null || iso.isEmpty) return '-';
   try {
     final dt = DateTime.parse(iso).toLocal();
     return DateFormat('d MMM yyyy • HH:mm').format(dt);

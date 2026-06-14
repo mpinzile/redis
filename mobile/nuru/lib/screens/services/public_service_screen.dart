@@ -17,7 +17,7 @@ import '../../providers/wallet_provider.dart';
 import '../messages/messages_screen.dart';
 import '../../core/l10n/l10n_helper.dart';
 
-/// Public Service Detail — 2026 redesign matching the customer-facing
+/// Public Service Detail - 2026 redesign matching the customer-facing
 /// service mockup pixel-close.
 ///
 /// Layout (per mockup):
@@ -28,10 +28,10 @@ import '../../core/l10n/l10n_helper.dart';
 ///   • "About This Service" section card
 ///   • "What's Included" checkmark list (sourced from packages features +
 ///     service-level inclusions)
-///   • Service Packages — relocated, kept fully functional
-///   • Availability Calendar — kept fully functional
-///   • Write a Review + Client Reviews — kept fully functional
-///   • Trust badges — kept
+///   • Service Packages - relocated, kept fully functional
+///   • Availability Calendar - kept fully functional
+///   • Write a Review + Client Reviews - kept fully functional
+///   • Trust badges - kept
 ///   • Sticky bottom bar: Chat (outlined) + Book This Service (gold)
 ///     with "Starting from TZS …" label
 class PublicServiceScreen extends StatefulWidget {
@@ -494,7 +494,7 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
               child: _highlightChipsRow(),
             ),
 
-            // ─── About (plain section per mockup — no card chrome)
+            // ─── About (plain section per mockup - no card chrome)
             if (description.isNotEmpty)
               SliverToBoxAdapter(
                 child: Padding(
@@ -747,7 +747,7 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
         ),
       );
 
-  // (Removed unused _circleBtn — replaced by AppBar IconButtons.)
+  // (Removed unused _circleBtn - replaced by AppBar IconButtons.)
 
   // ════════════════════════════════════════════════════════════════
   // TITLE BLOCK
@@ -810,7 +810,7 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
   }
 
   // ════════════════════════════════════════════════════════════════
-  // VENDOR ROW (avatar · name + verified · rating row) — clean inline,
+  // VENDOR ROW (avatar · name + verified · rating row) - clean inline,
   // no card/shadow per mockup.
   // ════════════════════════════════════════════════════════════════
   Widget _vendorRow() {
@@ -929,12 +929,12 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
     );
   }
 
-  // (Removed _chipsRow — superseded by _highlightChipsRow per mockup.)
+  // (Removed _chipsRow - superseded by _highlightChipsRow per mockup.)
 
 
   // ════════════════════════════════════════════════════════════════
   // FEATURE HIGHLIGHT CHIPS (per mockup: Custom Design, Premium Quality,
-  // On-time Setup, 24/7 Support — sourced from service highlights or
+  // On-time Setup, 24/7 Support - sourced from service highlights or
   // package features. Shows up to 4 thin-icon pill chips.)
   // ════════════════════════════════════════════════════════════════
   Widget _highlightChipsRow() {
@@ -1005,7 +1005,7 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
 
   // (Removed unused _chip helper.)
 
-  // (Removed unused _vendorCard — superseded by inline _vendorRow above.)
+  // (Removed unused _vendorCard - superseded by inline _vendorRow above.)
 
   Widget _avatarFallback(String name) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'P';
@@ -1489,7 +1489,7 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
                 size: 12, color: Color(0xFFB45309)),
             const SizedBox(width: 3),
             Text(
-              ratingNum > 0 ? ratingNum.toStringAsFixed(1) : '—',
+              ratingNum > 0 ? ratingNum.toStringAsFixed(1) : '-',
               style:
                   _f(size: 11, weight: FontWeight.w800, color: _ink),
             ),
@@ -1692,7 +1692,7 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
         ),
         child: Row(
           children: [
-            // Chat outlined (white bordered) — equal width
+            // Chat outlined (white bordered) - equal width
             Expanded(
               child: SizedBox(
                 height: 50,
@@ -1722,7 +1722,7 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            // Book primary (gold filled) — equal width
+            // Book primary (gold filled) - equal width
             Expanded(
               child: SizedBox(
                 height: 50,

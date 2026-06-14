@@ -1,11 +1,11 @@
-/// /set-password/:token landing page — premium Nuru branding.
+/// /set-password/:token landing page - premium Nuru branding.
 ///
 /// Flow:
 ///   1. GET  /api/v1/auth/account-setup/validate?token=...
 ///   2. POST /api/v1/auth/account-setup/set-password { token, password, password_confirmation }
 ///   3. On success: persist returned tokens, route to home.
 ///
-/// Public — no existing session required to render. Distinguishes valid /
+/// Public - no existing session required to render. Distinguishes valid /
 /// expired / used / invalid token states with clear messaging. Shows live
 /// password rule checklist as the user types.
 import 'package:flutter/material.dart';

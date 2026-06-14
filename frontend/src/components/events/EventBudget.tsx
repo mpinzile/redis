@@ -431,7 +431,7 @@ const EventBudget = ({ eventId, eventTitle, eventBudget, eventType, eventTypeNam
               {includesEstimates ? 'Overall Budget (incl. estimates)' : 'Overall Event Budget'}
             </p>
             <p className="text-lg font-bold text-foreground mt-0.5">{formatPrice(overallBudget)}</p>
-            <p className="text-[11px] text-muted-foreground mt-1">{pendingItems} pending · {items.length} total</p>
+            <p className="text-[11px] text-muted-foreground mt-1">{pendingItems} pending - {items.length} total</p>
           </CardContent>
         </Card>
       </div>

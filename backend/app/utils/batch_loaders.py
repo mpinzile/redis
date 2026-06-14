@@ -750,6 +750,16 @@ def build_event_summaries(db: Session, events: List[Event]) -> List[Dict]:
             "budget": float(event.budget) if event.budget else None,
             "currency": currency_map.get(str(event.currency_id)) if event.currency_id else None,
             "dress_code": event.dress_code, "special_instructions": event.special_instructions,
+            "extra_details": getattr(event, "extra_details", None),
+            "guest_of_honor": getattr(event, "guest_of_honor", None),
+            "what_to_expect": event.what_to_expect,
+            "what_to_expect_notes": event.what_to_expect_notes,
+            "reminder_contact_phone": event.reminder_contact_phone,
+            "contribution_payment_instructions": event.contribution_payment_instructions,
+            "invitation_template_id": event.invitation_template_id,
+            "invitation_accent_color": event.invitation_accent_color,
+            "invitation_sample_names": event.invitation_sample_names,
+            "invitation_content": event.invitation_content,
             "rsvp_deadline": s.rsvp_deadline.isoformat() if s and s.rsvp_deadline else None,
             "contribution_enabled": s.contributions_enabled if s else False,
             "contribution_target": c["contribution_target"],
@@ -764,6 +774,7 @@ def build_event_summaries(db: Session, events: List[Event]) -> List[Dict]:
             "created_at": event.created_at.isoformat() if event.created_at else None,
             "updated_at": event.updated_at.isoformat() if event.updated_at else None,
         })
+
     return result
 
 

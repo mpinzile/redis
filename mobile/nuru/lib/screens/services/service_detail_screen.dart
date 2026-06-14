@@ -20,7 +20,7 @@ import '../../widgets/received_payments_panel.dart';
 import '../../core/widgets/nuru_skeleton.dart';
 import '../../widgets/app_select.dart';
 
-/// Owner's Service Detail — matches web ServiceDetail.tsx
+/// Owner's Service Detail - matches web ServiceDetail.tsx
 /// Tabs: Overview, Calendar, Reviews, Payments
 class ServiceDetailScreen extends StatefulWidget {
   final String serviceId;
@@ -87,7 +87,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       _service = svc;
       _packages = svc['packages'] is List ? svc['packages'] as List : [];
       _introMedia = svc['intro_media'] is List ? svc['intro_media'] as List : [];
-      // Calendar is hidden behind a tab — don't show its skeleton on first paint.
+      // Calendar is hidden behind a tab - don't show its skeleton on first paint.
       _calendarLoading = false;
     });
     // Only fetch intro media separately if it wasn't already inlined in the payload.
@@ -176,7 +176,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   String _fmtPrice(dynamic p) {
     if (p == null) return 'Price on request';
     final n = (p is num) ? p.toInt() : (int.tryParse(p.toString().replaceAll(RegExp(r'[^\d]'), '')) ?? 0);
-    if (n == 0) return '—';
+    if (n == 0) return '-';
     return '${getActiveCurrency()} ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
   }
 
@@ -219,14 +219,14 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           // Title block under hero (chips)
           SliverToBoxAdapter(child: _titleBlock(title, category, rating, reviewCount, location, isPending)),
 
-          // KPI Dashboard — 6 metrics mirroring web ServiceDetail
+          // KPI Dashboard - 6 metrics mirroring web ServiceDetail
           SliverToBoxAdapter(child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Column(children: [
               Row(children: [
-                _kpiCard('Revenue', totalRevenue > 0 ? _fmtPrice(totalRevenue.toInt()) : '—', const Color(0xFF1B9E47), Icons.attach_money_rounded),
+                _kpiCard('Revenue', totalRevenue > 0 ? _fmtPrice(totalRevenue.toInt()) : '-', const Color(0xFF1B9E47), Icons.attach_money_rounded),
                 const SizedBox(width: 10),
-                _kpiCard('Rating', rating is num && rating > 0 ? (rating as num).toStringAsFixed(1) : '—', const Color(0xFFB45309), Icons.star_rounded),
+                _kpiCard('Rating', rating is num && rating > 0 ? (rating as num).toStringAsFixed(1) : '-', const Color(0xFFB45309), Icons.star_rounded),
                 const SizedBox(width: 10),
                 _kpiCard('Reviews', '$reviewCount', const Color(0xFF2563EB), Icons.rate_review_outlined),
               ]),
@@ -241,7 +241,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   () {
                     final done = (s['completed_events'] is num) ? (s['completed_events'] as num).toInt() : 0;
                     final total = done + upcomingBookings.length;
-                    if (total == 0) return '—';
+                    if (total == 0) return '-';
                     return '${((done / total) * 100).round()}%';
                   }(),
                   const Color(0xFF1B9E47), Icons.trending_up_rounded,
@@ -335,7 +335,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     );
   }
 
-  // Title block under hero — chips for category, rating, location
+  // Title block under hero - chips for category, rating, location
   Widget _titleBlock(String title, String category, dynamic rating, dynamic reviewCount, String location, bool isPending) {
     final ratingNum = rating is num ? rating.toDouble() : 0.0;
     final hasRating = ratingNum > 0;
@@ -449,7 +449,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     );
   }
 
-  // Legacy alias — kept for downstream call sites
+  // Legacy alias - kept for downstream call sites
   Widget _backBtn() => _circleBtn(asset: 'assets/icons/chevron-left-icon.svg', onTap: () => Navigator.pop(context));
 
   Widget _kpiCard(String label, String value, Color color, IconData icon) {
@@ -596,9 +596,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
 
   Widget _infoGrid(Map<String, dynamic> s) {
     final items = [
-      {'label': 'Category', 'value': _safeNestedString(s['service_category'], 'name') ?? s['category']?.toString() ?? '—'},
+      {'label': 'Category', 'value': _safeNestedString(s['service_category'], 'name') ?? s['category']?.toString() ?? '-'},
       {'label': 'On Nuru', 'value': _timeOnPlatform(s['created_at']?.toString())},
-      {'label': 'Location', 'value': s['location']?.toString() ?? '—'},
+      {'label': 'Location', 'value': s['location']?.toString() ?? '-'},
       {'label': 'Availability', 'value': s['availability']?.toString() ?? 'available'},
     ];
     return Row(children: items.map((m) => Expanded(child: Container(

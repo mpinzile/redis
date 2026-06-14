@@ -10,7 +10,7 @@ const Trust = () => {
 
   return (
     <EditorialFeaturePage
-      kicker="Service · 09 — Trust"
+      kicker="Service - 09 - Trust"
       title="Trust, engineered into every transaction."
       lead="A vendor takes money and disappears. A contribution goes missing. A booking is double-charged. Nuru is built so these stories stop. Every payment is secured, confirmed, reviewed and recorded."
       specs={[
@@ -34,7 +34,7 @@ const Trust = () => {
         },
         {
           title: "Payments that don't vanish.",
-          lead: "Deposits sit in protected payments until the vendor delivers. Milestones release funds in stages — never lump-sum, never blind.",
+          lead: "Deposits sit in protected payments until the vendor delivers. Milestones release funds in stages · never lump-sum, never blind.",
           bullets: [
             "Deposit, milestone, final-settlement model.",
             "Released only on organiser confirmation.",

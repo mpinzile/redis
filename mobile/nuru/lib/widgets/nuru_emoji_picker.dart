@@ -6,7 +6,7 @@ import '../core/theme/app_colors.dart';
 
 /// Modern, iOS-style emoji picker used globally across the app.
 ///
-/// Fully responsive — adapts grid columns, font sizes, and rail width to the
+/// Fully responsive - adapts grid columns, font sizes, and rail width to the
 /// available constraints to avoid pixel-overflow on small phones. The search
 /// input has no inner border (the surrounding pill provides the only border).
 class NuruEmojiPicker extends StatefulWidget {
@@ -307,7 +307,7 @@ class _NuruEmojiPickerState extends State<NuruEmojiPicker> {
                 ),
               ),
 
-              // Bottom action bar — Recent + Frequently Used (no GIF)
+              // Bottom action bar - Recent + Frequently Used (no GIF)
               if (!veryShort)
                 Container(
                   padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),

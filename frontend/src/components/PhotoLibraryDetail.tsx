@@ -343,7 +343,7 @@ const PhotoLibraryDetail = () => {
             </div>
             <p className="text-lg font-semibold text-foreground mb-1">No photos yet</p>
             <p className="text-sm text-muted-foreground">Click to upload your event photos</p>
-            <p className="text-xs text-muted-foreground mt-2">Max {MAX_IMAGE_MB}MB per image · Up to {STORAGE_LIMIT_MB}MB total storage</p>
+            <p className="text-xs text-muted-foreground mt-2">Max {MAX_IMAGE_MB}MB per image - Up to {STORAGE_LIMIT_MB}MB total storage</p>
           </div>
         ) : (
           <div className="border-2 border-dashed border-border rounded-2xl p-16 text-center">

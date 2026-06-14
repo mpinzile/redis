@@ -14,10 +14,10 @@ import '../../core/services/call_ui_coordinator.dart';
 /// WhatsApp-style 1:1 voice call screen.
 ///
 /// Handles BOTH:
-///   • Outgoing — caller initiates via [VoiceCallScreen.outgoing]. We already
+///   • Outgoing - caller initiates via [VoiceCallScreen.outgoing]. We already
 ///     have a LiveKit token from `/calls/start`, so we connect immediately and
 ///     show "Calling…" until a remote participant joins.
-///   • Incoming — callee accepts from CallKit / in-app and gets routed here
+///   • Incoming - callee accepts from CallKit / in-app and gets routed here
 ///     via [VoiceCallScreen.incoming]. We call `/calls/{id}/answer` to fetch
 ///     the LiveKit token, then connect.
 ///
@@ -237,7 +237,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   }
 
   void _onRemoteLeft() {
-    // Other side dropped — end the call from our side too.
+    // Other side dropped - end the call from our side too.
     _hangup();
   }
 

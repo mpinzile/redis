@@ -1,6 +1,6 @@
 /// Standalone, deep-linkable post details screen for /post/:id.
 ///
-/// Public endpoint: GET /api/v1/posts/{id}/public — renders without a session.
+/// Public endpoint: GET /api/v1/posts/{id}/public - renders without a session.
 /// Falls back to friendly states for private / deleted / not-found. Protected
 /// actions (comment, react, follow, message) show a sign-in CTA only when the
 /// user tries to use them.

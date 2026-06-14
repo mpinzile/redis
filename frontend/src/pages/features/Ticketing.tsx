@@ -10,7 +10,7 @@ const Ticketing = () => {
 
   return (
     <EditorialFeaturePage
-      kicker="Service · 08 — Ticketing"
+      kicker="Service - 08 - Ticketing"
       title="Sell tickets without selling your soul."
       lead="Concerts, conferences, fundraisers, sports days, exclusive dinners. Set tiers, take mobile money or card, scan at the door. No predatory fees, no slow payouts, no walk-away guests."
       specs={[
@@ -22,7 +22,7 @@ const Ticketing = () => {
       sections={[
         {
           title: "A storefront in minutes.",
-          lead: "Publish a public event page with tiered tickets, descriptions, dates and venue. Share a single link — buyers checkout in one screen.",
+          lead: "Publish a public event page with tiered tickets, descriptions, dates and venue. Share a single link · buyers checkout in one screen.",
           bullets: [
             "Multiple tiers (Early, Regular, VIP, Group).",
             "Time-based and quantity-based releases.",

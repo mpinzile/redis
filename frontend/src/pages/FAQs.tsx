@@ -44,12 +44,12 @@ const TOPICS: Topic[] = [
 const FAQS: Faq[] = [
   {
     q: "What is Nuru Workspace?",
-    a: "Nuru Workspace is the operating platform for every event — weddings, conferences, memorials, fundraisers, corporate events and more, anywhere in the world. Organisers, vendors, contributors and guests work in one place — planning, payments, RSVPs, ticketing and check-ins, recorded with the rigor of a bank.",
+    a: "Nuru Workspace is the operating platform for every event · weddings, conferences, memorials, fundraisers, corporate events and more, anywhere in the world. Organisers, vendors, contributors and guests work in one place · planning, payments, RSVPs, ticketing and check-ins, recorded with the rigor of a bank.",
     topics: ["Getting started"],
   },
   {
     q: "Is Nuru free to use?",
-    a: "Opening a workspace is free. Inviting your committee, building budgets, sending invitations and tracking RSVPs are all free. You only pay a small fee when money moves — contributions, ticket sales or vendor bookings.",
+    a: "Opening a workspace is free. Inviting your committee, building budgets, sending invitations and tracking RSVPs are all free. You only pay a small fee when money moves · contributions, ticket sales or vendor bookings.",
     topics: ["Getting started", "Payments"],
   },
   {
@@ -74,7 +74,7 @@ const FAQS: Faq[] = [
   },
   {
     q: "How fast does money settle to the organiser?",
-    a: "Cleared contributions and ticket sales settle within 24 hours. Vendor deposits sit in protected payments until the milestones you agreed to are met — never released blindly.",
+    a: "Cleared contributions and ticket sales settle within 24 hours. Vendor deposits sit in protected payments until the milestones you agreed to are met · never released blindly.",
     topics: ["Payments"],
   },
   {
@@ -84,7 +84,7 @@ const FAQS: Faq[] = [
   },
   {
     q: "What if a vendor takes a deposit and disappears?",
-    a: "Vendor deposits are held in protected payments and only released as milestones are met. If something goes wrong you can open a structured dispute — both sides submit evidence and a Nuru reviewer mediates. See the Trust & Protection page for details.",
+    a: "Vendor deposits are held in protected payments and only released as milestones are met. If something goes wrong you can open a structured dispute · both sides submit evidence and a Nuru reviewer mediates. See the Trust & Protection page for details.",
     topics: ["Vendors", "Payments"],
   },
   {
@@ -114,17 +114,17 @@ const FAQS: Faq[] = [
   },
   {
     q: "Can multiple organisers and committees coordinate inside one event?",
-    a: "Yes. Add organisers, committee leads (food, decor, transport, entertainment) and contributors with role-based access. Each committee gets a sub-budget, a channel, and built-in video meetings — no more chat-app spaghetti.",
+    a: "Yes. Add organisers, committee leads (food, decor, transport, entertainment) and contributors with role-based access. Each committee gets a sub-budget, a channel, and built-in video meetings · no more chat-app spaghetti.",
     topics: ["Getting started"],
   },
   {
     q: "Does Nuru have built-in video meetings?",
-    a: "Yes — HD browser-based video meetings open from any event workspace. No installs, no separate accounts. Decisions made in calls are logged into the event activity automatically.",
+    a: "Yes · HD browser-based video meetings open from any event workspace. No installs, no separate accounts. Decisions made in calls are logged into the event activity automatically.",
     topics: ["Getting started"],
   },
   {
     q: "How is my data protected?",
-    a: "Personal information, event data and payment records are stored encrypted. Access is role-based — contributors only see what's appropriate. See the Privacy Policy for the full data lifecycle, retention and deletion rules.",
+    a: "Personal information, event data and payment records are stored encrypted. Access is role-based · contributors only see what's appropriate. See the Privacy Policy for the full data lifecycle, retention and deletion rules.",
     topics: ["Privacy"],
   },
   {
@@ -154,7 +154,7 @@ const FAQs = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   useMeta({
-    title: "FAQs — Payments, Vendors, RSVP, Tickets | Nuru",
+    title: "FAQs · Payments, Vendors, RSVP, Tickets | Nuru",
     description:
       "Answers about Nuru Workspace: payments and mobile money in Tanzania (M-Pesa, Airtel, Mixx by Yas) and Kenya, international USD contributions, vendor verification, RSVP, NuruCards, ticketing and privacy.",
   });
@@ -253,8 +253,8 @@ const FAQs = () => {
           {/* Result count */}
           <div className="text-[11px] tracking-[0.22em] uppercase text-muted-foreground/70 font-mono mb-4">
             {filteredFAQs.length} {filteredFAQs.length === 1 ? "result" : "results"}
-            {topic !== "All" && <> · {topic}</>}
-            {searchTerm && <> · "{searchTerm}"</>}
+            {topic !== "All" && <> - {topic}</>}
+            {searchTerm && <> - "{searchTerm}"</>}
           </div>
 
           {/* FAQ list */}

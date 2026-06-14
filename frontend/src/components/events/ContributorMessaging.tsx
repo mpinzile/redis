@@ -46,7 +46,7 @@ const DEFAULT_TEMPLATES: MessageTemplate[] = [
   {
     id: 'no_contribution_default',
     case: 'no_contribution',
-    label: 'Reminder - No Contribution',
+    label: 'Reminder · No Contribution',
     template: `{event_title}
 Habari {name},
 Tunakukumbusha kutoa mchango wako kwa ajili ya {event_name}.
@@ -55,7 +55,7 @@ Namba ya malipo: {payment}`,
   {
     id: 'partial_default',
     case: 'partial',
-    label: 'Reminder - Partial Contribution',
+    label: 'Reminder · Partial Contribution',
     template: `{event_title}
 Habari {name},
 Tunakukumbusha kumalizia mchango wako kwa ajili ya {event_name}.
@@ -64,7 +64,7 @@ Namba ya malipo: {payment}`,
   {
     id: 'completed_default',
     case: 'completed',
-    label: 'Thank You - Completed',
+    label: 'Thank You · Completed',
     template: `{event_title}
 Habari {name},
 Asante kwa kukamilisha mchango wako kwa ajili ya {event_name}. Tunathamini sana ushiriki wako.`,
@@ -72,7 +72,7 @@ Asante kwa kukamilisha mchango wako kwa ajili ya {event_name}. Tunathamini sana 
   {
     id: 'not_pledged_default',
     case: 'not_pledged',
-    label: 'Invite - Not Pledged',
+    label: 'Invite · Not Pledged',
     template: `{event_title}
 Habari {name},
 Tunakukaribisha kushiriki katika {event_name}. Tafadhali toa ahadi yako ya mchango.
@@ -335,7 +335,7 @@ const ContributorMessaging = ({ eventId, eventTitle = '', eventContributors, pay
         setSendResult(normalized);
         setResultOpen(true);
         if (normalized.idempotent_replay) {
-          toast.info('Already sent to these contributors in the last hour — skipped to avoid duplicates.');
+          toast.info('Already sent to these contributors in the last hour · skipped to avoid duplicates.');
         } else if (normalized.queued > 0 && normalized.sent === 0 && normalized.failed === 0) {
           toast.success(`Queued ${normalized.queued} message${normalized.queued !== 1 ? 's' : ''} for delivery`);
         } else if (normalized.sent === 0 && normalized.failed === 0 && normalized.queued === 0) {
@@ -474,7 +474,7 @@ const ContributorMessaging = ({ eventId, eventTitle = '', eventContributors, pay
             type="tel"
             value={contactPhoneOverride}
             onChange={e => setContactPhoneOverride(e.target.value)}
-            placeholder={defaultContactPhone || 'e.g. 0712 345 678 — leave empty to use organiser phone'}
+            placeholder={defaultContactPhone || 'e.g. 0712 345 678 - leave empty to use organiser phone'}
             className="text-sm"
           />
           <p className="text-[11px] text-muted-foreground">

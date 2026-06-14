@@ -8,7 +8,7 @@ import '../../core/utils/money_format.dart';
 import '../../providers/wallet_provider.dart';
 import 'receipt_screen.dart';
 
-/// CheckoutSheet — bottom sheet that mirrors the web `<CheckoutModal>`.
+/// CheckoutSheet - bottom sheet that mirrors the web `<CheckoutModal>`.
 ///
 /// Lets the user pay via Wallet, Mobile Money (STK push), or Bank transfer.
 /// Polls `/payments/{id}/status` until the gateway returns a terminal state.
@@ -297,7 +297,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
         _toast(final_['failure_reason']?.toString() ?? 'Payment $finalStatus');
         setState(() => _pendingMessage = null);
       } else {
-        _toast('Still processing — check Wallet › Transactions in a moment');
+        _toast('Still processing · check Wallet › Transactions in a moment');
         setState(() => _pendingMessage = null);
       }
       return;

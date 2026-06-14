@@ -12,7 +12,7 @@ class NotificationCenter {
   /// Live unread-notification count. Defaults to 0.
   static final ValueNotifier<int> unreadCount = ValueNotifier<int>(0);
 
-  /// Update the badge — no-op if [count] is null or already current.
+  /// Update the badge - no-op if [count] is null or already current.
   static void setUnread(int? count) {
     if (count == null) return;
     final clamped = count < 0 ? 0 : count;
