@@ -183,6 +183,16 @@ export const contributorsApi = {
   removeFromEvent: (eventId: string, eventContributorId: string) =>
     del(`/user-contributors/events/${eventId}/contributors/${eventContributorId}`),
 
+  /** Bulk-remove multiple contributors from an event (or all). */
+  bulkRemoveFromEvent: (
+    eventId: string,
+    payload: { ids?: string[]; all?: boolean },
+  ) =>
+    post<{ removed: number }>(
+      `/user-contributors/events/${eventId}/contributors/bulk-remove`,
+      payload,
+    ),
+
   /** Record payment for an event contributor */
   recordPayment: (eventId: string, eventContributorId: string, data: {
     amount: number;

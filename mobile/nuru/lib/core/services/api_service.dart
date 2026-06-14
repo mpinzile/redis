@@ -142,25 +142,30 @@ class ApiService {
 /// Auth-specific API calls matching web frontend exactly
 class AuthApi {
   /// POST /users/signup
+  ///
+  /// [username] is optional - when omitted (or empty), the backend generates
+  /// a unique username from first + last name. This mirrors the web
+  /// "Register missing member" flow used inside committee/guest dialogs.
   static Future<Map<String, dynamic>> signup({
     required String firstName,
     required String lastName,
-    required String username,
     required String phone,
     required String password,
+    String? username,
     String? email,
     String? registeredBy,
   }) {
     return ApiService.post('/users/signup', {
       'first_name': firstName,
       'last_name': lastName,
-      'username': username,
+      if (username != null && username.isNotEmpty) 'username': username,
       'phone': phone,
       'password': password,
       'email': email ?? '',
       if (registeredBy != null && registeredBy.isNotEmpty) 'registered_by': registeredBy,
     }, auth: false);
   }
+
 
   /// POST /auth/signin
   static Future<Map<String, dynamic>> signin({

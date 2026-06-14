@@ -1511,6 +1511,72 @@ def remove_from_event(event_id: str, ec_id: str, db: Session = Depends(get_db), 
     return standard_response(True, "Contributor removed from event")
 
 
+@router.post("/events/{event_id}/contributors/bulk-remove")
+def bulk_remove_from_event(
+    event_id: str,
+    body: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove many event contributors at once.
+
+    Body: ``{"ids": ["<event_contributor_id>", ...]}`` or
+    ``{"all": true}`` to remove every contributor on the event.
+
+    Only detaches them from the event — the underlying ``UserContributor``
+    rows in the organiser's address book are kept intact.
+    """
+    try:
+        eid = uuid.UUID(event_id)
+    except ValueError:
+        return standard_response(False, "Invalid event ID")
+
+    event, is_creator, _cm_del, _perms_del = _get_event_access(db, eid, current_user)
+    if not event or not is_creator:
+        return standard_response(False, "Only event creator can remove contributors")
+
+    raw_ids = body.get("ids") or []
+    select_all = bool(body.get("all"))
+
+    q = db.query(EventContributor).filter(EventContributor.event_id == eid)
+    if not select_all:
+        ecids: list[uuid.UUID] = []
+        for v in raw_ids:
+            try:
+                ecids.append(uuid.UUID(str(v)))
+            except Exception:
+                continue
+        if not ecids:
+            return standard_response(False, "No valid IDs provided")
+        q = q.filter(EventContributor.id.in_(ecids))
+
+    rows = q.all()
+    if not rows:
+        return standard_response(True, "Nothing to remove", {"removed": 0})
+
+    ec_id_list = [r.id for r in rows]
+    contribution_ids = [
+        c.id for c in db.query(EventContribution.id).filter(
+            EventContribution.event_contributor_id.in_(ec_id_list)
+        ).all()
+    ]
+    if contribution_ids:
+        db.query(ContributionThankYouMessage).filter(
+            ContributionThankYouMessage.contribution_id.in_(contribution_ids)
+        ).delete(synchronize_session=False)
+        db.query(EventContribution).filter(
+            EventContribution.event_contributor_id.in_(ec_id_list)
+        ).delete(synchronize_session=False)
+
+    db.query(EventContributor).filter(
+        EventContributor.id.in_(ec_id_list)
+    ).delete(synchronize_session=False)
+    db.commit()
+
+    return standard_response(True, f"Removed {len(ec_id_list)} contributor(s) from event", {"removed": len(ec_id_list)})
+
+
+
 # ══════════════════════════════════════════════
 # PAYMENTS
 # ══════════════════════════════════════════════

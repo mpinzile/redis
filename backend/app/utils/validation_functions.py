@@ -8,19 +8,40 @@ def validate_email(email: str) -> bool:
     return re.match(pattern, email) is not None
 
 
+def normalize_phone_number(value) -> str:
+    """
+    Pre-clean a phone value before validation.
+
+    Strips spaces, brackets, dots and hyphens. Preserves a leading '+' only;
+    any '+' that appears inside the number is removed. Always returns a
+    string (never None) so it's safe to pass straight into validators or
+    duplicate-detection helpers.
+    """
+    raw = str(value if value is not None else "").strip()
+    if not raw:
+        return ""
+    keeps_leading_plus = raw.startswith("+")
+    cleaned = re.sub(r"\s+", "", raw)
+    cleaned = re.sub(r"[().\-]", "", cleaned)
+    cleaned = cleaned.replace("+", "")
+    return f"+{cleaned}" if keeps_leading_plus else cleaned
+
+
 def validate_phone_number(phone: str) -> str:
     """
     Validates and normalises any phone number into international format (without +).
-    
+
     Accepts:
         - Local Tanzanian: 0653750805, 653750805
         - International with prefix: +255653750805, 255653750805
         - Any international number: +1234567890, 447911123456
-    
+        - Formatted inputs like "+1 (444) 123 4567", "255-764-432-456",
+          "+44.7700.900123" — formatting characters are stripped first.
+
     Returns normalised number (digits only, with country code).
     Raises ValueError if invalid.
     """
-    phone = phone.strip().replace(" ", "").replace("-", "")
+    phone = normalize_phone_number(phone)
 
     # Remove leading +
     if phone.startswith("+"):

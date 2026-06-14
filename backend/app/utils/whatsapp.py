@@ -127,6 +127,31 @@ def _send_whatsapp_sync(action: str, phone: str, params: dict, log_id: str | Non
     except Exception as _media_exc:  # noqa: BLE001
         print(f"[WhatsApp] media-safe swap skipped: {_media_exc}")
 
+    # ── WhatsApp template-param sanitization ─────────────────────────────
+    # Meta rejects any template body/header variable that contains
+    # new-line, tab, or more than 4 consecutive spaces (error 132000 /
+    # 132018: "Param text cannot have new-line/tab characters or more
+    # than 4 consecutive spaces"). Imported data (payment_instructions,
+    # organiser notes, etc.) often carries "\r\n". Strip it here so the
+    # guarantee applies to every action and every call site.
+    try:
+        if isinstance(params, dict):
+            MEDIA_KEYS = {"image_url", "media_url", "header_image", "document_url", "video_url"}
+            def _clean_wa_param(v):
+                if not isinstance(v, str):
+                    return v
+                s = v.replace("\r\n", " ").replace("\r", " ").replace("\n", " ").replace("\t", " ")
+                # Collapse runs of 5+ spaces down to 4 (Meta's hard limit).
+                import re as _re
+                s = _re.sub(r" {5,}", "    ", s)
+                return s.strip()
+            for k, v in list(params.items()):
+                if k in MEDIA_KEYS:
+                    continue
+                params[k] = _clean_wa_param(v)
+    except Exception as _san_exc:  # noqa: BLE001
+        print(f"[WhatsApp] param sanitize skipped: {_san_exc}")
+
     urls = [WHATSAPP_SEND_URL] if WHATSAPP_SEND_URL else []
     fallback_url = f"{CURRENT_FUNCTIONS_URL}/functions/v1/whatsapp-send"
     if fallback_url not in urls:

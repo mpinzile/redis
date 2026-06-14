@@ -10,6 +10,8 @@ import '../../../core/services/events_service.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/l10n/l10n_helper.dart';
+import 'register_missing_member_form.dart';
+
 
 class EventGuestsTab extends StatefulWidget {
   final String eventId;
@@ -460,7 +462,9 @@ class _EventGuestsTabState extends State<EventGuestsTab> with AutomaticKeepAlive
     bool searching = false;
     Map<String, dynamic>? selectedUser;
     bool submitting = false;
+    bool showRegisterForm = false;
     Timer? debounce;
+
 
     showModalBottomSheet(
       context: context,
@@ -478,59 +482,102 @@ class _EventGuestsTabState extends State<EventGuestsTab> with AutomaticKeepAlive
               children: [
                 Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
                 const SizedBox(height: 20),
-                Text('Invite Guest', style: appText(size: 18, weight: FontWeight.w700)),
+                Text(showRegisterForm ? 'Register a new guest' : 'Invite Guest', style: appText(size: 18, weight: FontWeight.w700)),
                 const SizedBox(height: 4),
-                Text('Search for a Nuru user to add as guest', style: appText(size: 13, color: AppColors.textTertiary)),
+                Text(showRegisterForm
+                    ? 'Add someone who is not yet on Nuru'
+                    : 'Search for a Nuru user to add as guest',
+                  style: appText(size: 13, color: AppColors.textTertiary)),
+
                 const SizedBox(height: 16),
-                TextField(
-                  controller: searchCtrl,
-                  autofocus: true,
-                  autocorrect: false,
-                  style: appText(size: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Search by name, email, or phone...',
-                    hintStyle: appText(size: 13, color: AppColors.textHint),
-                    prefixIcon: const Padding(padding: EdgeInsets.all(14), child: AppIcon('search', size: 18, color: AppColors.textHint)),
-                    filled: true, fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: const Color(0xFFE5E7EB), width: 1)),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                if (showRegisterForm)
+                  RegisterMissingMemberForm(
+                    submitLabel: 'Register guest',
+                    onCancel: () => setModalState(() => showRegisterForm = false),
+                    onRegistered: (user) => setModalState(() {
+                      selectedUser = user;
+                      showRegisterForm = false;
+                      searchResults = [];
+                      searchCtrl.clear();
+                    }),
+                  )
+                else ...[
+                  TextField(
+                    controller: searchCtrl,
+                    autofocus: true,
+                    autocorrect: false,
+                    style: appText(size: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, email, or phone...',
+                      hintStyle: appText(size: 13, color: AppColors.textHint),
+                      prefixIcon: const Padding(padding: EdgeInsets.all(14), child: AppIcon('search', size: 18, color: AppColors.textHint)),
+                      filled: true, fillColor: Colors.white,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: const Color(0xFFE5E7EB), width: 1)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onChanged: (q) {
+                      debounce?.cancel();
+                      if (q.trim().length < 2) { setModalState(() { searchResults = []; selectedUser = null; }); return; }
+                      debounce = Timer(const Duration(milliseconds: 400), () async {
+                        setModalState(() => searching = true);
+                        final res = await EventsService.searchUsers(q.trim());
+                        if (ctx.mounted) {
+                          setModalState(() {
+                            searching = false;
+                            if (res['success'] == true) {
+                              final data = res['data'];
+                              final rawList = data is List ? data : (data is Map ? (data['items'] ?? data['users'] ?? []) : []);
+                              searchResults = (rawList is List ? rawList : []).map((u) {
+                                if (u is! Map) return u;
+                                final m = Map<String, dynamic>.from(u);
+                                if ((m['first_name'] == null || m['first_name'] == '') && m['full_name'] != null) {
+                                  final parts = (m['full_name'] as String).split(' ');
+                                  m['first_name'] = parts.first;
+                                  m['last_name'] = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+                                }
+                                return m;
+                              }).toList();
+                            }
+                          });
+                        }
+                      });
+                    },
                   ),
-                  onChanged: (q) {
-                    debounce?.cancel();
-                    if (q.trim().length < 2) { setModalState(() { searchResults = []; selectedUser = null; }); return; }
-                    debounce = Timer(const Duration(milliseconds: 400), () async {
-                      setModalState(() => searching = true);
-                      final res = await EventsService.searchUsers(q.trim());
-                      if (ctx.mounted) {
-                        setModalState(() {
-                          searching = false;
-                          if (res['success'] == true) {
-                            final data = res['data'];
-                            final rawList = data is List ? data : (data is Map ? (data['items'] ?? data['users'] ?? []) : []);
-                            searchResults = (rawList is List ? rawList : []).map((u) {
-                              if (u is! Map) return u;
-                              final m = Map<String, dynamic>.from(u);
-                              if ((m['first_name'] == null || m['first_name'] == '') && m['full_name'] != null) {
-                                final parts = (m['full_name'] as String).split(' ');
-                                m['first_name'] = parts.first;
-                                m['last_name'] = parts.length > 1 ? parts.sublist(1).join(' ') : '';
-                              }
-                              return m;
-                            }).toList();
-                          }
-                        });
-                      }
-                    });
-                  },
-                ),
+                  const SizedBox(height: 12),
+                  if (searching)
+                    const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))),
+                  if (!searching && searchResults.isEmpty && searchCtrl.text.length >= 2)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Center(child: Text('No users found', style: appText(size: 13, color: AppColors.textTertiary))),
+                    ),
+                  if (selectedUser == null)
+                    InkWell(
+                      onTap: () => setModalState(() => showRegisterForm = true),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft.withOpacity(0.35),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+                        ),
+                        child: Row(children: [
+                          const AppIcon('user-add', size: 16, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text("Can't find them?", style: appText(size: 12, color: AppColors.textTertiary)),
+                              Text('Register missing guest', style: appText(size: 13, weight: FontWeight.w700, color: AppColors.primary)),
+                            ]),
+                          ),
+                          const AppIcon('arrow-right', size: 14, color: AppColors.primary),
+                        ]),
+                      ),
+                    ),
+                ],
                 const SizedBox(height: 12),
-                if (searching)
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))),
-                if (!searching && searchResults.isEmpty && searchCtrl.text.length >= 2)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Center(child: Text('No users found', style: appText(size: 13, color: AppColors.textTertiary))),
-                  ),
+
                 if (selectedUser != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
