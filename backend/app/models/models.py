@@ -746,6 +746,8 @@ class UserFeedGlow(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     feed_id = Column(UUID(as_uuid=True), ForeignKey('user_feeds.id', ondelete='CASCADE'))
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'))
+    # Optional reaction emoji. NULL = legacy/default heart.
+    emoji = Column(String(16), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
     # Relationships

@@ -32,16 +32,45 @@ class _GlimpseViewerScreenState extends State<GlimpseViewerScreen>
   VideoPlayerController? _vc;
   late final AnimationController _progress;
   static const _defaultDuration = Duration(seconds: 5);
+  bool _captionHidden = false;
+  // Persists for the lifetime of the session — WhatsApp-style sticky mute.
+  static bool _muted = false;
 
   @override
   void initState() {
     super.initState();
     _authorIdx = widget.initialAuthorIndex;
+    _momentIdx = _firstUnseenIndex(_authorIdx);
     _progress = AnimationController(vsync: this, duration: _defaultDuration)
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) _next();
       });
     _start();
+  }
+
+  /// Returns the index of the first not-yet-seen moment for the given author,
+  /// or 0 when every moment has already been seen.
+  int _firstUnseenIndex(int authorIndex) {
+    if (authorIndex < 0 || authorIndex >= widget.glimpses.length) return 0;
+    final group = widget.glimpses[authorIndex];
+    if (group is! Map) return 0;
+    final user = group['user'] is Map ? group['user'] as Map : const {};
+    // For your own glimpses always start from the beginning.
+    if (user['is_self'] == true) return 0;
+    final moments = group['moments'] is List ? group['moments'] as List : const [];
+    for (var i = 0; i < moments.length; i++) {
+      final m = moments[i];
+      if (m is Map && m['has_seen'] != true) return i;
+    }
+    return 0;
+  }
+
+  Future<void> _toggleMute() async {
+    setState(() => _muted = !_muted);
+    final c = _vc;
+    if (c != null && c.value.isInitialized) {
+      await c.setVolume(_muted ? 0.0 : 1.0);
+    }
   }
 
   @override
@@ -78,6 +107,7 @@ class _GlimpseViewerScreenState extends State<GlimpseViewerScreen>
         await c.initialize();
         if (!mounted || _vc != c) return;
         c.setLooping(false);
+        await c.setVolume(_muted ? 0.0 : 1.0);
         c.play();
         _progress.duration = c.value.duration > Duration.zero
             ? c.value.duration
@@ -278,9 +308,10 @@ class _GlimpseViewerScreenState extends State<GlimpseViewerScreen>
       setState(() => _momentIdx++);
       _start();
     } else if (_authorIdx < widget.glimpses.length - 1) {
+      final nextAuthor = _authorIdx + 1;
       setState(() {
-        _authorIdx++;
-        _momentIdx = 0;
+        _authorIdx = nextAuthor;
+        _momentIdx = _firstUnseenIndex(nextAuthor);
       });
       _start();
     } else {
@@ -359,6 +390,11 @@ class _GlimpseViewerScreenState extends State<GlimpseViewerScreen>
       body: GestureDetector(
         onVerticalDragEnd: (d) {
           if ((d.primaryVelocity ?? 0) > 200) Navigator.of(context).pop();
+        },
+        onLongPress: () {
+          if (type != 'text' && caption.isNotEmpty) {
+            setState(() => _captionHidden = !_captionHidden);
+          }
         },
         onTapUp: (d) {
           final w = MediaQuery.of(context).size.width;
@@ -440,21 +476,24 @@ class _GlimpseViewerScreenState extends State<GlimpseViewerScreen>
                           ],
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          alignment: Alignment.center,
-                          child: SvgPicture.asset(
-                            'assets/icons/close-icon.svg',
-                            width: 18,
-                            height: 18,
-                            colorFilter: const ColorFilter.mode(
-                                Colors.white, BlendMode.srcIn),
+                      if (type == 'video')
+                        GestureDetector(
+                          onTap: _toggleMute,
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                         ),
-                      ),
                       if (_isOwnGlimpse)
                         GestureDetector(
                           onTap: _confirmDelete,
@@ -475,8 +514,8 @@ class _GlimpseViewerScreenState extends State<GlimpseViewerScreen>
                 ],
               ),
             ),
-            // Premium caption block for media moments
-            if (type != 'text' && caption.isNotEmpty)
+            // Premium caption block for media moments (hidden via long-press)
+            if (type != 'text' && caption.isNotEmpty && !_captionHidden)
               Positioned(
                 left: 0,
                 right: 0,
@@ -607,12 +646,21 @@ class _CaptionBlockState extends State<_CaptionBlock> {
   @override
   Widget build(BuildContext context) {
     final isLong = widget.caption.length > 110;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
+    // White text + dark gradient scrim guarantees legibility even on
+    // bright/white media. Subtle text shadow adds an extra safety net.
+    const shadows = <Shadow>[
+      Shadow(color: Color(0xCC000000), blurRadius: 8, offset: Offset(0, 1)),
+      Shadow(color: Color(0x66000000), blurRadius: 18),
+    ];
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: isLong ? () => setState(() => _expanded = !_expanded) : null,
       child: Container(
-        padding: EdgeInsets.fromLTRB(
-            18, 28, 18, 28 + MediaQuery.of(context).padding.bottom),
+        width: double.infinity,
+        padding: EdgeInsets.fromLTRB(20, 36, 20, 24 + bottomInset),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -620,40 +668,47 @@ class _CaptionBlockState extends State<_CaptionBlock> {
             colors: [
               Colors.transparent,
               Colors.black.withOpacity(0.55),
-              Colors.black.withOpacity(0.85),
+              Colors.black.withOpacity(0.92),
             ],
             stops: const [0.0, 0.45, 1.0],
           ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            AnimatedSize(
-              duration: const Duration(milliseconds: 180),
-              alignment: Alignment.topLeft,
-              child: Text(
-                widget.caption,
-                maxLines: _expanded ? 12 : 3,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 14.5,
-                  height: 1.45,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.1,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                alignment: Alignment.topCenter,
+                child: Text(
+                  widget.caption,
+                  textAlign: TextAlign.center,
+                  maxLines: _expanded ? 14 : 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    height: 1.45,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.1,
+                    shadows: shadows,
+                  ),
                 ),
               ),
             ),
             if (isLong) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 _expanded ? 'Tap to collapse' : 'Tap to read more',
+                textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white70,
+                  color: Colors.white,
                   letterSpacing: 0.3,
+                  shadows: shadows,
                 ),
               ),
             ],

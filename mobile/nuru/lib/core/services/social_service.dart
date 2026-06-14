@@ -197,11 +197,13 @@ class SocialService {
   // GLOW (Like) - ❤️
 
   /// POST /posts/:id/glow
-  static Future<Map<String, dynamic>> glowPost(String postId) async {
+  /// Optional [emoji] picks the reaction emoji (defaults to ❤️ server-side).
+  static Future<Map<String, dynamic>> glowPost(String postId, {String? emoji}) async {
     try {
       final res = await http.post(
         Uri.parse('$_baseUrl/posts/$postId/glow'),
         headers: await _headers(),
+        body: emoji != null ? jsonEncode({'emoji': emoji}) : null,
       );
       return jsonDecode(res.body);
     } catch (e) {

@@ -99,6 +99,7 @@ import EventGroupWorkspace from "@/pages/EventGroupWorkspace";
 import GuestGroupJoin from "@/pages/GuestGroupJoin";
 import MyGroups from "@/components/eventGroups/MyGroups";
 import WhatsappLogs from "@/pages/WhatsappLogs";
+import BackgroundTasks from "@/pages/BackgroundTasks";
 import MyContributions from "@/pages/MyContributions";
 import PublicContribute from "@/pages/PublicContribute";
 import PublicContributionReceipt from "@/pages/PublicContributionReceipt";
@@ -245,6 +246,7 @@ function InnerRoutes() {
           <Route path="/services/photo-libraries/:serviceId" element={<ServicePhotoLibraries />} />
           <Route path="/photo-library/:libraryId" element={<PhotoLibraryDetail />} />
           <Route path="/whatsapp-logs" element={<WhatsappLogs />} />
+          <Route path="/background-tasks" element={<BackgroundTasks />} />
           
           
         </Route>

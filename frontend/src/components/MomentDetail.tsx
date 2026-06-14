@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { socialApi } from '@/lib/api/social';
+import { EmojiPickerPopover } from '@/components/emoji/EmojiPickerPopover';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -82,7 +83,7 @@ const InlineReplyInput = ({
     <div className="flex gap-2 items-start mt-2">
       <UserAvatar src={currentUser?.avatar} name={currentUser?.first_name || '?'} size="sm" />
       <div className="flex-1 flex items-start gap-1.5">
-        <div className="flex-1 border border-border rounded-full px-3 py-1.5 bg-muted/30">
+        <div className="flex-1 flex items-center gap-1.5 border border-border rounded-full px-3 py-1.5 bg-muted/30">
           <input
             type="text"
             value={text}
@@ -90,8 +91,21 @@ const InlineReplyInput = ({
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }}
             placeholder={placeholder}
             autoFocus={autoFocus}
-            className="w-full bg-transparent text-xs md:text-sm outline-none placeholder:text-muted-foreground"
+            className="flex-1 bg-transparent text-xs md:text-sm outline-none placeholder:text-muted-foreground"
           />
+          <EmojiPickerPopover
+            onSelect={(e) => setText((t) => t + e)}
+            side="top"
+            align="end"
+          >
+            <button
+              type="button"
+              className="text-base leading-none px-1 text-muted-foreground hover:text-foreground"
+              aria-label="Insert emoji"
+            >
+              😊
+            </button>
+          </EmojiPickerPopover>
         </div>
         <button
           onClick={handleSubmit}

@@ -106,6 +106,104 @@ def _find_address_book_contributor_by_phone(db, owner_id, phone: str):
     )
 
 
+def _dispatch_notification(item, *, event, currency, organizer_phone, pay_instr) -> Dict[str, Any]:
+    """Send WhatsApp + SMS for a single notification item.
+
+    Returns ``{ok, sent_channels, errors}``. Each channel attempt is isolated
+    so a WhatsApp failure does not block the SMS, and vice versa.
+    """
+    from utils.offline_claims import contributor_notify_phones
+    from utils.sms import (
+        sms_contribution_recorded,
+        sms_contribution_target_set,
+        sms_contribution_target_updated,
+    )
+    from utils.whatsapp import (
+        wa_contribution_recorded,
+        wa_contribution_target_set,
+        wa_contribution_target_updated,
+    )
+
+    ec = item["event_contributor"]
+    recipients = contributor_notify_phones(ec) or []
+    sent_channels = 0
+    errs: List[str] = []
+    if not recipients:
+        return {"ok": False, "sent_channels": 0, "errors": ["no recipient phone"], "recipients": 0}
+
+    for ph in recipients:
+        # Refresh per-recipient WA log context so each row carries its own metadata
+        try:
+            from utils.wa_logging import set_wa_log_context
+            set_wa_log_context(
+                event_id=str(event.id), event_name=event.name,
+                source_module="contributor_imports",
+                purpose="contribution_target",
+                recipient_type="contributor",
+                recipient_id=str(getattr(ec, "id", "")) or None,
+                recipient_name=item.get("contributor_name"),
+            )
+        except Exception:
+            pass
+
+        # WhatsApp
+        try:
+            if item["kind"] == "updated":
+                wa_contribution_target_updated(
+                    ph, item["contributor_name"], event.name,
+                    increase=(item["amount"] - item["old_pledge"]),
+                    total_target=item["amount"], currency=currency,
+                    organizer_phone=organizer_phone, payment_instructions=pay_instr,
+                )
+            elif item["kind"] == "recorded":
+                wa_contribution_recorded(
+                    ph, item["contributor_name"], event.name,
+                    item["amount"], item["pledge"], item["total_paid"], currency,
+                    organizer_phone=organizer_phone,
+                )
+            else:
+                wa_contribution_target_set(
+                    ph, item["contributor_name"], event.name,
+                    item["amount"], 0, currency,
+                    organizer_phone=organizer_phone, payment_instructions=pay_instr,
+                )
+            sent_channels += 1
+        except Exception as e:
+            errs.append(f"WA: {e}")
+
+        # SMS
+        try:
+            if item["kind"] == "updated":
+                sms_contribution_target_updated(
+                    ph, item["contributor_name"], event.name,
+                    increase=(item["amount"] - item["old_pledge"]),
+                    total_target=item["amount"], currency=currency,
+                    organizer_phone=organizer_phone, payment_instructions=pay_instr,
+                )
+            elif item["kind"] == "recorded":
+                sms_contribution_recorded(
+                    ph, item["contributor_name"], event.name,
+                    item["amount"], item["pledge"], item["total_paid"], currency,
+                    organizer_phone=organizer_phone,
+                )
+            else:
+                sms_contribution_target_set(
+                    ph, item["contributor_name"], event.name,
+                    item["amount"], 0, currency,
+                    organizer_phone=organizer_phone, payment_instructions=pay_instr,
+                )
+            sent_channels += 1
+        except Exception as e:
+            errs.append(f"SMS: {e}")
+
+    return {
+        "ok": sent_channels > 0,
+        "sent_channels": sent_channels,
+        "errors": errs,
+        "recipients": len(recipients),
+    }
+
+
 @celery_app.task(name="contributors.process_import_job", bind=True, max_retries=2)
 def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
     db = SessionLocal()
@@ -151,14 +249,27 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
             format_phone_display(organizer.phone) if organizer and organizer.phone else None
         )
 
+        # Pre-resolve payment instructions once (cheap & deterministic).
+        from utils.payment_instructions import resolve_payment_instructions
+        pay_instr = resolve_payment_instructions(event)
+
         errors: List[Dict[str, Any]] = []
         success_count = 0
         failure_count = 0
-        notifications: List[Dict[str, Any]] = []
         wa_phones: set[str] = set()
+
+        # Per-batch summary counters surfaced to the user.
+        inserted = 0
+        updated = 0
+        duplicates_in_file = 0
+        notified_total = 0
+        notify_failed = 0
+        notify_errors: List[Dict[str, Any]] = []
+        seen_phone_keys: set[str] = set()
 
         for idx, row in enumerate(rows):
             row_num = idx + 1
+            row_outcome = None  # "inserted" | "updated" | "duplicate"
             try:
                 name = (row.get("name") or "").strip()
                 phone_raw = (row.get("phone") or "").strip()
@@ -181,14 +292,16 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                         failure_count += 1
                         continue
 
+                pkey = _phone_key(phone) if phone else ""
+                if pkey and pkey in seen_phone_keys:
+                    row_outcome = "duplicate"
+                if pkey:
+                    seen_phone_keys.add(pkey)
+
                 ec = _find_event_contributor_by_phone(db, event.id, phone) if phone else None
                 if not ec and not phone:
                     ec = _find_event_contributor_by_name_without_phone(db, event.id, name)
 
-                # Upsert UserContributor without deleting anything. Phone is
-                # authoritative when present; rows without a phone are recorded
-                # as new/no-phone contributors unless the same no-phone name is
-                # already linked to this event.
                 contributor = ec.contributor if ec and ec.contributor else None
                 if not contributor and phone:
                     contributor = _find_address_book_contributor_by_phone(db, owner_id, phone)
@@ -204,9 +317,6 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                     db.add(contributor)
                     db.flush()
                 else:
-                    # Never overwrite the global ``name`` — per-event names
-                    # live on EventContributor.display_name. We only backfill
-                    # the global phone so subsequent uploads stay in sync.
                     if phone and contributor.phone != phone:
                         clash = (
                             db.query(UserContributor.id)
@@ -231,30 +341,29 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                         .first()
                     )
 
-                # Resolve per-event display name. NULL when it would just
-                # duplicate the global name so explicit overrides remain
-                # distinguishable.
                 desired_display = name if (name and name != contributor.name) else None
+
+                notification_item: Dict[str, Any] | None = None
 
                 if mode == "targets":
                     if ec:
-                        # Update display_name if the uploaded row carries a
-                        # different name than what this event currently shows.
                         current_effective = (ec.display_name or contributor.name or "").strip()
                         if name and name != current_effective:
                             ec.display_name = desired_display
                         old_pledge = float(ec.pledge_amount or 0)
                         ec.pledge_amount = amount
                         ec.updated_at = now
+                        if row_outcome is None:
+                            row_outcome = "updated"
                         if send_sms and amount > 0 and amount != old_pledge:
                             ec.contributor = contributor
-                            notifications.append({
+                            notification_item = {
                                 "event_contributor": ec,
                                 "contributor_name": (ec.display_name or contributor.name),
                                 "amount": amount,
                                 "old_pledge": old_pledge,
                                 "kind": "updated" if old_pledge > 0 and amount > old_pledge else "set",
-                            })
+                            }
                     else:
                         ec = EventContributor(
                             id=uuid.uuid4(),
@@ -269,15 +378,16 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                         )
                         db.add(ec)
                         db.flush()
+                        row_outcome = "inserted"
                         if send_sms and amount > 0:
                             ec.contributor = contributor
-                            notifications.append({
+                            notification_item = {
                                 "event_contributor": ec,
                                 "contributor_name": (ec.display_name or contributor.name),
                                 "amount": amount,
                                 "old_pledge": 0,
                                 "kind": "set",
-                            })
+                            }
                 else:
                     if not ec:
                         ec = EventContributor(
@@ -293,13 +403,14 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                         )
                         db.add(ec)
                         db.flush()
+                        row_outcome = "inserted"
                     else:
                         current_effective = (ec.display_name or contributor.name or "").strip()
                         if name and name != current_effective:
                             ec.display_name = desired_display
                             ec.updated_at = now
-                    # Contribution recording delegates to existing helpers
-                    # to keep semantics aligned with the inline path.
+                        if row_outcome is None:
+                            row_outcome = "updated"
                     if amount > 0:
                         try:
                             from models import EventContribution, PaymentMethodEnum, ContributionStatusEnum
@@ -325,140 +436,83 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                             ))
                             if send_sms:
                                 ec.contributor = contributor
-                                notifications.append({
+                                notification_item = {
                                     "event_contributor": ec,
                                     "contributor_name": (ec.display_name or contributor.name),
                                     "amount": amount,
                                     "total_paid": total_paid_before + amount,
                                     "pledge": float(ec.pledge_amount or 0),
                                     "kind": "recorded",
-                                })
+                                }
                         except Exception as e:
                             errors.append({"row": row_num, "message": f"Payment record failed: {e}"})
                             failure_count += 1
                             continue
+
+                # Flush the row before dispatching so the EC row exists for
+                # downstream logging. We commit periodically below.
+                db.flush()
+
+                # Send notification INLINE so progress is real and a single
+                # send failure cannot kill the entire batch.
+                if notification_item is not None:
+                    try:
+                        res = _dispatch_notification(
+                            notification_item,
+                            event=event, currency=currency,
+                            organizer_phone=organizer_phone, pay_instr=pay_instr,
+                        )
+                        if res.get("ok"):
+                            notified_total += 1
+                        else:
+                            notify_failed += 1
+                            notify_errors.append({
+                                "row": row_num,
+                                "name": notification_item["contributor_name"],
+                                "phone": phone or "",
+                                "errors": res.get("errors") or [],
+                            })
+                    except Exception as e:
+                        notify_failed += 1
+                        notify_errors.append({
+                            "row": row_num,
+                            "name": notification_item["contributor_name"],
+                            "phone": phone or "",
+                            "errors": [str(e)],
+                        })
+
+                if row_outcome == "duplicate":
+                    duplicates_in_file += 1
+                elif row_outcome == "updated":
+                    updated += 1
+                elif row_outcome == "inserted":
+                    inserted += 1
 
                 success_count += 1
             except Exception as e:  # pragma: no cover
                 errors.append({"row": row_num, "message": str(e)})
                 failure_count += 1
             finally:
-                # Periodic progress checkpoint
-                if (idx + 1) % 25 == 0:
+                if (idx + 1) % 10 == 0:
                     job.processed_rows = idx + 1
                     job.successful_rows = success_count
                     job.failed_rows = failure_count
                     job.errors = errors
+                    summary = dict(job.payload.get("summary") or {})
+                    summary.update({
+                        "inserted": inserted,
+                        "updated": updated,
+                        "duplicates_in_file": duplicates_in_file,
+                        "notified": notified_total,
+                        "notify_failed": notify_failed,
+                        "notify_errors": notify_errors[-100:],  # cap
+                    })
+                    payload = dict(job.payload or {})
+                    payload["summary"] = summary
+                    job.payload = payload
                     db.commit()
 
         db.commit()
-
-        if notifications:
-            try:
-                from utils.offline_claims import contributor_notify_phones
-                from utils.payment_instructions import resolve_payment_instructions
-                from utils.sms import sms_contribution_recorded, sms_contribution_target_set, sms_contribution_target_updated
-                from utils.whatsapp import wa_contribution_recorded, wa_contribution_target_set, wa_contribution_target_updated
-                try:
-                    from utils.wa_logging import set_wa_log_context
-                    set_wa_log_context(event_id=str(event.id), event_name=event.name,
-                                       source_module="contributor_imports", purpose="contribution_target",
-                                       recipient_type="contributor")
-                except Exception: pass
-                pay_instr = resolve_payment_instructions(event)
-                for item in notifications:
-                    ec = item["event_contributor"]
-                    recipients = contributor_notify_phones(ec)
-                    for ph in recipients:
-                        try:
-                            if item["kind"] == "updated":
-                                wa_contribution_target_updated(
-                                    ph,
-                                    item["contributor_name"],
-                                    event.name,
-                                    increase=(item["amount"] - item["old_pledge"]),
-                                    total_target=item["amount"],
-                                    currency=currency,
-                                    organizer_phone=organizer_phone,
-                                    payment_instructions=pay_instr,
-                                )
-                            elif item["kind"] == "recorded":
-                                wa_contribution_recorded(
-                                    ph,
-                                    item["contributor_name"],
-                                    event.name,
-                                    item["amount"],
-                                    item["pledge"],
-                                    item["total_paid"],
-                                    currency,
-                                    organizer_phone=organizer_phone,
-                                )
-                            else:
-                                wa_contribution_target_set(
-                                    ph,
-                                    item["contributor_name"],
-                                    event.name,
-                                    item["amount"],
-                                    0,
-                                    currency,
-                                    organizer_phone=organizer_phone,
-                                    payment_instructions=pay_instr,
-                                )
-                        except Exception as e:
-                            print(f"[bulk_import] WhatsApp notify failed: {e}")
-                        try:
-                            if item["kind"] == "updated":
-                                sms_contribution_target_updated(
-                                    ph,
-                                    item["contributor_name"],
-                                    event.name,
-                                    increase=(item["amount"] - item["old_pledge"]),
-                                    total_target=item["amount"],
-                                    currency=currency,
-                                    organizer_phone=organizer_phone,
-                                    payment_instructions=pay_instr,
-                                )
-                            elif item["kind"] == "recorded":
-                                sms_contribution_recorded(
-                                    ph,
-                                    item["contributor_name"],
-                                    event.name,
-                                    item["amount"],
-                                    item["pledge"],
-                                    item["total_paid"],
-                                    currency,
-                                    organizer_phone=organizer_phone,
-                                )
-                            else:
-                                sms_contribution_target_set(
-                                    ph,
-                                    item["contributor_name"],
-                                    event.name,
-                                    item["amount"],
-                                    0,
-                                    currency,
-                                    organizer_phone=organizer_phone,
-                                    payment_instructions=pay_instr,
-                                )
-                        except Exception as e:
-                            print(f"[bulk_import] SMS notify failed: {e}")
-            except Exception as e:
-                print(f"[bulk_import] notification setup failed: {e}")
-
-        job.processed_rows = len(rows)
-        job.successful_rows = success_count
-        job.failed_rows = failure_count
-        job.errors = errors
-        job.finished_at = datetime.utcnow()
-        if failure_count == 0:
-            job.status = "completed"
-        elif success_count == 0:
-            job.status = "failed"
-            job.error_message = "All rows failed"
-        else:
-            job.status = "partially_completed"
-        db.commit()
-
 
         # Best-effort: queue WhatsApp availability checks for every unique
         # phone discovered. Never blocks the import — failures are swallowed.
@@ -469,13 +523,185 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
         except Exception:
             pass
 
+        # Final write of counters
+        job.processed_rows = len(rows)
+        job.successful_rows = success_count
+        job.failed_rows = failure_count
+        job.errors = errors
+        job.finished_at = datetime.utcnow()
+        payload = dict(job.payload or {})
+        payload["summary"] = {
+            "inserted": inserted,
+            "updated": updated,
+            "duplicates_in_file": duplicates_in_file,
+            "notified": notified_total,
+            "notify_failed": notify_failed,
+            "notify_errors": notify_errors[-200:],
+        }
+        job.payload = payload
+        if failure_count == 0:
+            job.status = "completed"
+        elif success_count == 0:
+            job.status = "failed"
+            job.error_message = "All rows failed"
+        else:
+            job.status = "partially_completed"
+        db.commit()
+
         return {
             "ok": True,
             "status": job.status,
             "total": len(rows),
             "successful": success_count,
             "failed": failure_count,
+            "inserted": inserted,
+            "updated": updated,
+            "duplicates_in_file": duplicates_in_file,
+            "notified": notified_total,
+            "notify_failed": notify_failed,
         }
+    except Exception as e:  # pragma: no cover
+        try:
+            db.rollback()
+            job = (
+                db.query(ContributorImportJob)
+                .filter(ContributorImportJob.id == uuid.UUID(str(job_id)))
+                .first()
+            )
+            if job:
+                job.status = "failed"
+                job.error_message = str(e)[:1000]
+                job.finished_at = datetime.utcnow()
+                db.commit()
+        except Exception:
+            pass
+        raise
+    finally:
+        db.close()
+
+
+@celery_app.task(name="contributors.resend_notifications", bind=True, max_retries=1)
+def resend_contributor_notifications(self, job_id: str) -> Dict[str, Any]:
+    """Resend the target/contribution notification for the given event_contributor ids.
+
+    Reuses the same templates the bulk import uses so behaviour stays
+    identical. The payload is stashed on ``ContributorImportJob`` with
+    ``mode='resend'`` and ``payload['event_contributor_ids']``.
+    """
+    db = SessionLocal()
+    try:
+        job: ContributorImportJob | None = (
+            db.query(ContributorImportJob)
+            .filter(ContributorImportJob.id == uuid.UUID(str(job_id)))
+            .first()
+        )
+        if not job:
+            return {"ok": False, "error": "job-not-found"}
+        if job.status not in ("queued", "failed"):
+            return {"ok": True, "status": job.status}
+
+        event = db.query(Event).filter(Event.id == job.event_id).first()
+        if not event:
+            job.status = "failed"
+            job.error_message = "Event not found"
+            job.finished_at = datetime.utcnow()
+            db.commit()
+            return {"ok": False, "error": "event-not-found"}
+
+        ec_ids_raw = list((job.payload or {}).get("event_contributor_ids") or [])
+        try:
+            ec_ids = [uuid.UUID(str(x)) for x in ec_ids_raw]
+        except Exception:
+            ec_ids = []
+
+        currency = _currency_code(db, event)
+        organizer = db.query(User).filter(User.id == event.organizer_id).first()
+        organizer_phone = (
+            format_phone_display(organizer.phone) if organizer and organizer.phone else None
+        )
+        from utils.payment_instructions import resolve_payment_instructions
+        pay_instr = resolve_payment_instructions(event)
+
+        ecs = (
+            db.query(EventContributor)
+            .filter(EventContributor.event_id == event.id, EventContributor.id.in_(ec_ids))
+            .all()
+            if ec_ids else []
+        )
+
+        job.status = "processing"
+        job.started_at = datetime.utcnow()
+        job.total_rows = len(ecs)
+        job.processed_rows = 0
+        job.successful_rows = 0
+        job.failed_rows = 0
+        job.errors = []
+        db.commit()
+
+        sent = 0
+        failed = 0
+        per_recipient_errors: List[Dict[str, Any]] = []
+        for idx, ec in enumerate(ecs):
+            contributor = ec.contributor
+            if not contributor:
+                failed += 1
+                per_recipient_errors.append({"ec_id": str(ec.id), "errors": ["no contributor linked"]})
+                continue
+            amount = float(ec.pledge_amount or 0)
+            kind = "set" if amount > 0 else "set"  # default to target_set template
+            item = {
+                "event_contributor": ec,
+                "contributor_name": (ec.display_name or contributor.name),
+                "amount": amount,
+                "old_pledge": amount,
+                "kind": kind,
+            }
+            try:
+                res = _dispatch_notification(
+                    item, event=event, currency=currency,
+                    organizer_phone=organizer_phone, pay_instr=pay_instr,
+                )
+                if res.get("ok"):
+                    sent += 1
+                else:
+                    failed += 1
+                    per_recipient_errors.append({
+                        "ec_id": str(ec.id),
+                        "name": item["contributor_name"],
+                        "errors": res.get("errors") or [],
+                    })
+            except Exception as e:  # pragma: no cover
+                failed += 1
+                per_recipient_errors.append({"ec_id": str(ec.id), "errors": [str(e)]})
+
+            if (idx + 1) % 5 == 0:
+                job.processed_rows = idx + 1
+                job.successful_rows = sent
+                job.failed_rows = failed
+                payload = dict(job.payload or {})
+                payload["summary"] = {"notified": sent, "notify_failed": failed,
+                                       "notify_errors": per_recipient_errors[-100:]}
+                job.payload = payload
+                db.commit()
+
+        job.processed_rows = len(ecs)
+        job.successful_rows = sent
+        job.failed_rows = failed
+        job.finished_at = datetime.utcnow()
+        payload = dict(job.payload or {})
+        payload["summary"] = {"notified": sent, "notify_failed": failed,
+                               "notify_errors": per_recipient_errors[-200:]}
+        job.payload = payload
+        if failed == 0:
+            job.status = "completed"
+        elif sent == 0:
+            job.status = "failed"
+            job.error_message = "All notifications failed"
+        else:
+            job.status = "partially_completed"
+        db.commit()
+
+        return {"ok": True, "status": job.status, "sent": sent, "failed": failed}
     except Exception as e:  # pragma: no cover
         try:
             db.rollback()

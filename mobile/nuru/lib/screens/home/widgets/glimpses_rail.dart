@@ -47,10 +47,15 @@ class GlimpsesRail extends StatelessWidget {
           if (r is! Map) return const SizedBox.shrink();
           final user = (r['user'] is Map) ? r['user'] as Map : const {};
           final moments = r['moments'] is List ? r['moments'] as List : const [];
-          final allSeen = r['all_seen'] == true;
-          final seenCount = moments.where((m) => m is Map && m['has_seen'] == true).length;
+          final isSelf = user['is_self'] == true;
+          // Your own glimpses are implicitly "seen" — WhatsApp shows your own
+          // status with a neutral ring, not the colored "unseen" treatment.
+          final allSeen = isSelf ? true : (r['all_seen'] == true);
+          final seenCount = isSelf
+              ? moments.length
+              : moments.where((m) => m is Map && m['has_seen'] == true).length;
           return _glimpseTile(
-            label: user['is_self'] == true
+            label: isSelf
                 ? 'You'
                 : (user['name']?.toString() ?? '').split(' ').first,
             avatar: user['avatar']?.toString(),

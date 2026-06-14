@@ -30,6 +30,7 @@ import {
   type ReminderRun,
   type ReminderRecipient,
 } from "@/lib/api/reminderAutomations";
+import { startTask, updateTask, appendDetail, finishTask } from "@/lib/backgroundTasks/store";
 
 const TYPE_LABELS: Record<AutomationType, string> = {
   fundraise_attend: "Fundraising attendance",
@@ -176,17 +177,54 @@ function AutomationRow({ a, onEdit, onDetail, onChanged }: {
 
   async function sendNow() {
     setBusy(true);
+    const isGuest = a.automation_type === "guest_remind";
+    const taskId = startTask({
+      title: `Sending ${isGuest ? "guest" : "contributor"} reminders`,
+      subtitle: a.name || TYPE_LABELS[a.automation_type],
+      kind: "bulk-message",
+      href: `/event/${a.event_id}/automations`,
+    });
     try {
-      await reminderAutomationsApi.sendNow(a.event_id, a.id);
-      const isGuest = a.automation_type === "guest_remind";
+      const res = await reminderAutomationsApi.sendNow(a.event_id, a.id);
+      const runId = (res as any)?.data?.run_id || (res as any)?.run_id;
+      appendDetail(taskId, { level: "info", message: `Queued${runId ? ` · run ${runId}` : ""}` });
       toast({
         title: "Reminders sent",
         description: isGuest
           ? "Guest reminders are being sent. We will notify your guests using the available contact details."
           : "Payment reminders are being sent to contributors with outstanding pledges.",
       });
+      // Poll the run for progress until it finishes.
+      if (runId) {
+        const poll = setInterval(async () => {
+          try {
+            const r = await reminderAutomationsApi.listRuns(a.event_id, a.id, 5);
+            const run = r?.data?.items?.find((x) => x.id === runId);
+            if (!run) return;
+            updateTask(taskId, {
+              processed: (run.sent_count || 0) + (run.failed_count || 0) + (run.skipped_count || 0),
+              total: run.total_recipients,
+              progress: run.total_recipients
+                ? ((run.sent_count || 0) + (run.failed_count || 0) + (run.skipped_count || 0)) / run.total_recipients
+                : undefined,
+            });
+            if (run.status !== "running" && run.status !== "pending") {
+              clearInterval(poll);
+              appendDetail(taskId, {
+                level: run.failed_count ? "warn" : "info",
+                message: `${run.sent_count} sent · ${run.failed_count} failed · ${run.skipped_count} skipped`,
+              });
+              finishTask(taskId, run.failed_count && !run.sent_count ? "failed" : "success", run.error || undefined);
+            }
+          } catch {/* swallow */}
+        }, 3000);
+        setTimeout(() => clearInterval(poll), 10 * 60_000);
+      } else {
+        finishTask(taskId, "success");
+      }
       onChanged();
     } catch (e: any) {
+      finishTask(taskId, "failed", e?.message);
       toast({ title: "Failed", description: e?.message, variant: "destructive" });
     } finally {
       setBusy(false);
@@ -528,11 +566,21 @@ function AutomationDetailDialog({ eventId, automation, onClose }: {
 
   async function resendFailed() {
     if (!activeRun) return;
+    const taskId = startTask({
+      title: "Resending failed reminders",
+      subtitle: automation.name || TYPE_LABELS[automation.automation_type],
+      kind: "bulk-message",
+      total: activeRun.failed_count,
+      href: `/event/${eventId}/automations`,
+    });
     try {
       await reminderAutomationsApi.resendFailed(eventId, automation.id, activeRun.id);
+      appendDetail(taskId, { level: "info", message: `Resend queued for ${activeRun.failed_count} recipient(s)` });
+      finishTask(taskId, "success");
       toast({ title: "Resend queued" });
       setTimeout(() => loadRecipients(activeRun.id), 1500);
     } catch (e: any) {
+      finishTask(taskId, "failed", e?.message);
       toast({ title: "Failed", description: e?.message, variant: "destructive" });
     }
   }

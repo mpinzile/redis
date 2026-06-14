@@ -61,7 +61,8 @@ export const socialApi = {
   deletePost: (postId: string) => del(`/posts/${postId}`),
 
   // Glow (like) - aligned with nuru-api-doc 14.6/14.7
-  glowPost: (postId: string) => post<any>(`/posts/${postId}/glow`),
+  glowPost: (postId: string, data?: { emoji?: string }) =>
+    post<any>(`/posts/${postId}/glow`, data),
   unglowPost: (postId: string) => del<any>(`/posts/${postId}/glow`),
 
   // Echo (repost) - aligned with nuru-api-doc 14.9/14.10

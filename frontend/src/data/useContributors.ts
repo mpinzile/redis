@@ -80,7 +80,7 @@ export const useEventContributors = (eventId: string | null) => {
     }
   };
 
-  const updateEventContributor = async (ecId: string, data: { pledge_amount?: number; notes?: string; secondary_phone?: string | null; notify_target?: 'primary' | 'secondary' | 'both' }) => {
+  const updateEventContributor = async (ecId: string, data: { pledge_amount?: number; notes?: string; secondary_phone?: string | null; notify_target?: 'primary' | 'secondary' | 'both'; display_name?: string | null }) => {
     if (!eventId) return null;
     try {
       const response = await contributorsApi.updateEventContributor(eventId, ecId, data);

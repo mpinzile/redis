@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart';
 import '../../../core/services/moments_service.dart';
 import '../../../core/theme/app_colors.dart';
 import 'glimpse_trim_screen.dart';
+import '../../../widgets/nuru_emoji_picker.dart';
 
 /// Modern full-screen Glimpse composer.
 /// Layout (top→bottom):
@@ -98,6 +99,8 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
     if (mounted) setState(() {});
   }
 
+  bool _videoMuted = false;
+
   Future<bool> _prepareVideoPreview(File file) async {
     _videoPreview?.dispose();
     final controller = VideoPlayerController.file(file);
@@ -119,7 +122,8 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
         return false;
       }
       await controller.setLooping(true);
-      await controller.setVolume(0);
+      // Allow the user to listen to the video while composing.
+      await controller.setVolume(_videoMuted ? 0.0 : 1.0);
       await controller.play();
       if (mounted) setState(() => _videoPreviewReady = true);
       return true;
@@ -129,6 +133,13 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
       }
       return false;
     }
+  }
+
+  void _toggleVideoMute() {
+    final c = _videoPreview;
+    if (c == null || !c.value.isInitialized) return;
+    setState(() => _videoMuted = !_videoMuted);
+    c.setVolume(_videoMuted ? 0.0 : 1.0);
   }
 
   void _clearVideoPreview() {
@@ -269,7 +280,21 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
                         svg: 'assets/icons/close-icon.svg',
                         onTap: _submitting ? null : () => Navigator.of(context).pop(),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
+                      // "Hold to replace" lives next to Share at the top so it
+                      // doesn't get covered by the caption bar at the bottom.
+                      if (_mode != _Mode.text && _media != null) ...[
+                        Expanded(child: _replaceHintChip()),
+                        const SizedBox(width: 8),
+                      ] else
+                        const Spacer(),
+                      if (_mode == _Mode.video && _videoPreviewReady) ...[
+                        _circleMaterialBtn(
+                          icon: _videoMuted ? Icons.volume_off : Icons.volume_up,
+                          onTap: _toggleVideoMute,
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       _shareBtn(),
                     ],
                   ),
@@ -518,94 +543,75 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
     if (_mode == _Mode.photo) {
       return GestureDetector(
         onTap: _pickMedia,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.file(_media!, fit: BoxFit.cover),
-            _mediaShade(),
-          ],
+        child: Container(
+          color: const Color(0xFF0A0A0C),
+          alignment: Alignment.center,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Centered, contained image so the full photo is visible inside
+              // a clean black container instead of being cropped edge-to-edge.
+              Center(
+                child: Image.file(_media!, fit: BoxFit.contain),
+              ),
+              _mediaShade(),
+            ],
+          ),
         ),
       );
     }
     return GestureDetector(
       onTap: _toggleVideoPreview,
       onLongPress: _pickMedia,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Container(color: Colors.black),
-          if (_videoPreviewReady && _videoPreview != null)
-            FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: _videoPreview!.value.size.width,
-                height: _videoPreview!.value.size.height,
-                child: VideoPlayer(_videoPreview!),
-              ),
-            )
-          else
-            Center(
-              child: SvgPicture.asset(
-                'assets/icons/video-icon.svg',
-                width: 34,
-                height: 34,
-                colorFilter:
-                    const ColorFilter.mode(Colors.white70, BlendMode.srcIn),
-              ),
-            ),
-          _mediaShade(),
-          if (_videoPreviewReady &&
-              _videoPreview != null &&
-              !_videoPreview!.value.isPlaying)
-            Center(
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.45),
-                  shape: BoxShape.circle,
+      child: Container(
+        color: const Color(0xFF0A0A0C),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (_videoPreviewReady && _videoPreview != null)
+              Center(
+                child: AspectRatio(
+                  aspectRatio: _videoPreview!.value.aspectRatio == 0
+                      ? 9 / 16
+                      : _videoPreview!.value.aspectRatio,
+                  child: VideoPlayer(_videoPreview!),
                 ),
-                child: Center(
-                  child: SvgPicture.asset(
-                    'assets/icons/play-icon.svg',
-                    width: 24,
-                    height: 24,
-                    colorFilter: const ColorFilter.mode(
-                        Colors.white, BlendMode.srcIn),
+              )
+            else
+              Center(
+                child: SvgPicture.asset(
+                  'assets/icons/video-icon.svg',
+                  width: 34,
+                  height: 34,
+                  colorFilter:
+                      const ColorFilter.mode(Colors.white70, BlendMode.srcIn),
+                ),
+              ),
+            _mediaShade(),
+            if (_videoPreviewReady &&
+                _videoPreview != null &&
+                !_videoPreview!.value.isPlaying)
+              Center(
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/icons/play-icon.svg',
+                      width: 24,
+                      height: 24,
+                      colorFilter: const ColorFilter.mode(
+                          Colors.white, BlendMode.srcIn),
+                    ),
                   ),
                 ),
               ),
-            ),
-          Positioned(
-            left: 16,
-            bottom: 150,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.38),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SvgPicture.asset(
-                    'assets/icons/video-icon.svg',
-                    width: 14,
-                    height: 14,
-                    colorFilter:
-                        const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                  ),
-                  const SizedBox(width: 7),
-                  Text('Hold to replace',
-                      style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700)),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -645,6 +651,57 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
               width: 18, height: 18,
               colorFilter:
                   const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+        ),
+      ),
+    );
+  }
+
+  Widget _circleMaterialBtn({required IconData icon, required VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40, height: 40,
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.45),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white24, width: 1),
+        ),
+        child: Icon(icon, color: Colors.white, size: 20),
+      ),
+    );
+  }
+
+  /// "Hold to replace" hint that lives in the top bar (next to Share)
+  /// so it never gets covered by the caption field at the bottom.
+  Widget _replaceHintChip() {
+    return GestureDetector(
+      onTap: _pickMedia,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.45),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white24, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 16),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'Tap to replace',
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -948,51 +1005,95 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
         borderRadius: BorderRadius.circular(24),
       ),
       clipBehavior: Clip.antiAlias,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 22, maxHeight: 86),
-        child: Stack(
-          children: [
-            if (_captionCtrl.text.isEmpty)
-              IgnorePointer(
-                child: Text(
-                  'Add a caption',
-                  style: GoogleFonts.inter(
-                    color: Colors.white.withOpacity(0.58),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    height: 1.35,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 22, maxHeight: 86),
+              child: Stack(
+                children: [
+                  if (_captionCtrl.text.isEmpty)
+                    IgnorePointer(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Text(
+                          'Add a caption',
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withOpacity(0.58),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: EditableText(
+                      controller: _captionCtrl,
+                      focusNode: _captionFocus,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                      cursorColor: Colors.white,
+                      backgroundCursorColor: Colors.white24,
+                      selectionColor: Colors.white.withOpacity(0.22),
+                      keyboardAppearance: Brightness.dark,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      maxLines: 3,
+                      minLines: 1,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      smartDashesType: SmartDashesType.disabled,
+                      smartQuotesType: SmartQuotesType.disabled,
+                      inputFormatters: [LengthLimitingTextInputFormatter(160)],
+                    ),
                   ),
-                ),
+                ],
               ),
-            EditableText(
-              controller: _captionCtrl,
-              focusNode: _captionFocus,
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-              ),
-              cursorColor: Colors.white,
-              backgroundCursorColor: Colors.white24,
-              selectionColor: Colors.white.withOpacity(0.22),
-              keyboardAppearance: Brightness.dark,
-              keyboardType: TextInputType.multiline,
-              textCapitalization: TextCapitalization.sentences,
-              maxLines: 3,
-              minLines: 1,
-              autocorrect: false,
-              enableSuggestions: false,
-              smartDashesType: SmartDashesType.disabled,
-              smartQuotesType: SmartQuotesType.disabled,
-              inputFormatters: [LengthLimitingTextInputFormatter(160)],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () async {
+              HapticFeedback.selectionClick();
+              FocusScope.of(context).unfocus();
+              final picked = await NuruEmojiPicker.show(context);
+              if (picked == null) return;
+              final sel = _captionCtrl.selection;
+              final text = _captionCtrl.text;
+              final start = sel.isValid ? sel.start : text.length;
+              final end = sel.isValid ? sel.end : text.length;
+              final next = text.replaceRange(start, end, picked);
+              _captionCtrl.value = TextEditingValue(
+                text: next,
+                selection: TextSelection.collapsed(
+                    offset: start + picked.length),
+              );
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Text('😊', style: TextStyle(fontSize: 18)),
+            ),
+          ),
+        ],
       ),
     );
   }
+
 
   // ─── Mode switcher ─────────────────────────────────────────────
   Widget _modeSwitcher() {

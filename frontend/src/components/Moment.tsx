@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { socialApi } from '@/lib/api/social';
+import { EmojiPickerPopover } from '@/components/emoji/EmojiPickerPopover';
+import { normalizeEmoji } from '@/components/emoji/data';
 import { usePostViewTracking, useInteractionLogger } from '@/hooks/useFeedTracking';
 import {
   Popover,
@@ -88,6 +90,10 @@ const Moment = ({ post }: MomentProps) => {
   const [glowed, setGlowed] = useState(post.has_glowed || false);
   const [glowCount, setGlowCount] = useState(post.likes);
   const [glowing, setGlowing] = useState(false);
+  const [glowEmoji, setGlowEmoji] = useState<string>(
+    normalizeEmoji((post as any).glow_emoji),
+  );
+  const [reactionOpen, setReactionOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [saved, setSaved] = useState(post.has_saved || false);
   const [saving, setSaving] = useState(false);
@@ -101,20 +107,26 @@ const Moment = ({ post }: MomentProps) => {
   const viewTrackingRef = usePostViewTracking(post.id);
   const { logInteraction } = useInteractionLogger();
 
-  const handleGlow = async () => {
+  const handleGlow = async (emoji?: string) => {
     if (glowing) return;
     setGlowing(true);
     const wasGlowed = glowed;
-    setGlowed(!wasGlowed);
-    setGlowCount(prev => wasGlowed ? prev - 1 : prev + 1);
-    // Track interaction for ranking
-    logInteraction(post.id, wasGlowed ? 'unglow' : 'glow');
+    const nextEmoji = emoji || glowEmoji || '❤️';
+    // If picking a new emoji while already glowed, keep glowed=true and just swap emoji.
+    const willGlow = emoji ? true : !wasGlowed;
+    setGlowed(willGlow);
+    if (emoji) setGlowEmoji(normalizeEmoji(emoji));
+    setGlowCount(prev => {
+      if (emoji) return wasGlowed ? prev : prev + 1; // adding reaction
+      return wasGlowed ? prev - 1 : prev + 1;
+    });
+    logInteraction(post.id, willGlow ? 'glow' : 'unglow');
     try {
-      if (wasGlowed) await socialApi.unglowPost(post.id);
-      else await socialApi.glowPost(post.id);
+      if (!willGlow) await socialApi.unglowPost(post.id);
+      else await socialApi.glowPost(post.id, emoji ? { emoji } : undefined);
     } catch {
       setGlowed(wasGlowed);
-      setGlowCount(prev => wasGlowed ? prev + 1 : prev - 1);
+      setGlowCount(prev => (willGlow ? prev - 1 : prev + 1));
       toast.error('Failed to update glow');
     } finally {
       setGlowing(false);
@@ -472,18 +484,36 @@ const Moment = ({ post }: MomentProps) => {
       {/* Action Buttons */}
       <div className="px-3 md:px-4 py-2 md:py-3 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-2 w-full sm:w-auto justify-start">
-          {/* Glow */}
-          <button
-            onClick={(e) => { e.stopPropagation(); handleGlow(); }}
-            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 rounded-lg transition-colors text-xs md:text-sm min-w-[60px] md:min-w-[80px] ${
-              glowed
-                ? 'bg-red-100 text-red-600'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
+          {/* Glow — tap to toggle, long-press / right-click for emoji reactions */}
+          <EmojiPickerPopover
+            reactionMode
+            open={reactionOpen}
+            onOpenChange={setReactionOpen}
+            onSelect={(e) => handleGlow(e)}
+            side="top"
+            align="start"
           >
-            <span className="text-sm flex-shrink-0">❤️</span>
-            <span className="hidden sm:inline whitespace-nowrap">{glowed ? 'Glowed' : 'Glow'}</span>
-          </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleGlow(); }}
+              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setReactionOpen(true); }}
+              onTouchStart={(e) => {
+                const t = window.setTimeout(() => setReactionOpen(true), 450);
+                const cancel = () => window.clearTimeout(t);
+                e.currentTarget.addEventListener('touchend', cancel, { once: true });
+                e.currentTarget.addEventListener('touchmove', cancel, { once: true });
+              }}
+              className={`flex items-center justify-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 rounded-lg transition-colors text-xs md:text-sm min-w-[60px] md:min-w-[80px] ${
+                glowed
+                  ? 'bg-red-100 text-red-600'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+              aria-label="Glow — hold for reactions"
+            >
+              <span className="text-sm flex-shrink-0">{glowed ? glowEmoji : '🤍'}</span>
+              <span className="hidden sm:inline whitespace-nowrap">{glowed ? 'Glowed' : 'Glow'}</span>
+            </button>
+          </EmojiPickerPopover>
+
 
           {/* Echo - drawer on mobile, inline toggle on desktop */}
           <button
