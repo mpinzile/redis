@@ -198,7 +198,7 @@ export default function AdminDeletionRequests() {
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {r.email}{r.phone ? ` · ${r.phone}` : ""} · {r.delete_scope === "data_only" ? "Data only" : "Account + data"}
+                      {r.email}{r.phone ? ` - ${r.phone}` : ""} - {r.delete_scope === "data_only" ? "Data only" : "Account + data"}
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground whitespace-nowrap">{fmt(r.created_at)}</div>

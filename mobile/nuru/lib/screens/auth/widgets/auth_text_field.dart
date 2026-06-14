@@ -4,7 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// Floating label field — consistent Plus Jakarta Sans
+/// Floating label field - consistent Plus Jakarta Sans
 class AuthTextField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
@@ -92,7 +92,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
           ),
         ),
 
-        // Field — premium: subtle gradient border on focus, soft shadow lift
+        // Field - premium: subtle gradient border on focus, soft shadow lift
         AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,

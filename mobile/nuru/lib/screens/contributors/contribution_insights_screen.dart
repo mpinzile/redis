@@ -8,7 +8,7 @@ import '../../core/utils/money_format.dart' show formatMoney, getActiveCurrency;
 import '../../core/widgets/nuru_subpage_app_bar.dart';
 import '../../core/widgets/nuru_skeleton.dart';
 
-/// Premium "Contribution Insights" screen — surfaces a friendly impact line,
+/// Premium "Contribution Insights" screen - surfaces a friendly impact line,
 /// streak, top stats, a 12-month giving trend, payment-method breakdown,
 /// biggest gift and the organisers the user supports most.
 class ContributionInsightsScreen extends StatefulWidget {
@@ -729,7 +729,7 @@ class _ContributionInsightsScreenState extends State<ContributionInsightsScreen>
         fontSize: 10, letterSpacing: 0.6,
         fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
     const SizedBox(height: 4),
-    Text(value.isEmpty ? '—' : value,
+    Text(value.isEmpty ? '-' : value,
       style: GoogleFonts.inter(
         fontSize: 12.5, fontWeight: FontWeight.w700,
         color: AppColors.textPrimary)),

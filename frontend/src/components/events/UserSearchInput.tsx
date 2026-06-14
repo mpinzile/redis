@@ -169,7 +169,7 @@ const UserSearchInput = ({ onSelect, placeholder = "Search by email or phone..."
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user.full_name || `${user.first_name} ${user.last_name}`}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  @{user.username}{user.email ? ` · ${user.email}` : ""}{user.phone ? ` · ${user.phone}` : ""}
+                  @{user.username}{user.email ? ` - ${user.email}` : ""}{user.phone ? ` - ${user.phone}` : ""}
                 </p>
               </div>
             </button>

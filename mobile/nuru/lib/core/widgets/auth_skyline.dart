@@ -44,8 +44,8 @@ class _WavePainter extends CustomPainter {
     final path = Path()
       ..moveTo(0, h * 0.55)
       ..cubicTo(
-        w * 0.18, h * 0.30,   // first control — gentle hump on the left
-        w * 0.45, h * 0.95,   // second control — deep trough mid
+        w * 0.18, h * 0.30,   // first control - gentle hump on the left
+        w * 0.45, h * 0.95,   // second control - deep trough mid
         w * 0.78, h * 0.45,   // end of first curve
       )
       ..cubicTo(
@@ -129,7 +129,7 @@ class _CornerWavePainter extends CustomPainter {
       Paint()..color = color.withOpacity(opacity * 0.45),
     );
 
-    // ── Inner (richer) layer — tighter to the corner ──
+    // ── Inner (richer) layer - tighter to the corner ──
     final inner = Path()
       ..moveTo(w * 0.42, 0)
       ..cubicTo(

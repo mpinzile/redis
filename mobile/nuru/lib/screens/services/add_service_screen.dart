@@ -694,7 +694,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
           style: _f(size: 13, color: AppColors.textSecondary)),
       const SizedBox(height: 22),
 
-      // Card 1 — Category & Service Type
+      // Card 1 - Category & Service Type
       _sectionCard('Category & Service Type', [
         _fieldLabel('Category *'),
         _dropdown(
@@ -761,7 +761,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
       ]),
       const SizedBox(height: 16),
 
-      // Card 2 — Service Title & Description
+      // Card 2 - Service Title & Description
       _sectionCard('Service Title & Description', [
         _fieldLabel('Service Title *'),
         _textField(_titleCtrl, 'e.g., Professional Wedding Photography'),
@@ -771,7 +771,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
       ]),
       const SizedBox(height: 16),
 
-      // Card 3 — Pricing & Location
+      // Card 3 - Pricing & Location
       _sectionCard('Pricing & Location', [
         Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -813,7 +813,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
       const SizedBox(height: 6),
       Text(
         _portfolioKycRequirement != null
-            ? 'Required — these photos verify your portfolio as part of your service KYC.'
+            ? 'Required · these photos verify your portfolio as part of your service KYC.'
             : 'Showcase your best work to attract more clients.',
         style: _f(size: 13, color: AppColors.textSecondary),
       ),

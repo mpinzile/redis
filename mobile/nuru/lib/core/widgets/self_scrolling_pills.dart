@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Horizontally-scrolling pill strip that smoothly centers the active pill
-/// when [activeIndex] changes — matches the auto-scroll behaviour of the
+/// when [activeIndex] changes - matches the auto-scroll behaviour of the
 /// event-detail tab bar but for pill-style filters.
 ///
 /// Use:

@@ -11,7 +11,7 @@ import '../../core/widgets/app_snackbar.dart';
 import '../../core/l10n/l10n_helper.dart';
 import 'report_preview_screen.dart';
 
-/// AI Budget Assistant — chat-based budget planner matching web BudgetAssistant.
+/// AI Budget Assistant - chat-based budget planner matching web BudgetAssistant.
 /// Streams responses from the nuru-chat edge function.
 class BudgetAssistantScreen extends StatefulWidget {
   final String? eventType;
@@ -78,7 +78,7 @@ class _BudgetAssistantScreenState extends State<BudgetAssistantScreen> {
     if (widget.budget != null) parts.add('Current budget: ${getActiveCurrency()} ${widget.budget}');
 
     final name = widget.firstName ?? 'there';
-    return '''You are the Nuru Budget Assistant — an expert event budget planner for Tanzania.
+    return '''You are the Nuru Budget Assistant - an expert event budget planner for Tanzania.
 
 Your job: Have a SHORT, focused conversation to understand the user's event needs, then generate a detailed budget breakdown.
 
@@ -92,7 +92,7 @@ CONVERSATION RULES:
 - Ask 2-3 focused questions about what matters most (venue type, catering style, entertainment, decor level, etc.)
 - Ask ONE round of questions maximum. After the user responds, generate the budget.
 - If the user says "generate" or "go ahead", generate immediately.
-- Keep questions SHORT — use bullet points.
+- Keep questions SHORT - use bullet points.
 - NEVER use emoji icons in your responses.
 
 BUDGET FORMAT (when generating):

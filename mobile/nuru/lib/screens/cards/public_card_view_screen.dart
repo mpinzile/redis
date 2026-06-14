@@ -1,4 +1,4 @@
-// PublicCardViewScreen — opens when the user taps a nuru.tz/cards/:id deep
+// PublicCardViewScreen - opens when the user taps a nuru.tz/cards/:id deep
 // link (Android App Link / iOS Universal Link) or the nuru://cards/:id
 // custom scheme. Loads the rendered thank-you card PNG from the backend's
 // public endpoint and offers a download/share affordance.

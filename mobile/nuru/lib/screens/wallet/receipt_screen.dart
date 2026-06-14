@@ -17,7 +17,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/money_format.dart';
 import '../tickets/widgets/dashed_divider.dart';
 
-/// ReceiptScreen — premium printable receipt for a single transaction.
+/// ReceiptScreen - premium printable receipt for a single transaction.
 /// Redesigned to match the TicketDetailsScreen aesthetic:
 /// white background, SVG icons, GoogleFonts, rounded card with notched dividers.
 class ReceiptScreen extends StatefulWidget {
@@ -520,7 +520,7 @@ class _ReceiptCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 _summaryRow('Service fee', fee > 0
                     ? formatMoney(fee, currency: currency)
-                    : '—',
+                    : '-',
                     muted: true),
                 const SizedBox(height: 12),
                 Container(

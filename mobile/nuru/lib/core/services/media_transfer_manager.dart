@@ -105,7 +105,7 @@ class MediaTransferManager extends ChangeNotifier {
 
   // ─── OS background progress notifications ────────────────────────────
   // Piggy-back on `flutter_local_notifications` so users can see transfer
-  // progress in the system tray when the app is backgrounded — and so
+  // progress in the system tray when the app is backgrounded - and so
   // Android keeps the process alive longer (ongoing notifications act as a
   // soft foreground hint without needing a full ForegroundService).
   final FlutterLocalNotificationsPlugin _notif = FlutterLocalNotificationsPlugin();
@@ -333,7 +333,7 @@ class MediaTransferManager extends ChangeNotifier {
       if (totalBytes > maxBytes) {
         print('[LibraryUpload] blocked locally: size $totalBytes exceeds $maxBytes');
         task._setStatus(TransferStatus.error,
-            error: '${isVideo ? "Video" : "File"} too large — max ${(maxBytes / (1024 * 1024)).round()}MB, yours is ${(totalBytes / (1024 * 1024)).toStringAsFixed(1)}MB');
+            error: '${isVideo ? "Video" : "File"} too large · max ${(maxBytes / (1024 * 1024)).round()}MB, yours is ${(totalBytes / (1024 * 1024)).toStringAsFixed(1)}MB');
         return;
       }
 

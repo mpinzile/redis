@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'secure_token_storage.dart';
 import 'api_config.dart';
 
-/// Social API service — mirrors src/lib/api/social.ts
+/// Social API service - mirrors src/lib/api/social.ts
 class SocialService {
   static String get _baseUrl => ApiConfig.baseUrl;
 
@@ -24,7 +24,7 @@ class SocialService {
     };
   }
 
-  /// GET /posts/feed — ranked or chronological feed
+  /// GET /posts/feed - ranked or chronological feed
   static Future<Map<String, dynamic>> getFeed({
     int page = 1,
     int limit = 15,
@@ -52,7 +52,7 @@ class SocialService {
     }
   }
 
-  /// GET /posts/explore — trending/explore feed (authenticated)
+  /// GET /posts/explore - trending/explore feed (authenticated)
   static Future<Map<String, dynamic>> getExplore({int limit = 15}) async {
     try {
       final uri = Uri.parse('$_baseUrl/posts/explore?limit=$limit');
@@ -87,7 +87,7 @@ class SocialService {
     }
   }
 
-  /// GET /moments/public/trending — trending glimpses for the rail.
+  /// GET /moments/public/trending - trending glimpses for the rail.
   static Future<Map<String, dynamic>> getTrendingMoments({int limit = 12}) async {
     try {
       final uri = Uri.parse('$_baseUrl/moments/public/trending?limit=$limit');
@@ -98,7 +98,7 @@ class SocialService {
     }
   }
 
-  /// POST /posts — create a new post with FormData (multipart).
+  /// POST /posts - create a new post with FormData (multipart).
   /// When [postType] is 'event_share', the [eventId] is attached so the feed
   /// renders the Rich Event Card (parity with web ShareEventToFeed).
   static Future<Map<String, dynamic>> createPost({
@@ -173,7 +173,7 @@ class SocialService {
     }
   }
 
-  /// PATCH /posts/:id — update content/visibility
+  /// PATCH /posts/:id - update content/visibility
   static Future<Map<String, dynamic>> updatePost(
     String postId, {
     String? content,
@@ -194,7 +194,7 @@ class SocialService {
     }
   }
 
-  // GLOW (Like) — ❤️
+  // GLOW (Like) - ❤️
 
   /// POST /posts/:id/glow
   static Future<Map<String, dynamic>> glowPost(String postId) async {
@@ -340,7 +340,7 @@ class SocialService {
     }
   }
 
-  /// GET /users/search?suggested=true — follow suggestions
+  /// GET /users/search?suggested=true - follow suggestions
   static Future<Map<String, dynamic>> getFollowSuggestions({
     int limit = 5,
   }) async {
@@ -500,7 +500,7 @@ class SocialService {
   //   }
   // }
 
-  /// GET /posts/me — current user's posts
+  /// GET /posts/me - current user's posts
   static Future<Map<String, dynamic>> getMyPosts({
     int page = 1,
     int limit = 30,
@@ -520,7 +520,7 @@ class SocialService {
     }
   }
 
-  /// GET /posts/user/:userId — user's posts by ID (same as web getUserPosts)
+  /// GET /posts/user/:userId - user's posts by ID (same as web getUserPosts)
   static Future<Map<String, dynamic>> getUserPosts(
     String userId, {
     int page = 1,
@@ -906,7 +906,7 @@ class SocialService {
     }
   }
 
-  /// POST /communities/{id}/posts (multipart) — creator-only.
+  /// POST /communities/{id}/posts (multipart) - creator-only.
   static Future<Map<String, dynamic>> createCommunityPost({
     required String communityId,
     required String content,

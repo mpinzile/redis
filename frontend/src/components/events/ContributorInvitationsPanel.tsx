@@ -335,7 +335,7 @@ const ContributorInvitationsPanel = ({ eventId, eventContributors, onChanged }: 
                           <Badge variant="secondary" className="text-[10px] gap-1">
                             <CheckCircle2 className="w-3 h-3" />
                             Sent {guest?.invitation_sent_at ? `· ${formatDateMedium(guest.invitation_sent_at)}` : ''}
-                            {guest?.invitation_method ? ` · ${guest.invitation_method}` : ''}
+                            {guest?.invitation_method ? ` - ${guest.invitation_method}` : ''}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-[10px] gap-1">

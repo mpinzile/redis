@@ -11,7 +11,7 @@ import '../wallet/make_payment_screen.dart';
 import 'contribution_history_screen.dart';
 import '../payments/payment_receipt_screen.dart';
 
-/// Per-event Contribution Details — opened when the user taps a card on the
+/// Per-event Contribution Details - opened when the user taps a card on the
 /// My Contributions tab. Layout follows the supplied mockup: event header,
 /// pledge summary card, circular pledge progress, recent contributions
 /// list and Pay Balance + Download Receipt actions.
@@ -65,7 +65,7 @@ class _ContributionDetailsScreenState extends State<ContributionDetailsScreen> {
       setState(() { _payments = []; _loadingPayments = false; });
       return;
     }
-    // Unified endpoint — returns ALL payment rows (online gateway,
+    // Unified endpoint - returns ALL payment rows (online gateway,
     // offline-claim and organiser-recorded) from event_contributions for
     // every event_contributor row that maps to me (by user id OR phone).
     final res = await EventContributorsService.getMyPaymentsForEvent(eid);

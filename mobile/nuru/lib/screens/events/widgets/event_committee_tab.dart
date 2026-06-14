@@ -15,7 +15,7 @@ import '../../../core/l10n/l10n_helper.dart';
 import '../../../widgets/app_select.dart';
 import '../../../widgets/app_checkbox.dart';
 
-/// Mirrors web EventCommittee.tsx — user search, role picker, permissions, edit/remove
+/// Mirrors web EventCommittee.tsx - user search, role picker, permissions, edit/remove
 class EventCommitteeTab extends StatefulWidget {
   final String eventId;
   final Map<String, dynamic>? permissions;
@@ -102,7 +102,7 @@ class _EventCommitteeTabState extends State<EventCommitteeTab> with AutomaticKee
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         children: [
-          // Committee Report — minimal, premium, icon-free
+          // Committee Report - minimal, premium, icon-free
           Container(
             decoration: BoxDecoration(
               color: Colors.white,

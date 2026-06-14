@@ -10,9 +10,9 @@ const ServiceProviders = () => {
 
   return (
     <EditorialFeaturePage
-      kicker="Service · 02 — Vendors"
+      kicker="Service - 02 - Vendors"
       title="A growth platform, not a chase."
-      lead="Caterers, decorators, photographers, MCs, transport, sound, lighting, entertainment, venues. Build a verified Nuru profile, accept bookings, get paid through protected payments — and stop chasing money."
+      lead="Caterers, decorators, photographers, MCs, transport, sound, lighting, entertainment, venues. Build a verified Nuru profile, accept bookings, get paid through protected payments · and stop chasing money."
       specs={[
         { label: "Verification", value: "ID + business" },
         { label: "Payouts", value: "Protected" },
@@ -22,7 +22,7 @@ const ServiceProviders = () => {
       sections={[
         {
           title: "Be discovered by the right organisers.",
-          lead: "Your verified profile, portfolio and reviews work for you 24/7. Organisers find you by category, city, budget and date — and book directly.",
+          lead: "Your verified profile, portfolio and reviews work for you 24/7. Organisers find you by category, city, budget and date · and book directly.",
           bullets: [
             "Public profile with portfolio gallery.",
             "Searchable by category, city, price band.",
@@ -33,7 +33,7 @@ const ServiceProviders = () => {
           ],
         },
         {
-          title: "Bookings, contracts, payments — handled.",
+          title: "Bookings, contracts, payments · handled.",
           lead: "Every booking is a structured contract with deposit, milestones, deliverables and final settlement. No more verbal agreements, no more missing money.",
           bullets: [
             "Protected deposits via M-Pesa, Airtel, Mixx by Yas, banks, cards.",
@@ -53,7 +53,7 @@ const ServiceProviders = () => {
             "Reviews can't be bought or faked.",
             "Appeal and remediation flow for disputes.",
             "Protection against impersonation.",
-            "Visible track record — bookings completed, on-time rate.",
+            "Visible track record · bookings completed, on-time rate.",
           ],
         },
       ]}

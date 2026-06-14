@@ -19,7 +19,7 @@ type ChatMsg = {
 const LiveChat = () => {
   const { t } = useLanguage();
   useWorkspaceMeta({
-    title: 'Live Chat - Support',
+    title: 'Live Chat · Support',
     description: 'Chat with our support team for instant help with your Nuru account.'
   });
 
@@ -205,7 +205,7 @@ const LiveChat = () => {
         <div className="flex-1">
           <h3 className="font-semibold">Nuru Support</h3>
           <p className="text-sm text-muted-foreground">
-            {sessionStatus === 'ended' ? 'Session ended' : 'Live — Messages are saved'}
+            {sessionStatus === 'ended' ? 'Session ended' : 'Live · Messages are saved'}
           </p>
         </div>
         {sessionStatus !== 'ended' && (

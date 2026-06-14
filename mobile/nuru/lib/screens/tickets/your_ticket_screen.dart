@@ -199,7 +199,7 @@ class _YourTicketScreenState extends State<YourTicketScreen> {
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'image/png')],
         subject: 'Nuru Ticket',
-        text: 'My ticket for $_eventName${_ticketCode.isNotEmpty ? "  ·  $_ticketCode" : ""}',
+        text: 'My ticket for $_eventName${_ticketCode.isNotEmpty ? "  -  $_ticketCode" : ""}',
         sharePositionOrigin: sharePositionOrigin(context),
       );
     } catch (e) {

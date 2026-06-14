@@ -21,7 +21,7 @@ import '../invitation_cards/svg_template_registry.dart';
 import '../tickets/widgets/dashed_divider.dart';
 
 /// Premium invitation card screen for confirmed guests.
-/// - Two templates (Classic & Editorial) — mirror web invitation cards
+/// - Two templates (Classic & Editorial) - mirror web invitation cards
 /// - Uses event theme color when available
 /// - Download / share full-resolution PNG
 class InvitationQRScreen extends StatefulWidget {
@@ -54,7 +54,7 @@ class _InvitationQRScreenState extends State<InvitationQRScreen> {
 
   Color _accent = const Color(0xFFD4AF37); // gold default
 
-  /// Selected SVG template (set by organiser via web/mobile editor) — when
+  /// Selected SVG template (set by organiser via web/mobile editor) - when
   /// non-null we render the bespoke design instead of the legacy classic/editorial.
   SvgCardTemplate? _svgTemplate;
   InvitationContent? _svgContent;
@@ -610,9 +610,9 @@ class _InvitationQRScreenState extends State<InvitationQRScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _infoCell('DATE', dateStr.isEmpty ? '—' : dateStr, ink),
-                  _infoCell('TIME', timeStr.isEmpty ? '—' : timeStr, ink),
-                  _infoCell('VENUE', _venue.isEmpty ? '—' : _venue, ink),
+                  _infoCell('DATE', dateStr.isEmpty ? '-' : dateStr, ink),
+                  _infoCell('TIME', timeStr.isEmpty ? '-' : timeStr, ink),
+                  _infoCell('VENUE', _venue.isEmpty ? '-' : _venue, ink),
                 ],
               ),
             ),

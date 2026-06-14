@@ -52,18 +52,18 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     };
   }
 
-  /// Global search — fires 3 parallel requests matching web search.ts
+  /// Global search - fires 3 parallel requests matching web search.ts
   Future<void> _search(String q) async {
     if (q.trim().isEmpty) return;
     setState(() { _loading = true; _query = q.trim(); });
 
     final headers = await _headers();
     final results = await Future.wait([
-      // /users/search?q=...&limit=6 — web: searchApi.searchPeople
+      // /users/search?q=...&limit=6 - web: searchApi.searchPeople
       http.get(Uri.parse('$_baseUrl/users/search').replace(queryParameters: {'q': _query, 'limit': '10'}), headers: headers),
-      // /events?q=...&limit=6 — web: searchApi.searchEvents
+      // /events?q=...&limit=6 - web: searchApi.searchEvents
       http.get(Uri.parse('$_baseUrl/events').replace(queryParameters: {'q': _query, 'limit': '10'}), headers: headers),
-      // /services?q=...&limit=6 — web: searchApi.searchServices
+      // /services?q=...&limit=6 - web: searchApi.searchServices
       http.get(Uri.parse('$_baseUrl/services').replace(queryParameters: {'q': _query, 'limit': '10'}), headers: headers),
     ].map((f) => f.catchError((_) => http.Response('{}', 500))));
 

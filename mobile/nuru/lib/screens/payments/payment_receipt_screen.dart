@@ -211,7 +211,7 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
   }
 
   /// Force a fresh status pull from the gateway. Same code path the
-  /// background poller uses — guarantees the user can self-serve verify.
+  /// background poller uses - guarantees the user can self-serve verify.
   Future<void> _verifyStatus() async {
     if (_verifying) return;
     if (_txCode.isEmpty) return;

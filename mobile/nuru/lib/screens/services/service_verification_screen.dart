@@ -13,7 +13,7 @@ import '../../core/services/api_service.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../core/l10n/l10n_helper.dart';
 
-/// Service Verification / KYC document upload — matches web ServiceVerification.tsx
+/// Service Verification / KYC document upload - matches web ServiceVerification.tsx
 class ServiceVerificationScreen extends StatefulWidget {
   final String serviceId;
   final String serviceType;

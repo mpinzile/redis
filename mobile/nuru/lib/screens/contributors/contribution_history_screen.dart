@@ -6,6 +6,7 @@ import '../../core/services/event_contributors_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/money_format.dart' show formatMoney;
 import '../../core/widgets/nuru_subpage_app_bar.dart';
+import '../../core/widgets/nuru_skeleton.dart';
 import '../payments/payment_receipt_screen.dart';
 
 /// Full contribution payment history for a single event (current user only).
@@ -127,14 +128,30 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
             ),
             const SizedBox(height: 16),
             if (_loading)
-              ...List.generate(3, (_) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Container(height: 72, decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.borderLight),
-                )),
-              ))
+              NuruSkeletonGroup(
+                child: Column(children: List.generate(5, (_) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.borderLight),
+                    ),
+                    child: Row(children: [
+                      NuruSkeleton.box(width: 40, height: 40, radius: 10),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        NuruSkeleton.text(width: 140, height: 12),
+                        const SizedBox(height: 8),
+                        NuruSkeleton.text(width: 100, height: 10),
+                      ])),
+                      const SizedBox(width: 12),
+                      NuruSkeleton.text(width: 70, height: 12),
+                    ]),
+                  ),
+                ))),
+              )
             else if (_payments.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 40),

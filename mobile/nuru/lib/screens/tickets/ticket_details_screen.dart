@@ -369,7 +369,7 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: _gridCell(Icons.confirmation_number_outlined, 'TICKET TYPE',
-              _ticketClass.isNotEmpty ? _ticketClass : '—')),
+              _ticketClass.isNotEmpty ? _ticketClass : '-')),
             const SizedBox(width: 14),
             Expanded(child: _gridCell(Icons.person_outline, 'TICKET FOR',
               '$_quantity ${_quantity > 1 ? "People" : "Person"}')),
@@ -380,10 +380,10 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: _gridCell(Icons.attach_money, 'AMOUNT PAID',
-              totalAmount != null ? '$currency ${_formatAmount(totalAmount)}' : '—')),
+              totalAmount != null ? '$currency ${_formatAmount(totalAmount)}' : '-')),
             const SizedBox(width: 14),
             Expanded(child: _gridCell(Icons.receipt_long_outlined, 'ORDER ID',
-              _ticketCode.isNotEmpty ? _ticketCode : '—', mono: true)),
+              _ticketCode.isNotEmpty ? _ticketCode : '-', mono: true)),
           ],
         ),
       ],
@@ -504,7 +504,7 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'image/png')],
         subject: 'Nuru Ticket',
-        text: 'My ticket for $_eventName${_ticketCode.isNotEmpty ? "  ·  $_ticketCode" : ""}',
+        text: 'My ticket for $_eventName${_ticketCode.isNotEmpty ? "  -  $_ticketCode" : ""}',
         sharePositionOrigin: sharePositionOrigin(context),
       );
     } catch (e) {

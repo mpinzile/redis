@@ -158,7 +158,7 @@ class EventContributorsService {
   }
 
   // ────────────────────────────────────────────────────────────────────
-  // Guest payment links — host-side actions for the /c/:token web flow.
+  // Guest payment links - host-side actions for the /c/:token web flow.
   // The plain token is returned ONCE; the server stores only its hash.
   // ────────────────────────────────────────────────────────────────────
 

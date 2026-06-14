@@ -143,7 +143,7 @@ class _GuestGroupJoinScreenState extends State<GuestGroupJoinScreen> {
                               Icon(Icons.verified_outlined, color: AppColors.primary, size: 18),
                               const SizedBox(width: 8),
                               Expanded(child: Text(
-                                'Join the group chat & live scoreboard. No account needed — your link gives you secure access to this group only.',
+                                'Join the group chat & live scoreboard. No account needed · your link gives you secure access to this group only.',
                                 style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary),
                               )),
                             ]),

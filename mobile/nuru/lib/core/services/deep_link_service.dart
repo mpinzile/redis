@@ -1,4 +1,4 @@
-/// DeepLinkService — listens for incoming https://nuru.tz/* and https://nuru.ke/*
+/// DeepLinkService - listens for incoming https://nuru.tz/* and https://nuru.ke/*
 /// links (Android App Links + iOS Universal Links) and routes them to the right
 /// in-app screen using a global navigatorKey.
 ///
@@ -63,7 +63,7 @@ class DeepLinkService {
     // custom scheme there is no host, so we skip the host check.
     final isCustomScheme = uri.scheme == 'nuru';
     if (!isCustomScheme && !_supportedHosts.contains(uri.host)) {
-      debugPrint('[DeepLink] ignored — unsupported host');
+      debugPrint('[DeepLink] ignored · unsupported host');
       return;
     }
     final nav = _navigatorKey?.currentState;
@@ -83,7 +83,7 @@ class DeepLinkService {
       return;
     }
 
-    // Routing table — uses named routes when available, otherwise pushes
+    // Routing table - uses named routes when available, otherwise pushes
     // a builder via the navigator. Add new mappings here as new routes ship.
     final first = segments.first;
     final rest = segments.length > 1 ? segments[1] : null;
@@ -117,7 +117,7 @@ class DeepLinkService {
         if (rest != null) { nav.pushNamed('/rsvp', arguments: {'code': rest}); routed = '/rsvp'; }
         break;
       case 'i':
-        // Invitation landing — distinct from RSVP so the screen can show the
+        // Invitation landing - distinct from RSVP so the screen can show the
         // right label / actions. Falls back to placeholder until the native
         // invitation screen ships.
         if (rest != null) { nav.pushNamed('/invitation', arguments: {'code': rest}); routed = '/invitation'; }

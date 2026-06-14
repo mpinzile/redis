@@ -11,7 +11,7 @@ import '../../../core/services/received_payments_service.dart';
 import '../../../core/utils/money_format.dart';
 import '../../payments/payment_receipt_screen.dart';
 
-/// My Ticket Payments — editorial redesign matching the
+/// My Ticket Payments - editorial redesign matching the
 /// "Total Paid" mockup: search + date filter, summary banner,
 /// horizontal event cards with status pill + amount + method,
 /// and a secure-payments footer.
@@ -137,7 +137,7 @@ class _MyTicketPaymentsTabState extends State<MyTicketPaymentsTab>
       final m = p is Map ? p : {};
       final s = m['status']?.toString();
       if (s == 'credited' || s == 'completed' || s == 'paid' || s == 'confirmed') {
-        // Exclude commission/service fee — show what the beneficiary received.
+        // Exclude commission/service fee - show what the beneficiary received.
         final v = m['net_amount'] ?? m['gross_amount'];
         if (v is num) t += v;
       }
@@ -146,7 +146,7 @@ class _MyTicketPaymentsTabState extends State<MyTicketPaymentsTab>
   }
 
   // Summary uses the active user currency (set globally on login),
-  // mirroring the rest of the app — never hard-coded.
+  // mirroring the rest of the app - never hard-coded.
 
   Future<void> _pickRange() async {
     final now = DateTime.now();
@@ -327,7 +327,7 @@ class _MyTicketPaymentsTabState extends State<MyTicketPaymentsTab>
     final m = p is Map ? Map<String, dynamic>.from(p) : <String, dynamic>{};
     final status = m['status']?.toString() ?? 'pending';
     final badge = _statusBadge(status);
-    // Show the base price the buyer actually paid for the ticket — without
+    // Show the base price the buyer actually paid for the ticket - without
     // the platform service fee/commission added on top.
     final amount = (m['net_amount'] is num)
         ? (m['net_amount'] as num)
@@ -617,7 +617,7 @@ class _MyTicketPaymentsTabState extends State<MyTicketPaymentsTab>
       iconColor = AppColors.primary;
       label = pr.isNotEmpty ? pr : 'Wallet';
     } else {
-      label = pr.isNotEmpty ? pr : (method.isNotEmpty ? method : '—');
+      label = pr.isNotEmpty ? pr : (method.isNotEmpty ? method : '-');
     }
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, size: 13, color: iconColor),

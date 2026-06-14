@@ -2,9 +2,9 @@
  * AdminPayments — top-level Finance Operations Center.
  *
  * Two stacked navigations:
- *   1. Operations sub-nav (Overview · Ledger · Settlements · Reconciliation · Reports)
+ *   1. Operations sub-nav (Overview - Ledger - Settlements - Reconciliation - Reports)
  *      — the new enterprise dashboard. State-driven (no router changes needed).
- *   2. Configuration sub-nav (Providers · Commissions · Transactions [legacy])
+ *   2. Configuration sub-nav (Providers - Commissions - Transactions [legacy])
  *      — kept for finance settings.
  */
 import { useState } from "react";

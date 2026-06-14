@@ -121,6 +121,34 @@ def _parse_what_to_expect(raw: Optional[str]):
     return out or None
 
 
+def _parse_extra_details(raw: Optional[str]):
+    """Accepts a JSON string from multipart Form. Returns a sanitized list
+    of {label, details} items, or None when empty/invalid. Max 20 rows."""
+    if not raw:
+        return None
+    txt = raw.strip()
+    if not txt:
+        return None
+    try:
+        data = json.loads(txt)
+    except Exception:
+        return None
+    if not isinstance(data, list):
+        return None
+    out = []
+    for it in data:
+        if not isinstance(it, dict):
+            continue
+        label = (it.get("label") or it.get("title") or "").strip()
+        details = (it.get("details") or it.get("description") or it.get("value") or "").strip()
+        if not label or not details:
+            continue
+        out.append({"label": label[:80], "details": details[:600]})
+        if len(out) >= 20:
+            break
+    return out or None
+
+
 def _initial_status(raw: Optional[str]):
     """Map an incoming `status` form value to an EventStatusEnum.
 
@@ -343,6 +371,8 @@ def _event_summary(db: Session, event: Event) -> dict:
         "budget": float(event.budget) if event.budget else None,
         "currency": _currency_code(db, event.currency_id),
         "dress_code": event.dress_code, "special_instructions": event.special_instructions,
+        "extra_details": event.extra_details,
+        "guest_of_honor": event.guest_of_honor,
         "what_to_expect": event.what_to_expect, "what_to_expect_notes": event.what_to_expect_notes,
         "invitation_template_id": event.invitation_template_id,
         "invitation_accent_color": event.invitation_accent_color,
@@ -1040,6 +1070,8 @@ def get_invitation_card(
             "special_instructions": event.special_instructions,
             "what_to_expect": event.what_to_expect,
             "what_to_expect_notes": event.what_to_expect_notes,
+            "extra_details": event.extra_details,
+            "guest_of_honor": event.guest_of_honor,
             "invitation_template_id": event.invitation_template_id,
             "invitation_accent_color": event.invitation_accent_color,
             "invitation_content": event.invitation_content,
@@ -1133,7 +1165,7 @@ def get_event(
     except Exception:
         cache_get = cache_set = None
 
-    cache_key = f"event_essential:v3:{event_id}"
+    cache_key = f"event_essential:v5:{event_id}"
     data = None
     if cache_get is not None:
         try:
@@ -1401,6 +1433,8 @@ async def create_event(
     special_instructions: Optional[str] = Form(None), rsvp_deadline: Optional[str] = Form(None),
     what_to_expect: Optional[str] = Form(None),
     what_to_expect_notes: Optional[str] = Form(None),
+    extra_details: Optional[str] = Form(None),
+    guest_of_honor: Optional[str] = Form(None),
     reminder_contact_phone: Optional[str] = Form(None),
     contribution_payment_instructions: Optional[str] = Form(None),
     contribution_enabled: Optional[bool] = Form(False), contribution_target: Optional[float] = Form(None),
@@ -1507,6 +1541,8 @@ async def create_event(
         special_instructions=special_instructions.strip() if special_instructions else None,
         what_to_expect=_parse_what_to_expect(what_to_expect),
         what_to_expect_notes=(what_to_expect_notes.strip() or None) if what_to_expect_notes else None,
+        extra_details=_parse_extra_details(extra_details),
+        guest_of_honor=(guest_of_honor.strip() or None) if guest_of_honor else None,
         reminder_contact_phone=reminder_contact_phone.strip() if reminder_contact_phone else None,
         contribution_payment_instructions=(contribution_payment_instructions.strip() or None) if contribution_payment_instructions else None,
         created_at=now, updated_at=now,
@@ -1671,6 +1707,8 @@ async def update_event(
     dress_code: Optional[str] = Form(None), special_instructions: Optional[str] = Form(None),
     what_to_expect: Optional[str] = Form(None),
     what_to_expect_notes: Optional[str] = Form(None),
+    extra_details: Optional[str] = Form(None),
+    guest_of_honor: Optional[str] = Form(None),
     reminder_contact_phone: Optional[str] = Form(None),
     contribution_payment_instructions: Optional[str] = Form(None),
     invitation_template_id: Optional[str] = Form(None),
@@ -1813,6 +1851,11 @@ async def update_event(
     if what_to_expect_notes is not None:
         wte_n = what_to_expect_notes.strip()
         event.what_to_expect_notes = wte_n if wte_n else None
+    if extra_details is not None:
+        event.extra_details = _parse_extra_details(extra_details)
+    if guest_of_honor is not None:
+        goh = guest_of_honor.strip()
+        event.guest_of_honor = goh if goh else None
     if reminder_contact_phone is not None:
         rcp = reminder_contact_phone.strip()
         event.reminder_contact_phone = rcp if rcp else None
@@ -1936,7 +1979,7 @@ async def update_event(
     try:
         from core.redis import cache_delete, cache_delete_pattern
         cache_delete(f"public_event:{event_id}")
-        cache_delete(f"event_essential:v3:{event_id}")
+        cache_delete(f"event_essential:v5:{event_id}")
         cache_delete_pattern("events:featured:*")
         cache_delete_pattern("events:nearby:*")
         cache_delete_pattern("events:search:*")
@@ -1983,7 +2026,7 @@ def delete_event(event_id: str, db: Session = Depends(get_db), current_user: Use
     try:
         from core.redis import cache_delete, cache_delete_pattern
         cache_delete(f"public_event:{event_id}")
-        cache_delete(f"event_essential:v3:{event_id}")
+        cache_delete(f"event_essential:v5:{event_id}")
         cache_delete_pattern("events:featured:*")
         cache_delete_pattern("events:nearby:*")
         cache_delete_pattern("events:search:*")
@@ -2040,7 +2083,7 @@ def update_event_status(event_id: str, body: dict = Body(...), db: Session = Dep
     try:
         from core.redis import cache_delete, cache_delete_pattern
         cache_delete(f"public_event:{event_id}")
-        cache_delete(f"event_essential:v3:{event_id}")
+        cache_delete(f"event_essential:v5:{event_id}")
         cache_delete_pattern("events:featured:*")
         cache_delete_pattern("events:nearby:*")
         cache_delete_pattern("events:search:*")

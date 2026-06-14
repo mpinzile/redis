@@ -1,4 +1,4 @@
-/// Public Invitation / RSVP landing screen — premium Nuru-branded.
+/// Public Invitation / RSVP landing screen - premium Nuru-branded.
 ///
 /// Deep links:
 ///   /i/:code     → mode = 'view'  (full invitation card + event detail)

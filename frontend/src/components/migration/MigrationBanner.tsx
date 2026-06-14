@@ -29,9 +29,9 @@ const COPY: Record<MigrationSurface, { headline: string; sub: string }> = {
   tickets:  { headline: "Payment setup required to continue ticket sales settlements.",
               sub: "We'll release ticket revenue to your wallet as soon as you're set up." },
   bookings: { headline: "Set up payments to confirm new paid bookings.",
-              sub: "Customers can still browse — but checkouts pause until you're ready." },
+              sub: "Customers can still browse · but checkouts pause until you're ready." },
   generic:  { headline: "Complete your payment setup to keep earning.",
-              sub: "Takes about a minute. Mobile money or bank — your choice." },
+              sub: "Takes about a minute. Mobile money or bank · your choice." },
 };
 
 interface Props {

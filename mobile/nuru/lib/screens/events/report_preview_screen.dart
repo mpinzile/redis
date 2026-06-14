@@ -196,7 +196,7 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
                       onTap: () => Printing.layoutPdf(onLayout: (_) => widget.pdfBytes),
                     ),
                     const SizedBox(width: 10),
-                    // Save — primary CTA
+                    // Save - primary CTA
                     Expanded(
                       flex: 3,
                       child: AnimatedContainer(

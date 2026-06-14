@@ -1,7 +1,7 @@
 import 'api_base.dart';
 import 'secure_token_storage.dart';
 
-/// Event Groups service — workspace, chat, scoreboard, members & invites.
+/// Event Groups service - workspace, chat, scoreboard, members & invites.
 /// Supports BOTH authenticated Nuru users and group-scoped guest tokens
 /// stored under `eg_guest_token` in secure storage.
 class EventGroupsService {

@@ -386,31 +386,96 @@ const EventView = () => {
         </motion.div>
       )}
 
-      {/* Dress Code & Instructions */}
-      {(event.dress_code || event.special_instructions) && (
+      {/* What to Expect */}
+      {((Array.isArray(event.what_to_expect) && event.what_to_expect.length > 0) || (event.what_to_expect_notes && String(event.what_to_expect_notes).trim().length > 0)) && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
+          transition={{ delay: 0.32 }}
         >
           <Card>
-            <CardContent className="p-5 space-y-3">
-              {event.dress_code && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Dress Code</h3>
-                  <p className="text-foreground">{event.dress_code}</p>
-                </div>
+            <CardContent className="p-5">
+              <h2 className="font-semibold text-foreground mb-3">What to Expect</h2>
+              {Array.isArray(event.what_to_expect) && event.what_to_expect.length > 0 && (
+                <ul className="space-y-3 mb-3">
+                  {event.what_to_expect.map((it: any, idx: number) => {
+                    const label = (it?.label || it?.title || '').toString().trim();
+                    if (!label) return null;
+                    const desc = (it?.description || '').toString().trim();
+                    return (
+                      <li key={idx} className="flex items-start gap-3">
+                        <span className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{label}</p>
+                          {desc && <p className="text-sm text-muted-foreground">{desc}</p>}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
-              {event.special_instructions && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Special Instructions</h3>
-                  <p className="text-foreground">{event.special_instructions}</p>
-                </div>
+              {event.what_to_expect_notes && (
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.what_to_expect_notes}</p>
               )}
             </CardContent>
           </Card>
         </motion.div>
       )}
+
+
+      {/* Guest of Honor */}
+      {(event as any).guest_of_honor && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.32 }}
+        >
+          <Card>
+            <CardContent className="p-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Guest of Honor</h3>
+              <p className="text-foreground text-lg font-semibold mt-1">{(event as any).guest_of_honor}</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Additional details - flexible label/details rows, with legacy
+          dress_code / special_instructions as fallback when no extra_details
+          are recorded yet. */}
+      {(() => {
+        const rawExtras = (event as any).extra_details;
+        const rows: Array<{ label: string; details: string }> = [];
+        if (Array.isArray(rawExtras)) {
+          for (const it of rawExtras) {
+            const label = String(it?.label || '').trim();
+            const details = String(it?.details || it?.description || '').trim();
+            if (label && details) rows.push({ label, details });
+          }
+        }
+        if (rows.length === 0) {
+          if (event.dress_code) rows.push({ label: 'Dress Code', details: event.dress_code });
+          if (event.special_instructions) rows.push({ label: 'Special Instructions', details: event.special_instructions });
+        }
+        if (rows.length === 0) return null;
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <Card>
+              <CardContent className="p-5 divide-y divide-border">
+                {rows.map((r, i) => (
+                  <div key={i} className={i === 0 ? 'pb-3' : 'py-3 last:pb-0'}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{r.label}</h3>
+                    <p className="text-foreground mt-1 whitespace-pre-line">{r.details}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
+        );
+      })()}
 
       {/* Schedule */}
       {event.schedule?.length > 0 && (
@@ -440,7 +505,7 @@ const EventView = () => {
         </motion.div>
       )}
 
-      {/* Photo Libraries — shown to event creator when photography provider has uploaded */}
+      {/* Photo Libraries - shown to event creator when photography provider has uploaded */}
       {photoLibraries.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}

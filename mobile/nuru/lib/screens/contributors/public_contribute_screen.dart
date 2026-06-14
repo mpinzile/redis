@@ -1,4 +1,4 @@
-/// PublicContributeScreen — native parity for the web `/c/:token` page.
+/// PublicContributeScreen - native parity for the web `/c/:token` page.
 ///
 /// Shows a hero event cover, pledge / paid / balance breakdown with a
 /// progress bar, then opens the canonical [MakePaymentScreen] checkout.

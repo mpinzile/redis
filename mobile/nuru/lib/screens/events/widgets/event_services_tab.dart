@@ -10,7 +10,7 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/theme/text_styles.dart';
 import 'log_offline_payment_sheet.dart';
 
-/// Event Services tab — refined redesign.
+/// Event Services tab - refined redesign.
 /// • No gradients, no heavy shadows, no oversized hero icon.
 /// • Removed "you're building something beautiful" tagline.
 /// • Project SVG icons only via AppIcon.

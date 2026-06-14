@@ -12,7 +12,7 @@ import 'live_chat_screen.dart';
 import '../issues/my_issues_screen.dart';
 import '../../core/l10n/l10n_helper.dart';
 
-/// Redesigned Help Center — uses Nuru's custom SVG iconography (no Flutter Material icons).
+/// Redesigned Help Center - uses Nuru's custom SVG iconography (no Flutter Material icons).
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
 

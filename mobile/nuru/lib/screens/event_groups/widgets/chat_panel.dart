@@ -19,7 +19,7 @@ const _fullEmojis = [
   '🙌','👀','🚀','💡','✅','❌',
 ];
 
-/// Modern chat panel — redesigned to match mobile UI:
+/// Modern chat panel - redesigned to match mobile UI:
 /// - Flat #F8F8FA background
 /// - White rounded bubbles (16px) with soft shadow
 /// - Sender name + time above bubbles
@@ -273,7 +273,7 @@ class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
           reactions[mineIdx] = r;
         }
       } else {
-        // Enforce single reaction per user — remove any previous one first.
+        // Enforce single reaction per user - remove any previous one first.
         if (mineIdx >= 0) {
           final prev = Map<String, dynamic>.from(reactions[mineIdx]);
           prev['mine'] = false;
@@ -392,7 +392,7 @@ class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
   }
 
   /// Server timestamps may be naive UTC (no `Z`/offset). Treat them as UTC
-  /// before converting to local — otherwise `DateTime.parse` assumes the
+  /// before converting to local - otherwise `DateTime.parse` assumes the
   /// device's local zone and the chat shows server time instead of local.
   DateTime? _parseUtc(String iso) {
     if (iso.isEmpty) return null;
@@ -419,7 +419,7 @@ class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
     return '$h:$m $period';
   }
 
-  /// Force OS color emoji rendering — Flutter inherits the surrounding
+  /// Force OS color emoji rendering - Flutter inherits the surrounding
   /// text color which makes ❤️ render as monochrome (looks black).
   static const TextStyle _emojiStyle = TextStyle(
     fontSize: 13,
@@ -432,7 +432,7 @@ class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
     ],
   );
 
-  /// Heart emoji is often rendered monochrome on Android — force red tint.
+  /// Heart emoji is often rendered monochrome on Android - force red tint.
   static bool _isHeart(String e) => e == '❤️' || e == '❤' || e == '♥';
 
   Widget _emoji(String e, {double size = 13}) {
@@ -615,7 +615,7 @@ class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
       );
     }
     // Darker emerald palette to match the web event-group contribution card
-    // (tailwind emerald-600/700/100 — text-emerald-700, bg-emerald-100 etc.)
+    // (tailwind emerald-600/700/100 - text-emerald-700, bg-emerald-100 etc.)
     const emerald = Color(0xFF047857); // emerald-700
     const emeraldStrong = Color(0xFF059669); // emerald-600
     const emeraldSoft = Color(0xFFD1FAE5); // emerald-100
@@ -1042,13 +1042,13 @@ class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.lock_outline, size: 14, color: AppColors.textTertiary),
             const SizedBox(width: 6),
-            Text('Event has ended — chat is read-only',
+            Text('Event has ended · chat is read-only',
                 style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textTertiary, fontWeight: FontWeight.w600)),
           ]),
         ),
       );
     }
-    // Floating pill composer per spec — borderless, gold send.
+    // Floating pill composer per spec - borderless, gold send.
     final sendGold = AppColors.primary;
     const navy = Color(0xFF0A1C40);
     const hintBlueGrey = Color(0xFF8E9BB0);
@@ -1068,7 +1068,7 @@ class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
         ),
         padding: const EdgeInsets.fromLTRB(8, 6, 6, 6),
         child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          // Attach (left) — match mock composer (no IconButton min-size)
+          // Attach (left) - match mock composer (no IconButton min-size)
           InkWell(
             onTap: _uploading ? null : _pickImage,
             customBorder: const CircleBorder(),
@@ -1081,7 +1081,7 @@ class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
                       colorFilter: const ColorFilter.mode(navy, BlendMode.srcIn)),
             ),
           ),
-          // Textfield (middle) — outer padding mirrors the inactive composer so
+          // Textfield (middle) - outer padding mirrors the inactive composer so
           // the placeholder x-position never shifts when switching tabs.
           Expanded(
             child: Padding(
@@ -1113,7 +1113,7 @@ class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(width: 4),
-          // Send (right) — circular gold
+          // Send (right) - circular gold
           SizedBox(
             width: 54, height: 54,
             child: Material(

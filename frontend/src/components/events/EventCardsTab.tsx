@@ -1630,10 +1630,10 @@ function BatchesView({
     <div className="space-y-3">
       <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs space-y-1">
         <p className="font-medium text-foreground">
-          {totalSelected} selected · {totalSent} {pastTense} · {totalFailed} failed · {totalPending} pending
+          {totalSelected} selected - {totalSent} {pastTense} - {totalFailed} failed - {totalPending} pending
         </p>
         <p className="text-muted-foreground">
-          {completed} of {batches.length} batches completed · {remaining} remaining · batch size {batchSize}
+          {completed} of {batches.length} batches completed - {remaining} remaining - batch size {batchSize}
         </p>
         <div className="pt-1">
           <Button size="sm" variant="outline" onClick={onResetRenderer} disabled={activeBatchNo !== null}>
@@ -1656,10 +1656,10 @@ function BatchesView({
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">
-                      Batch {b.batch_no} · {start}–{end} of {totalSelected}
+                      Batch {b.batch_no} - {start}–{end} of {totalSelected}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {b.recipient_ids.length} recipients · {pastTense} {sentCount} · failed {failedCount} · pending {pendingCount}
+                      {b.recipient_ids.length} recipients - {pastTense} {sentCount} - failed {failedCount} - pending {pendingCount}
                     </p>
                   </div>
                   <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[b.status]}`}>
@@ -1675,13 +1675,13 @@ function BatchesView({
                         : `Card ${Math.min(activeBatchProgress.done + 1, activeBatchProgress.total)} of ${activeBatchProgress.total}${activeBatchProgress.currentName ? `: ${activeBatchProgress.currentName}` : ""}`}
                     </p>
                     <p>
-                      Prepared {activeBatchProgress.prepared} · Uploaded {activeBatchProgress.uploaded} · Failed {activeBatchProgress.failed} · Pending {Math.max(0, activeBatchProgress.total - activeBatchProgress.done)}
+                      Prepared {activeBatchProgress.prepared} - Uploaded {activeBatchProgress.uploaded} - Failed {activeBatchProgress.failed} - Pending {Math.max(0, activeBatchProgress.total - activeBatchProgress.done)}
                     </p>
                     {activeBatchProgress.avgMs !== undefined && (
                       <p>
                         Average: {(activeBatchProgress.avgMs / 1000).toFixed(1)}s/card
                         {activeBatchProgress.etaMs !== undefined && activeBatchProgress.etaMs > 0
-                          ? ` · ETA ${Math.max(1, Math.round(activeBatchProgress.etaMs / 1000))}s`
+                          ? ` - ETA ${Math.max(1, Math.round(activeBatchProgress.etaMs / 1000))}s`
                           : ""}
                       </p>
                     )}
@@ -1748,7 +1748,7 @@ function BatchesView({
                             <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${failed ? "bg-red-500" : sent ? "bg-green-500" : "bg-muted-foreground/40"}`} />
                             <span className="flex-1 break-words">
                               <span className="text-foreground">{info?.name || id}</span>
-                              {info?.phone && <span className="text-muted-foreground"> · {info.phone}</span>}
+                              {info?.phone && <span className="text-muted-foreground"> - {info.phone}</span>}
                               {failed && <span className="text-red-600 dark:text-red-400"> — {failed.reason}</span>}
                             </span>
                           </li>
@@ -1758,7 +1758,7 @@ function BatchesView({
                     {b.started_at && (
                       <p className="pt-1">
                         Started {new Date(b.started_at).toLocaleString()}
-                        {b.finished_at ? ` · Finished ${new Date(b.finished_at).toLocaleString()}` : ""}
+                        {b.finished_at ? ` - Finished ${new Date(b.finished_at).toLocaleString()}` : ""}
                       </p>
                     )}
                   </div>

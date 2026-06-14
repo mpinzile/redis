@@ -390,7 +390,7 @@ const LivingLedgerHero = () => {
             <span className="opacity-30">/</span>
             <span>Airtel Money</span>
             <span className="opacity-30">/</span>
-            <span>Visa · Mastercard</span>
+            <span>Visa - Mastercard</span>
             <span className="opacity-30">/</span>
             <span>Bank transfer</span>
           </div>

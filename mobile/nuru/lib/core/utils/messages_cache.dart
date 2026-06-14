@@ -3,14 +3,14 @@
 /// while the network round-trip completes.
 ///
 /// Two layers:
-///   * [MessagesCache.conversations] — the last-known list of conversations,
+///   * [MessagesCache.conversations] - the last-known list of conversations,
 ///     used as a seed when the Messages screen mounts before the network
 ///     fetch returns.
-///   * [MessagesCache.messages] — per-conversation message arrays seeded by
+///   * [MessagesCache.messages] - per-conversation message arrays seeded by
 ///     the prefetcher when a card scrolls into view, and updated by the
 ///     ChatDetailScreen after every successful load.
 ///
-/// Caches live for the duration of the process — they are cleared on logout
+/// Caches live for the duration of the process - they are cleared on logout
 /// via [MessagesCache.reset].
 class MessagesCache {
   MessagesCache._();

@@ -8,7 +8,7 @@ import 'receipt_screen.dart';
 /// Shown immediately after the make-payment screen successfully *initiates*
 /// a payment. We use `pushReplacement` so pressing back from here returns
 /// the user to whatever screen launched the payment (event detail, ticket
-/// checkout, contribution flow, etc.) — never back into the now-stale
+/// checkout, contribution flow, etc.) - never back into the now-stale
 /// make-payment form.
 ///
 /// The screen polls the transaction status until it terminates, then shows

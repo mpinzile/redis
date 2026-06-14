@@ -249,7 +249,12 @@ async def public_initiate(token: str, request: Request, db: Session = Depends(ge
     contributor = (
         db.query(UserContributor).filter(UserContributor.id == ec.contributor_id).first()
     )
-    contributor_name = (contributor.name if contributor else "Guest contributor")
+    # Prefer the event-specific display name so receipts, descriptions and
+    # gateway metadata all carry the name the organiser uses inside THIS event.
+    contributor_name = (
+        (getattr(ec, "display_name", None) or "").strip()
+        or (contributor.name if contributor else "Guest contributor")
+    )
 
     desc = (payload.get("payment_description") or "").strip()
     if len(desc) < 8:
@@ -452,7 +457,7 @@ def _attribute_to_event_contributor(db, tx: Transaction, ec: EventContributor):
     contribution = EventContribution(
         event_id=ec.event_id,
         event_contributor_id=ec.id,
-        contributor_name=contributor.name if contributor else "Guest contributor",
+        contributor_name=((getattr(ec, "display_name", None) or "").strip() or (contributor.name if contributor else "Guest contributor")),
         contributor_contact=contact or None,
         amount=tx.net_amount or tx.gross_amount,
         payment_method=PaymentMethodEnum.mobile,
@@ -493,7 +498,7 @@ def _send_receipt_sms(db: Session, ec: EventContributor, tx: Transaction, token:
 
     event = db.query(Event).filter(Event.id == ec.event_id).first()
     event_title = event.name if event else "your event"
-    name = (contributor.name if contributor else "") or "Contributor"
+    name = ((getattr(ec, "display_name", None) or "").strip() or (contributor.name if contributor else "") or "Contributor")
     receipt_url = f"https://{host_for_currency(currency)}/c/{token}/r/{tx.transaction_code}"
 
     # Compute total_paid for this contributor on this event (confirmed only)

@@ -35,7 +35,7 @@ export default function AdminServiceDetail() {
   const [newVerificationStatus, setNewVerificationStatus] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  useAdminMeta(service?.title ? `Service — ${service.title}` : "Service Detail");
+  useAdminMeta(service?.title ? `Service - ${service.title}` : "Service Detail");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -126,7 +126,7 @@ export default function AdminServiceDetail() {
               {service.user?.email && <span className="ml-1 text-muted-foreground">· {service.user.email}</span>}
               {service.user?.phone && <span className="ml-1 text-muted-foreground">· {service.user.phone}</span>}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">{service.category}{service.service_type ? ` / ${service.service_type}` : ""}{service.location ? ` · ${service.location}` : ""}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{service.category}{service.service_type ? ` / ${service.service_type}` : ""}{service.location ? ` - ${service.location}` : ""}</p>
           </div>
         </div>
         {service.description && (

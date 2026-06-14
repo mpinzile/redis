@@ -21,7 +21,7 @@ import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../messages/messages_screen.dart';
 
-/// My Circle — pixel match to mockup.
+/// My Circle - pixel match to mockup.
 /// Black hero with circular avatar arrangement, underline tabs
 /// (Members / Requests / Invitations), borderless rows, privacy notice
 /// and a full-width "Invite to Circle" CTA.
@@ -731,32 +731,27 @@ class _CircleScreenState extends State<CircleScreen> {
                     ),
                   ]),
                   const SizedBox(height: 18),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppColors.borderLight),
+                  TextField(
+                    controller: ctrl,
+                    focusNode: focus,
+                    autofocus: true,
+                    autocorrect: true,
+                    enableSuggestions: true,
+                    maxLines: 6,
+                    minLines: 4,
+                    textInputAction: TextInputAction.newline,
+                    style: GoogleFonts.inter(fontSize: 14.5, color: AppColors.textPrimary, height: 1.45),
+                    decoration: InputDecoration(
+                      hintText: 'Write a message…',
+                      hintStyle: GoogleFonts.inter(fontSize: 14, color: AppColors.textHint),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border, width: 1)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border, width: 1)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
                     ),
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                    child: TextField(
-                      controller: ctrl,
-                      focusNode: focus,
-                      autofocus: true,
-                      autocorrect: true,
-                      enableSuggestions: true,
-                      maxLines: 6,
-                      minLines: 4,
-                      textInputAction: TextInputAction.newline,
-                      style: GoogleFonts.inter(fontSize: 14.5, color: AppColors.textPrimary, height: 1.45),
-                      decoration: InputDecoration(
-                        isCollapsed: true,
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                        hintText: 'Write a message…',
-                        hintStyle: GoogleFonts.inter(fontSize: 14.5, color: AppColors.textTertiary),
-                      ),
-                      onChanged: (_) => setSheet(() {}),
-                    ),
+                    onChanged: (_) => setSheet(() {}),
                   ),
                   const SizedBox(height: 14),
                   Row(children: [

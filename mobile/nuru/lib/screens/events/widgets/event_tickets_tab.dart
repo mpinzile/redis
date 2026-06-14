@@ -9,7 +9,7 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/l10n/l10n_helper.dart';
 
-/// Event Tickets Tab — manage ticket classes and view sales (organizer view)
+/// Event Tickets Tab - manage ticket classes and view sales (organizer view)
 /// Matches web EventTicketManagement.tsx
 class EventTicketsTab extends StatefulWidget {
   final String eventId;
@@ -197,7 +197,7 @@ class _EventTicketsTabState extends State<EventTicketsTab> {
             _approvalBanner(),
             if (_approvalStatus.isNotEmpty) const SizedBox(height: 14),
 
-            // 4 KPI tiles row — Classes, Sold, Orders, Revenue
+            // 4 KPI tiles row - Classes, Sold, Orders, Revenue
             Row(children: [
               Expanded(child: _kpiCard(
                 iconName: 'ticket',
@@ -628,9 +628,9 @@ class _EventTicketsTabState extends State<EventTicketsTab> {
   }
 
   String _fmtPrice(dynamic p) {
-    if (p == null) return '—';
+    if (p == null) return '-';
     final n = (p is num) ? p.toInt() : (int.tryParse(p.toString().replaceAll(RegExp(r'[^\d]'), '')) ?? 0);
-    if (n == 0) return '—';
+    if (n == 0) return '-';
     return '${getActiveCurrency()} ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
   }
 

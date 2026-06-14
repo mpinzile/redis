@@ -81,7 +81,7 @@ class _SelectTicketsScreenState extends State<SelectTicketsScreen> {
     setState(() => _feeLoading = true);
     final currency = getActiveCurrency();
     final country = currency == 'KES' ? 'KE' : 'TZ';
-    // Use a nominal gross of 1 — backend fee is currently a flat per-tx
+    // Use a nominal gross of 1 - backend fee is currently a flat per-tx
     // CommissionSetting; the amount only matters for percentage models.
     final res = await WalletService.feePreview(
       countryCode: country,
@@ -122,7 +122,7 @@ class _SelectTicketsScreenState extends State<SelectTicketsScreen> {
 
   Future<void> _proceed() async {
     if (_totalQty == 0 || _purchasing) return;
-    // Build the full multi-class cart — backend is the source of truth for
+    // Build the full multi-class cart - backend is the source of truth for
     // pricing and the grand total, so we send every selected line.
     final items = <Map<String, dynamic>>[];
     _quantities.forEach((id, qty) {
@@ -161,7 +161,7 @@ class _SelectTicketsScreenState extends State<SelectTicketsScreen> {
             .join(' · ')
         : '$_totalQty ticket${_totalQty > 1 ? "s" : ""} • ${widget.eventName}';
 
-    // Reserve flow — supported only for single-class single-line carts
+    // Reserve flow - supported only for single-class single-line carts
     // (mirrors what the backend's /ticketing/reserve route accepts).
     final canReserve = items.length == 1;
     final reserveClassId = canReserve ? items.first['ticket_class_id'] as String : null;
@@ -211,7 +211,7 @@ class _SelectTicketsScreenState extends State<SelectTicketsScreen> {
               Navigator.pop(context);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Payment confirmed — your tickets are now issued.'),
+                content: Text('Payment confirmed · your tickets are now issued.'),
               ));
             }
           },

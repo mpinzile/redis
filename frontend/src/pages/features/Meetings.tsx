@@ -10,9 +10,9 @@ const Meetings = () => {
 
   return (
     <EditorialFeaturePage
-      kicker="Service · 06 — Meetings"
+      kicker="Service - 06 - Meetings"
       title="Committee calls, inside the workspace."
-      lead="Built-in HD video meetings for organisers, committees, vendors and family groups. Open a room from any event with one click — no installs, no separate accounts, no link-juggling."
+      lead="Built-in HD video meetings for organisers, committees, vendors and family groups. Open a room from any event with one click · no installs, no separate accounts, no link-juggling."
       specs={[
         { label: "Quality", value: "HD video" },
         { label: "Capacity", value: "Up to 50" },
@@ -22,9 +22,9 @@ const Meetings = () => {
       sections={[
         {
           title: "Open a room from anywhere in the event.",
-          lead: "From the budget page, the vendor thread, or a committee group — one button starts a meeting that everyone in the right room can join.",
+          lead: "From the budget page, the vendor thread, or a committee group · one button starts a meeting that everyone in the right room can join.",
           bullets: [
-            "Browser-based — no downloads.",
+            "Browser-based · no downloads.",
             "Mobile and desktop supported.",
             "Permission-aware: only invited members join.",
             "Persistent room links per committee.",
@@ -34,7 +34,7 @@ const Meetings = () => {
         },
         {
           title: "Built for event coordination.",
-          lead: "Meetings are tied to the event context — agenda, budget, tasks and decisions made stay attached to the workspace, not lost in a chat app.",
+          lead: "Meetings are tied to the event context · agenda, budget, tasks and decisions made stay attached to the workspace, not lost in a chat app.",
           bullets: [
             "Live shared agenda during the call.",
             "Decisions logged into the event activity.",

@@ -145,7 +145,7 @@ class EventsService {
     return ApiBase.getRaw('/user-events/committee?page=$page&limit=$limit');
   }
 
-  /// fields: 'essential' (default — fast, includes inline permissions) or 'full'.
+  /// fields: 'essential' (default - fast, includes inline permissions) or 'full'.
   static Future<Map<String, dynamic>> getEventById(String eventId, {String fields = 'essential'}) {
     return ApiBase.getRaw('/user-events/$eventId?fields=$fields');
   }
@@ -178,6 +178,8 @@ class EventsService {
     String? contributionPaymentInstructions,
     List<Map<String, dynamic>>? whatToExpect,
     String? whatToExpectNotes,
+    List<Map<String, dynamic>>? extraDetails,
+    String? guestOfHonor,
     String status = 'published',
     bool createdForSomeoneElse = false,
     String? eventOwnerUserId,
@@ -221,6 +223,10 @@ class EventsService {
         request.fields['what_to_expect'] = jsonEncode(whatToExpect);
       if (whatToExpectNotes != null)
         request.fields['what_to_expect_notes'] = whatToExpectNotes;
+      if (extraDetails != null)
+        request.fields['extra_details'] = jsonEncode(extraDetails);
+      if (guestOfHonor != null && guestOfHonor.isNotEmpty)
+        request.fields['guest_of_honor'] = guestOfHonor;
       request.fields['created_for_someone_else'] = createdForSomeoneElse ? 'true' : 'false';
       if (createdForSomeoneElse && eventOwnerUserId != null && eventOwnerUserId.isNotEmpty) {
         request.fields['event_owner_user_id'] = eventOwnerUserId;
@@ -269,6 +275,8 @@ class EventsService {
     String? contributionPaymentInstructions,
     List<Map<String, dynamic>>? whatToExpect,
     String? whatToExpectNotes,
+    List<Map<String, dynamic>>? extraDetails,
+    String? guestOfHonor,
     String? invitationTemplateId,
     String? invitationAccentColor,
     Map<String, dynamic>? invitationContent,
@@ -312,6 +320,10 @@ class EventsService {
         request.fields['what_to_expect'] = jsonEncode(whatToExpect);
       if (whatToExpectNotes != null)
         request.fields['what_to_expect_notes'] = whatToExpectNotes;
+      if (extraDetails != null)
+        request.fields['extra_details'] = jsonEncode(extraDetails);
+      if (guestOfHonor != null)
+        request.fields['guest_of_honor'] = guestOfHonor;
       if (invitationTemplateId != null)
         request.fields['invitation_template_id'] = invitationTemplateId;
       if (invitationAccentColor != null)
@@ -574,9 +586,9 @@ class EventsService {
     int limit = 10,
   }) => ApiBase.get('/user-events/$eventId/recent-activity', queryParams: {'limit': '$limit'});
 
-  /// Unified Event Management overview — KPIs, ticket sales, contribution
+  /// Unified Event Management overview - KPIs, ticket sales, contribution
   /// status, revenue summary and sponsor totals in a single call. The
-  /// numbers are authoritative — never recompute or hardcode them on the client.
+  /// numbers are authoritative - never recompute or hardcode them on the client.
   static Future<Map<String, dynamic>> getManagementOverview(String eventId) =>
       ApiBase.getRaw('/user-events/$eventId/management-overview');
 

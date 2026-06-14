@@ -330,7 +330,7 @@ export default function AdminAgreements() {
               {accPagination && accPagination.pages > 1 && (
                 <div className="flex items-center justify-between pt-2">
                   <span className="text-xs text-muted-foreground">
-                    Page {accPagination.page} of {accPagination.pages} · {accPagination.total} total
+                    Page {accPagination.page} of {accPagination.pages} - {accPagination.total} total
                   </span>
                   <div className="flex gap-2">
                     <Button

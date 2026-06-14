@@ -1,4 +1,4 @@
-/// Public ticket verification + view for /ticket/:code — premium Nuru styling.
+/// Public ticket verification + view for /ticket/:code - premium Nuru styling.
 ///
 /// Endpoint: GET /api/v1/ticketing/verify/{ticket_code} (public, no auth).
 /// States: loading, valid (with QR), used / checked-in, expired, invalid /

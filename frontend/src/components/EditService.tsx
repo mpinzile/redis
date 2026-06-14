@@ -332,7 +332,7 @@ const EditService = () => {
         toast({
           title: 'Service updated!',
           description: keyFieldChanged
-            ? 'Service category or type changed — please upload your KYC documents to re-verify.'
+            ? 'Service category or type changed · please upload your KYC documents to re-verify.'
             : (response.message || 'Your service has been updated successfully.'),
         });
         // If key fields changed, redirect to the KYC upload page.

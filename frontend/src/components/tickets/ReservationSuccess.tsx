@@ -70,7 +70,7 @@ const ReservationSuccess = ({ data, onPayNow, onClose }: Props) => {
       </div>
 
       <div>
-        <p className="font-bold text-foreground text-lg">Reserved · pay later</p>
+        <p className="font-bold text-foreground text-lg">Reserved - pay later</p>
         <p className="text-xs text-muted-foreground mt-1">
           We're holding{" "}
           {data.quantity && data.quantity > 1

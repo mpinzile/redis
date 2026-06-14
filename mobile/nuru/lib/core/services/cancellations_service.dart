@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'secure_token_storage.dart';
 
-/// Cancellations API (Phase 1.2) — preview + commit refund.
+/// Cancellations API (Phase 1.2) - preview + commit refund.
 class CancellationsService {
   static String get _baseUrl => ApiConfig.baseUrl;
 

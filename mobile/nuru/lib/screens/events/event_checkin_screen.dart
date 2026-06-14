@@ -4,7 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import 'widgets/event_checkin_tab.dart';
 
-/// Standalone host for [EventCheckinTab] — used when the user opens the
+/// Standalone host for [EventCheckinTab] - used when the user opens the
 /// scanner directly from a quick action. Title resolves dynamically from
 /// the backend ("Guest Check In" or "Ticket Check In").
 class EventCheckinScreen extends StatefulWidget {

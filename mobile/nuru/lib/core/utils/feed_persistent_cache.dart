@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Persists the chronological feed list across app launches so the feed
 /// screen can render instantly from disk while a fresh fetch runs in the
-/// background. Keeps the same ordering returned by the server — we never
+/// background. Keeps the same ordering returned by the server - we never
 /// resort locally.
 class FeedPersistentCache {
   static const _kFeedKey = 'nuru.feed.cache.v1';

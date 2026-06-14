@@ -10,7 +10,7 @@ import '../checkin_failed_screen.dart';
 /// Premium full-screen Guest / Ticket Check-In scanner.
 ///
 /// Continuous live camera, event hero card with real-time aggregate stats
-/// (total / checked in / pending — labels & counts depend on whether the
+/// (total / checked in / pending - labels & counts depend on whether the
 /// event sells tickets), manual code entry, and a recent scans feed.
 class EventCheckinTab extends StatefulWidget {
   final String eventId;
@@ -396,7 +396,7 @@ class _EventCheckinTabState extends State<EventCheckinTab>
                     ),
                   ),
 
-                  // Corner brackets — Nuru primary color
+                  // Corner brackets - Nuru primary color
                   _frame(),
                   if (!_processing) _scannerLine(),
 
@@ -461,7 +461,7 @@ class _EventCheckinTabState extends State<EventCheckinTab>
           ]),
           const SizedBox(height: 10),
           Builder(builder: (_) {
-            // Show only actual check-in scans — pending RSVPs from the
+            // Show only actual check-in scans - pending RSVPs from the
             // backend feed are not real scans and must be hidden here.
             final scans = _recent.where((r) =>
                 (r['status'] ?? '').toString() == 'checked_in').toList();
@@ -754,7 +754,7 @@ class _EventCheckinTabState extends State<EventCheckinTab>
   }
 
   String _formatEventDate(String? iso) {
-    if (iso == null || iso.isEmpty) return '—';
+    if (iso == null || iso.isEmpty) return '-';
     final dt = DateTime.tryParse(iso);
     if (dt == null) return iso;
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];

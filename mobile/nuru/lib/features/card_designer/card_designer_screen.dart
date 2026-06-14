@@ -1,4 +1,4 @@
-// CardDesignerScreen — premium mobile invitation card designer.
+// CardDesignerScreen - premium mobile invitation card designer.
 //
 // Editor architecture
 //  - State holds a CardDesignDoc and a undo/redo stack (cap 50).
@@ -230,7 +230,7 @@ class _CardDesignerScreenState extends State<CardDesignerScreen> {
     }
   }
 
-  /// Standalone image layer — draggable, resizable, rotatable. NOT a
+  /// Standalone image layer - draggable, resizable, rotatable. NOT a
   /// background. Place anywhere on the canvas; reorder via the layers panel.
   Future<void> _addImage() async {
     try {
@@ -1214,7 +1214,7 @@ class _QrStyleSheet extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
-                    'QR is small — guests may struggle to scan it. Resize on canvas.',
+                    'QR is small · guests may struggle to scan it. Resize on canvas.',
                     style: TextStyle(
                         color: Colors.amberAccent,
                         fontSize: 12,

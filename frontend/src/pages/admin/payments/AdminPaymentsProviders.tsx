@@ -61,7 +61,7 @@ export default function AdminPaymentsProviders() {
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
             {COUNTRIES.map((c) => (
-              <SelectItem key={c.code} value={c.code}>{c.label} · {c.currency}</SelectItem>
+              <SelectItem key={c.code} value={c.code}>{c.label} - {c.currency}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -93,7 +93,7 @@ export default function AdminPaymentsProviders() {
                       {p.is_default && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
                     </div>
                     <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                      {p.code} · {p.provider_type.replace("_", " ")}
+                      {p.code} - {p.provider_type.replace("_", " ")}
                     </p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       <Badge variant={p.is_active ? "default" : "secondary"} className="text-[10px]">

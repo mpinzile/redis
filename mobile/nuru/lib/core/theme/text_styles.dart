@@ -30,7 +30,7 @@ String extractStr(dynamic v, {String fallback = ''}) {
 }
 
 /// Formats an amount with the active user currency (or [currency] override).
-/// Name kept for backward compatibility — no longer hardcoded to TZS.
+/// Name kept for backward compatibility - no longer hardcoded to TZS.
 String formatTZS(dynamic amount, {String? currency}) {
   final code = (currency != null && currency.trim().isNotEmpty)
       ? currency.trim().toUpperCase()

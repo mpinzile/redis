@@ -10,8 +10,8 @@ const Invitations = () => {
 
   return (
     <EditorialFeaturePage
-      kicker="Service · 03 — Invitations"
-      title="Invitations that arrive — and reply."
+      kicker="Service - 03 - Invitations"
+      title="Invitations that arrive · and reply."
       lead="Beautiful, personalised invitations delivered through SMS, WhatsApp, email or a unique short link. Each guest gets their own page. Each RSVP lands in your dashboard, instantly."
       specs={[
         { label: "Channels", value: "SMS · WA · Email · Link" },
@@ -22,7 +22,7 @@ const Invitations = () => {
       sections={[
         {
           title: "Personal at scale.",
-          lead: "Each invitation is unique to the guest — their name, table, dress code, programme, and a one-tap RSVP. No more group blasts.",
+          lead: "Each invitation is unique to the guest · their name, table, dress code, programme, and a one-tap RSVP. No more group blasts.",
           bullets: [
             "Personalised guest landing pages.",
             "Multi-language SMS and WhatsApp.",
@@ -46,7 +46,7 @@ const Invitations = () => {
         },
         {
           title: "Becomes your check-in on the day.",
-          lead: "Every digital invitation is also a check-in token. Pair with NFC NuruCards or QR scan for fast entry — no paper lists, no confusion at the gate.",
+          lead: "Every digital invitation is also a check-in token. Pair with NFC NuruCards or QR scan for fast entry · no paper lists, no confusion at the gate.",
           bullets: [
             "Scan-to-check-in via NFC or QR.",
             "Live arrival board for organisers.",

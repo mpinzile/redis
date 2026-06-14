@@ -10,7 +10,7 @@ import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/event_cover_image.dart';
 
 /// Full-screen activity log for an event. Shows search, type filter pills
-/// and items grouped into Today / This Week / Earlier — the same visual
+/// and items grouped into Today / This Week / Earlier - the same visual
 /// system as the Recent Activity card on the overview tab.
 class EventActivityScreen extends StatefulWidget {
   final String eventId;
@@ -58,7 +58,7 @@ class _EventActivityScreenState extends State<EventActivityScreen> {
     final res = await EventsService.getRecentActivity(widget.eventId, limit: 100);
     if (!mounted) return;
     // Backend returns: { success, data: { items: [...], currency: 'TZS' } }.
-    // Older clients expected `data` to be a list directly — handle both shapes
+    // Older clients expected `data` to be a list directly - handle both shapes
     // so the activity list always populates.
     final data = res['data'];
     List raw = const [];

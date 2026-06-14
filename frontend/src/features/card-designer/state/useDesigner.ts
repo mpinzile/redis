@@ -177,7 +177,7 @@ export function smartStarterDoc(): CardDesignDoc {
         style: { fontFamily: "Playfair Display, serif", fontSize: 72, fontWeight: "700", color: "#111", textAlign: "center", lineHeight: 1.1 } } as CardLayer,
       { ...newLayers.dynamic("{{guest_name}}", "Guest Name"), x: 80, y: 320, width: 920, height: 90,
         style: { fontFamily: "Inter", fontSize: 44, fontWeight: "600", color: "#111", textAlign: "center", lineHeight: 1.2 } } as CardLayer,
-      { ...newLayers.dynamic("{{event_date}} · {{event_time}}", "Date/Time"), x: 80, y: 440, width: 920, height: 60,
+      { ...newLayers.dynamic("{{event_date}} - {{event_time}}", "Date/Time"), x: 80, y: 440, width: 920, height: 60,
         style: { fontFamily: "Inter", fontSize: 28, fontWeight: "400", color: "#444", textAlign: "center", lineHeight: 1.2 } } as CardLayer,
       { ...newLayers.dynamic("{{event_location}}", "Location"), x: 80, y: 510, width: 920, height: 60,
         style: { fontFamily: "Inter", fontSize: 26, fontWeight: "400", color: "#666", textAlign: "center", lineHeight: 1.2 } } as CardLayer,

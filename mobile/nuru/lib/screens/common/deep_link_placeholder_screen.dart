@@ -11,7 +11,7 @@ import '../../core/theme/app_colors.dart';
 class DeepLinkPlaceholderScreen extends StatelessWidget {
   final String kind;        // 'ticket', 'rsvp', 'invitation', 'post', 'moment'
   final String identifier;  // code / id / token
-  final String webPath;     // e.g. /rsvp/ABC123 — used for "Open in browser"
+  final String webPath;     // e.g. /rsvp/ABC123 - used for "Open in browser"
 
   const DeepLinkPlaceholderScreen({
     super.key,

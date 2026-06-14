@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Generic key/value persistent cache for API responses.
 ///
 /// Use this as a thin layer screens can adopt to make data survive app
-/// close/reopen — the standard pattern is:
+/// close/reopen - the standard pattern is:
 ///
 /// ```dart
 /// // 1. on initState, read cache and render immediately:
@@ -17,7 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///   setState(() => _event = res['data']);
 ///   MobileCache.writeJson('cached_event_$id', res['data']);
 /// }
-/// // 3. on failure, keep cached data on screen — do NOT clear.
+/// // 3. on failure, keep cached data on screen - do NOT clear.
 /// ```
 ///
 /// Cache keys follow `cached_<resource>[_<id>]` convention used across the
@@ -70,7 +70,7 @@ class MobileCache {
   }
 
   /// Wipe every entry written through this cache.
-  /// Call from sign-out flows — do NOT call on transient network errors.
+  /// Call from sign-out flows - do NOT call on transient network errors.
   static Future<void> clearAll() async {
     try {
       final prefs = await SharedPreferences.getInstance();

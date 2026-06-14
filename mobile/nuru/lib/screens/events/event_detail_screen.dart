@@ -304,7 +304,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       'data': null,
     };
 
-    // ── Phase 1: ONE blocking call — essential event payload (with inline permissions) ──
+    // ── Phase 1: ONE blocking call - essential event payload (with inline permissions) ──
     Map<String, dynamic> eventRes;
     try {
       eventRes = await EventsService.getEventById(widget.eventId);
@@ -333,7 +333,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       eventData?['role'] ?? eventData?['viewer_role'] ?? eventData?['my_role'],
     );
     final permissionRoleHint = _roleHint(inlinePermissions?['role']);
-    // current_user.id is already cached in AuthProvider — no need for AuthApi.me()
+    // current_user.id is already cached in AuthProvider - no need for AuthApi.me()
     String? currentUserId;
     try {
       final auth = context.read<AuthProvider>();
@@ -533,7 +533,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       _overview = overview;
     });
 
-    // Recent activity — fetched separately from the unified backend endpoint
+    // Recent activity - fetched separately from the unified backend endpoint
     try {
       final res = await EventsService.getRecentActivity(eid, limit: 8);
       if (!mounted) return;
@@ -801,7 +801,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       case 'rsvp':
         return EventRsvpTab(eventId: widget.eventId);
       // 'schedule' tab removed
-      // 'meetings' moved out of tabs — accessible from Quick Actions sheet
+      // 'meetings' moved out of tabs - accessible from Quick Actions sheet
       case 'tickets':
         return EventTicketsTab(
           eventId: widget.eventId,
@@ -812,7 +812,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           eventId: widget.eventId,
           isCreator: _isCreator,
         );
-      // workspace tab removed — Group Chat lives on the overview as a CTA card
+      // workspace tab removed - Group Chat lives on the overview as a CTA card
       // invitation tab moved to the "..." actions sheet (opens full screen)
       case 'check_in':
         return EventCheckinTab(
@@ -1302,7 +1302,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       centerNumber = sold;
       centerLabel = 'Total Sold';
     } else {
-      // Contribution-based donut — backend overview is the source of truth
+      // Contribution-based donut - backend overview is the source of truth
       final cs = (_overview != null && _overview!['contribution_status'] is Map)
           ? (_overview!['contribution_status'] as Map).cast<String, dynamic>()
           : const <String, dynamic>{};
@@ -2803,7 +2803,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _TabBarDelegate oldDelegate) => false;
 }
 
-/// Vendor-bookings style underline tabs — black bold active label with yellow bar.
+/// Vendor-bookings style underline tabs - black bold active label with yellow bar.
 /// Horizontally scrollable so all event-management tabs fit on small screens.
 class _UnderlineTabs extends StatefulWidget implements PreferredSizeWidget {
   final List<String> labels;
@@ -3059,8 +3059,8 @@ class _EventGroupCtaState extends State<_EventGroupCta> {
                 const SizedBox(height: 2),
                 Text(
                   hasGroup
-                      ? '$memberCount members${unread > 0 ? " · $unread unread" : ""}'
-                      : 'Private chat for your organizer team, committee and contributors — with a live contribution scoreboard.',
+                      ? '$memberCount members${unread > 0 ? " - $unread unread" : ""}'
+                      : 'Private chat for your organizer team, committee and contributors · with a live contribution scoreboard.',
                   style: appText(
                     size: 11,
                     color: AppColors.textSecondary,

@@ -5,14 +5,14 @@ const EventPlanning = () => {
   useMeta({
     title: "Event Planning Workspace | Nuru",
     description:
-      "Plan weddings, conferences, graduations, exhibitions, and family celebrations from one workspace. Budgets, timelines, committees, vendors and contributions — all connected.",
+      "Plan weddings, conferences, graduations, exhibitions, and family celebrations from one workspace. Budgets, timelines, committees, vendors and contributions · all connected.",
   });
 
   return (
     <EditorialFeaturePage
-      kicker="Service · 01 — Event Planning"
+      kicker="Service - 01 - Event Planning"
       title="The command centre of every celebration."
-      lead="Open a workspace for any occasion — wedding, conference, graduation, exhibition, family gathering or business event. Build budgets, invite guests, coordinate committees, collect contributions, sell tickets, and book vendors from one place."
+      lead="Open a workspace for any occasion · wedding, conference, graduation, exhibition, family gathering or business event. Build budgets, invite guests, coordinate committees, collect contributions, sell tickets, and book vendors from one place."
       specs={[
         { label: "Event types", value: "Weddings → Conferences" },
         { label: "Workspace cost", value: "Free to open" },
@@ -34,7 +34,7 @@ const EventPlanning = () => {
         },
         {
           title: "Committees that actually coordinate.",
-          lead: "Add the people running decoration, food, transport, invitations or entertainment. Each committee gets the visibility they need — nothing more, nothing less.",
+          lead: "Add the people running decoration, food, transport, invitations or entertainment. Each committee gets the visibility they need · nothing more, nothing less.",
           bullets: [
             "Role-based access for committee members.",
             "Shared sub-budgets per committee.",
@@ -46,13 +46,13 @@ const EventPlanning = () => {
         },
         {
           title: "Built for every event.",
-          lead: "Weddings, memorials, send-offs, corporate offsites, fundraisers, graduations, conferences, birthdays. Every workflow respects how families, companies and communities actually run events — anywhere in the world.",
+          lead: "Weddings, memorials, send-offs, corporate offsites, fundraisers, graduations, conferences, birthdays. Every workflow respects how families, companies and communities actually run events · anywhere in the world.",
           bullets: [
             "Multi-event programmes (pre-, main, after).",
             "Multiple organisers with shared control.",
             "Family contribution tracking, not just ticket sales.",
             "Local payment methods built-in (M-Pesa, Airtel, Mixx by Yas, banks).",
-            "Bilingual interfaces — English and Swahili.",
+            "Bilingual interfaces · English and Swahili.",
             "Works on the slowest connections.",
           ],
         },

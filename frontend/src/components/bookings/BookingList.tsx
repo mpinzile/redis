@@ -144,7 +144,7 @@ const MyBookingsTab = () => {
     if (!selectedBooking) return;
     try {
       await cancelBooking(selectedBooking.id, reason);
-      toast.success('Booking cancelled — refund processed per policy');
+      toast.success('Booking cancelled · refund processed per policy');
       setSelectedBooking(null);
     } catch (err: any) {
       showCaughtError(err, 'Failed to cancel booking');

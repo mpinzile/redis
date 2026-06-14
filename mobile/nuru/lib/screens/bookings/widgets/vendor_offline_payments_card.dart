@@ -123,7 +123,7 @@ class _VendorOfflinePaymentsCardState extends State<VendorOfflinePaymentsCard> {
             Text(_money(amt), style: appText(size: 14, weight: FontWeight.w800)),
             Text('${p['service_title']} · ${p['recorded_by_name'] ?? 'Organiser'}',
                 style: appText(size: 11, color: AppColors.textTertiary), maxLines: 1, overflow: TextOverflow.ellipsis),
-            if (!isPending) Text('Paid offline — not in wallet', style: appText(size: 10, color: AppColors.textTertiary)),
+            if (!isPending) Text('Paid offline · not in wallet', style: appText(size: 10, color: AppColors.textTertiary)),
           ])),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

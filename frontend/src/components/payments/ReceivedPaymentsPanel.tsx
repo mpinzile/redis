@@ -238,7 +238,7 @@ export default function ReceivedPaymentsPanel({ source, title }: Props) {
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-foreground">{fmtMoney(Number(p.amount || 0), p.currency || "TZS")}</div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {p.service_title}{p.method ? ` · ${p.method.replace("_", " ")}` : ""}{p.reference ? ` · ${p.reference}` : ""}
+                      {p.service_title}{p.method ? ` - ${p.method.replace("_", " ")}` : ""}{p.reference ? ` - ${p.reference}` : ""}
                     </div>
                   </div>
                   <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize ${p.status === "confirmed" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "bg-amber-500/15 text-amber-700 dark:text-amber-400"}`}>
@@ -385,7 +385,7 @@ function PaymentCard({ p }: { p: ReceivedPayment }) {
         <div className="text-xs text-muted-foreground flex items-center justify-between">
           <span>
             {p.provider_name || p.method_type ? `via ${p.provider_name || p.method_type}` : ""}
-            {p.is_offline ? " · offline" : ""}
+            {p.is_offline ? " - offline" : ""}
           </span>
           <Button
             variant="ghost"

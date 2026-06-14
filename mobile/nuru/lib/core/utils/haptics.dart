@@ -8,27 +8,27 @@ import 'package:flutter/services.dart';
 class Haptics {
   Haptics._();
 
-  /// Light tap — selection changes, tab switches, toggles.
+  /// Light tap - selection changes, tab switches, toggles.
   static Future<void> selection() async {
     try { await HapticFeedback.selectionClick(); } catch (_) {}
   }
 
-  /// Light impact — small confirmations, dismissible actions.
+  /// Light impact - small confirmations, dismissible actions.
   static Future<void> light() async {
     try { await HapticFeedback.lightImpact(); } catch (_) {}
   }
 
-  /// Medium impact — primary actions: send message, RSVP, refresh complete.
+  /// Medium impact - primary actions: send message, RSVP, refresh complete.
   static Future<void> medium() async {
     try { await HapticFeedback.mediumImpact(); } catch (_) {}
   }
 
-  /// Heavy impact — destructive or major confirmations: purchase, delete.
+  /// Heavy impact - destructive or major confirmations: purchase, delete.
   static Future<void> heavy() async {
     try { await HapticFeedback.heavyImpact(); } catch (_) {}
   }
 
-  /// Success pattern — light + medium for celebratory completions.
+  /// Success pattern - light + medium for celebratory completions.
   static Future<void> success() async {
     try {
       await HapticFeedback.lightImpact();

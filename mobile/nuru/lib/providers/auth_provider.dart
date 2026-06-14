@@ -69,7 +69,7 @@ class AuthProvider extends ChangeNotifier {
         }
         _syncCurrencyFromUser();
 
-        // Background hydration — never blocks UI.
+        // Background hydration - never blocks UI.
         // Roll the 30-day refresh window forward FIRST so a long-dormant
         // user who just opened the app gets a brand-new pair of tokens
         // before anything else hits the network.
@@ -91,7 +91,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _rollRefreshAndHydrate() async {
     // Best-effort proactive refresh. If it fails (offline, server down,
     // refresh token finally expired after 30 days of total inactivity), we
-    // simply fall through to /auth/me — ApiBase will retry the refresh on
+    // simply fall through to /auth/me - ApiBase will retry the refresh on
     // any 401 it sees and we still won't sign the user out automatically.
     try {
       final rt = await SecureTokenStorage.getRefreshToken();
@@ -125,7 +125,7 @@ class AuthProvider extends ChangeNotifier {
       // Only treat the session as dead if the backend explicitly says the
       // bearer is invalid AND our refresh attempt (handled inside ApiBase)
       // already failed. Transient network/server errors must NOT log the
-      // user out — that's what was wiping sessions even though tokens are
+      // user out - that's what was wiping sessions even though tokens are
       // valid for 24h with a 30-day refresh window.
       final meSucceeded = meRes['success'] == true && meRes['data'] != null;
       final msg = meRes['message']?.toString().toLowerCase() ?? '';
@@ -249,7 +249,7 @@ class AuthProvider extends ChangeNotifier {
 
         // Register the device's FCM token with the backend so push
         // notifications (messages, payments, invitations, etc.) reach this
-        // device. Best-effort — never block sign-in.
+        // device. Best-effort - never block sign-in.
         try {
           await PushNotificationService.instance.registerWithBackend();
         } catch (_) {}
@@ -282,7 +282,7 @@ class AuthProvider extends ChangeNotifier {
     return res;
   }
 
-  /// Sign up — creates account, returns response with user ID
+  /// Sign up - creates account, returns response with user ID
   Future<Map<String, dynamic>> signUp({
     required String firstName,
     required String lastName,
@@ -390,7 +390,7 @@ class AuthProvider extends ChangeNotifier {
     await _clearTokens();
     // Wipe every in-memory + on-disk cache (including avatars and other
     // network images) so a different account that signs in on this
-    // device — or even a snapshot of the recents/multitasking switcher —
+    // device - or even a snapshot of the recents/multitasking switcher -
     // can never reveal the previous user's data.
     await _wipeAllCaches();
     _isLoggedIn = false;

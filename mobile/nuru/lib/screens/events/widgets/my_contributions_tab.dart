@@ -11,7 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../contributors/contribution_details_screen.dart';
 import '../../contributors/contribution_insights_screen.dart';
 
-/// "My Contributions" tab — events where the current user is a contributor.
+/// "My Contributions" tab - events where the current user is a contributor.
 /// Layout follows the supplied mockup: 3-tile summary (Total Pledged /
 /// Total Paid / Active Pledges), search bar, filter chips
 /// (All / Active / Complete / Pending) + sort, then per-event cards.
@@ -45,7 +45,7 @@ class MyContributionsTabState extends State<MyContributionsTab>
   final _searchCtrl = TextEditingController();
   bool _searchOpen = false;
 
-  /// Public — called from the global app-bar search button via GlobalKey.
+  /// Public - called from the global app-bar search button via GlobalKey.
   void toggleSearch() {
     setState(() {
       _searchOpen = !_searchOpen;
@@ -360,7 +360,7 @@ class MyContributionsTabState extends State<MyContributionsTab>
     );
   }
 
-  // Inline SVG for a sort glyph — keeps us off Material icons.
+  // Inline SVG for a sort glyph - keeps us off Material icons.
   static const String _sortSvg =
     '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
     '<path d="M7 4v14M7 18l-3-3M7 18l3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
@@ -592,7 +592,7 @@ class MyContributionsTabState extends State<MyContributionsTab>
   }
 
   // ── Bottom CTA: Insights ────────────────────────────────────────
-  // Inline SVG (trending-up) — kept inline because no matching asset exists.
+  // Inline SVG (trending-up) - kept inline because no matching asset exists.
   static const String _trendUpSvg =
     '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
     '<path d="M3 17l6-6 4 4 8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'

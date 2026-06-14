@@ -15,7 +15,7 @@ import 'call_ui_coordinator.dart';
 ///      ConnectionService (Android) incoming-call UI via flutter_callkit_incoming
 ///      so the phone rings even when the app is backgrounded or locked.
 ///   3. Mirrors the ring with an in-app full-screen [IncomingCallScreen] when
-///      the app is foregrounded — same UX as WhatsApp.
+///      the app is foregrounded - same UX as WhatsApp.
 ///   4. Bridges CallKit Accept/Decline events back to the FastAPI backend
 ///      (`/calls/{id}/answer` / `/calls/{id}/decline`) and pushes the
 ///      [VoiceCallScreen] when accepted.
@@ -32,7 +32,7 @@ class IncomingCallService {
   StreamSubscription? _ckSub;
   bool _started = false;
 
-  /// Pending answered call — populated when CallKit Accept fires before the
+  /// Pending answered call - populated when CallKit Accept fires before the
   /// app's navigator is mounted (e.g., user tapped Accept on the lock screen
   /// while the app was killed). The first navigator frame consumes it.
   Map<String, dynamic>? _pendingAccept;
@@ -64,7 +64,7 @@ class IncomingCallService {
   Future<void> _poll() async {
     final data = await CallsService.getIncoming();
     if (data == null) {
-      // Backend says no ringing calls — clear our local "active" marker so a
+      // Backend says no ringing calls - clear our local "active" marker so a
       // future call from the same peer can ring again.
       final staleCallId = _activeRingingId;
       if (staleCallId != null && staleCallId.isNotEmpty) {
@@ -231,7 +231,7 @@ class IncomingCallService {
 
     final nav = _navKey?.currentState;
     if (nav == null) {
-      // Navigator not mounted yet — stash and let the splash/auth flow consume
+      // Navigator not mounted yet - stash and let the splash/auth flow consume
       // it after first frame.
       _pendingAccept = {
         'id': callId,

@@ -467,7 +467,7 @@ class _FindServicesScreenState extends State<FindServicesScreen> {
                     Row(children: [
                       Icon(Icons.star_rounded, size: 15, color: Colors.black),
                       const SizedBox(width: 4),
-                      Text(rating > 0 ? rating.toStringAsFixed(1) : '—',
+                      Text(rating > 0 ? rating.toStringAsFixed(1) : '-',
                         style: _f(size: 13, weight: FontWeight.w700)),
                       const SizedBox(width: 4),
                       Text('(${reviewCount is num ? reviewCount.toInt() : 0})',

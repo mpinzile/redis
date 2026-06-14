@@ -487,7 +487,7 @@ const EventManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold">Service Providers</h2>
-              <p className="text-xs text-muted-foreground">{eventServices.length} service{eventServices.length !== 1 ? 's' : ''} · {completedServices} completed</p>
+              <p className="text-xs text-muted-foreground">{eventServices.length} service{eventServices.length !== 1 ? 's' : ''} - {completedServices} completed</p>
             </div>
             {(permissions.can_manage_vendors || permissions.is_creator) && (
               <Button size="sm" onClick={() => setShowAddServiceDialog(true)}>

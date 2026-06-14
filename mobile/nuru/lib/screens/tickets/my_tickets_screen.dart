@@ -15,8 +15,9 @@ import 'widgets/my_reservations_section.dart';
 import 'ticket_details_screen.dart';
 import 'browse_tickets_screen.dart';
 import '../../core/widgets/nuru_search_bar.dart';
+import '../../core/widgets/nuru_skeleton.dart';
 
-/// My Tickets — premium redesign matching the mobile mockup.
+/// My Tickets - premium redesign matching the mobile mockup.
 /// App bar mirrors the home page (logo + bell). Tabs: Upcoming / Past / Cancelled / Payments.
 class MyTicketsScreen extends StatefulWidget {
   const MyTicketsScreen({super.key});
@@ -445,7 +446,7 @@ class MyTicketsScreenState extends State<MyTicketsScreen> {
                   Text('${quantity is int && quantity > 1 ? "$quantity Tickets" : "1 Ticket"}',
                     style: GoogleFonts.inter(fontSize: 12, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
                   const Spacer(),
-                  Text(totalAmount != null ? '$currency ${_formatAmount(totalAmount)}' : '—',
+                  Text(totalAmount != null ? '$currency ${_formatAmount(totalAmount)}' : '-',
                     style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                   const SizedBox(width: 6),
                   const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 20),
@@ -586,12 +587,43 @@ class MyTicketsScreenState extends State<MyTicketsScreen> {
   List<Widget> _buildSkeletons() {
     return List.generate(4, (_) => Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Container(
-        height: 154,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFEDEDF2)),
+      child: NuruSkeletonGroup(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFEDEDF2)),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              NuruSkeleton.box(width: 88, height: 88, radius: 12),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    NuruSkeleton.box(width: 44, height: 16, radius: 6),
+                    const Spacer(),
+                    NuruSkeleton.box(width: 60, height: 16, radius: 6),
+                  ]),
+                  const SizedBox(height: 12),
+                  NuruSkeleton.text(width: 180, height: 12),
+                  const SizedBox(height: 10),
+                  NuruSkeleton.text(width: 140, height: 10),
+                  const SizedBox(height: 6),
+                  NuruSkeleton.text(width: 110, height: 10),
+                ]),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            Container(height: 1, color: const Color(0xFFF1F1F4)),
+            const SizedBox(height: 12),
+            Row(children: [
+              NuruSkeleton.text(width: 70, height: 10),
+              const Spacer(),
+              NuruSkeleton.text(width: 80, height: 12),
+            ]),
+          ]),
         ),
       ),
     ));

@@ -52,7 +52,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         _isFollowing = _profile?['is_following'] == true;
       }
     });
-    // Posts load in the background — does not block first paint.
+    // Posts load in the background - does not block first paint.
     final resolvedId = (_profile?['id'] ?? widget.userId)?.toString() ?? '';
     if (resolvedId.isNotEmpty) {
       SocialService.getUserPosts(resolvedId).then((postsRes) {

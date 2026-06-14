@@ -193,7 +193,7 @@ const Sidebar = ({ onNavigate, onReplayTour, inDrawer = false }: SidebarProps) =
       id: 'money', label: 'Money', defaultOpen: true,
       items: [
         { lucideIcon: Wallet, label: 'Wallet', path: '/wallet', hint: 'Wallet balance, top-ups, and transaction history.' },
-        { lucideIcon: BookOpen, label: 'Bookings', path: '/bookings', hint: 'Booking requests in and out — accept, decline, pay deposits.' },
+        { lucideIcon: BookOpen, label: 'Bookings', path: '/bookings', hint: 'Booking requests in and out · accept, decline, pay deposits.' },
         { lucideIcon: HandCoins, label: 'My Contributions', path: '/my-contributions', hint: 'Receipts for every contribution you have paid.' },
         { customIcon: ContributorsIcon, label: 'My Contributors', path: '/my-contributors', hint: 'People who have contributed to your events.' },
       ],
@@ -211,7 +211,7 @@ const Sidebar = ({ onNavigate, onReplayTour, inDrawer = false }: SidebarProps) =
       id: 'account', label: 'Account', defaultOpen: false,
       items: [
         { customIcon: IssueIcon, label: t('my_issues'), path: '/my-issues', hint: 'Submit and track issues or disputes.' },
-        { lucideIcon: MessageSquare, label: 'WhatsApp Logs', path: '/whatsapp-logs', hint: 'Track every WhatsApp message Nuru sent — what worked and what failed.' },
+        { lucideIcon: MessageSquare, label: 'WhatsApp Logs', path: '/whatsapp-logs', hint: 'Track every WhatsApp message Nuru sent · what worked and what failed.' },
         { lucideIcon: AlertTriangle, label: t('removed_content'), path: '/removed-content', hint: 'Removed posts, reasons, and appeals.' },
         { customIcon: HelpIcon, label: t('help'), path: '/help', hint: 'FAQs and contact support.' },
         { customIcon: SettingsIcon, label: t('settings'), path: '/settings', hint: 'Notifications, privacy, theme, and account settings.' },

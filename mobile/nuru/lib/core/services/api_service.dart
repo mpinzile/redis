@@ -205,7 +205,7 @@ class AuthApi {
     return ApiService.get('/users/check-username', auth: false, queryParams: params);
   }
 
-  /// GET /users/username-suggestions — proactive Gmail-style suggestions
+  /// GET /users/username-suggestions - proactive Gmail-style suggestions
   /// from the user's name (indexed lookup, never scans the users table).
   static Future<Map<String, dynamic>> getUsernameSuggestions({String? firstName, String? lastName}) {
     final params = <String, String>{};
@@ -224,7 +224,7 @@ class AuthApi {
     return ApiService.get('/auth/me');
   }
 
-  /// POST /auth/refresh — exchange a refresh token for a fresh access token.
+  /// POST /auth/refresh - exchange a refresh token for a fresh access token.
   /// Sent unauthenticated so a stale access token doesn't trigger another
   /// 401 inside the refresh flow itself.
   static Future<Map<String, dynamic>> refresh(String refreshToken) {

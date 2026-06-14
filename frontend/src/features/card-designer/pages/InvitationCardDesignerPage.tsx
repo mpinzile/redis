@@ -164,9 +164,9 @@ export default function InvitationCardDesignerPage() {
     const issues: string[] = [];
     const qrs = doc.layers.filter(l => l.type === "qr");
     if (forActivate && qrs.length === 0) issues.push("Add a QR Code layer before activating.");
-    qrs.forEach(q => { if (Math.min(q.width, q.height) < 120) issues.push("QR is below 120px — may not scan reliably."); });
+    qrs.forEach(q => { if (Math.min(q.width, q.height) < 120) issues.push("QR is below 120px · may not scan reliably."); });
     const hasGuest = doc.layers.some(l => l.type === "text" && /\{\{\s*guest_name\s*\}\}/.test((l as any).text || (l as any).placeholder || ""));
-    if (forActivate && !hasGuest) issues.push("No {{guest_name}} field — guests will see identical cards.");
+    if (forActivate && !hasGuest) issues.push("No {{guest_name}} field · guests will see identical cards.");
     return issues;
   }
 

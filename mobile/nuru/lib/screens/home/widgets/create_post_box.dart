@@ -10,7 +10,7 @@ import '../../../core/services/location_service.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/l10n/l10n_helper.dart';
 
-/// Create post box — modern card composer
+/// Create post box - modern card composer
 class CreatePostBox extends StatefulWidget {
   final VoidCallback? onPostCreated;
 

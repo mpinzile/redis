@@ -247,7 +247,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Three-tier fallback so an offline open never shows "Your name":
     //   1. Freshly-fetched _profileData
     //   2. The profile blob the parent (home) passed in (cached on launch)
-    //   3. AuthProvider.user — populated from secure storage + cached_user
+    //   3. AuthProvider.user - populated from secure storage + cached_user
     //      prefs the very first frame after the splash, even when offline.
     final cached = context.watch<AuthProvider>().user;
     final p = _profileData ?? widget.profile ?? cached ?? <String, dynamic>{};
@@ -483,7 +483,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Events tab → My Contributions sub-tab.
       _ActionItem(svg: 'assets/icons/card-icon.svg', label: 'My Contributions',
         onTap: () => _openShellTab(HomeTabController.events, eventsSubTab: 3)),
-      // Dedicated screen — push it on top of the Home shell.
+      // Dedicated screen - push it on top of the Home shell.
       _ActionItem(svg: 'assets/icons/wallet-icon.svg', label: 'Payment History',
         onTap: () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => const PaymentHistoryScreen()))),

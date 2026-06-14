@@ -128,8 +128,8 @@ const MyTicketPaymentsTab = () => {
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-0.5 truncate font-mono">
                       {p.transaction_code}
-                      {p.method_type && ` · ${p.method_type}`}
-                      {p.provider_name && ` · ${p.provider_name}`}
+                      {p.method_type && ` - ${p.method_type}`}
+                      {p.provider_name && ` - ${p.provider_name}`}
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       {p.completed_at || p.confirmed_at || p.initiated_at

@@ -63,7 +63,7 @@ export default function AdminAppeals() {
     setReviewing(true);
     const res = await adminApi.reviewAppeal(reviewTarget.id, decision, notes.trim() || undefined);
     if (res.success) {
-      toast.success(decision === "approved" ? "Appeal approved — content restored" : "Appeal rejected");
+      toast.success(decision === "approved" ? "Appeal approved · content restored" : "Appeal rejected");
       setReviewTarget(null); setNotes(""); setDecision(null);
       load();
     } else toast.error(res.message || "Failed");

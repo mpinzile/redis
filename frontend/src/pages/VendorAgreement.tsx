@@ -55,7 +55,7 @@ const VendorAgreement = () => {
         "If you cancel a confirmed booking, the Organiser receives a full 100% refund including any booking deposit.",
         "Cancellation results in a rating penalty and possible account strike.",
         "Repeated cancellations may result in temporary suspension or permanent removal.",
-        "You may agree to reschedule a booking instead of cancellation — no penalty applies and funds remain in escrow."
+        "You may agree to reschedule a booking instead of cancellation · no penalty applies and funds remain in escrow."
       ]
     },
     {

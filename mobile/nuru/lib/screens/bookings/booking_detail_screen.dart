@@ -17,7 +17,7 @@ import '../../widgets/cancel_booking_dialog.dart';
 import 'widgets/vendor_offline_payments_card.dart';
 import '../../core/widgets/nuru_skeleton.dart';
 
-/// Booking detail — clean, hero-led layout that mirrors the rest of the app
+/// Booking detail - clean, hero-led layout that mirrors the rest of the app
 /// (SVG icons, soft cards, currency from WalletProvider, Sora/Inter type).
 class BookingDetailScreen extends StatefulWidget {
   final String bookingId;
@@ -524,15 +524,15 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           created.isNotEmpty ? _formatDate(created) : 'Pending', true),
       _TimelineStep(
         status == 'rejected' ? 'Declined' : 'Accepted',
-        responded.isNotEmpty ? _formatDate(responded) : '—',
+        responded.isNotEmpty ? _formatDate(responded) : '-',
         status == 'accepted' || status == 'rejected' || status == 'completed',
       ),
       if (status == 'completed' || completed.isNotEmpty)
         _TimelineStep('Completed',
-            completed.isNotEmpty ? _formatDate(completed) : '—', true),
+            completed.isNotEmpty ? _formatDate(completed) : '-', true),
       if (status == 'cancelled' || cancelled.isNotEmpty)
         _TimelineStep('Cancelled',
-            cancelled.isNotEmpty ? _formatDate(cancelled) : '—', true),
+            cancelled.isNotEmpty ? _formatDate(cancelled) : '-', true),
     ];
 
     return _card(

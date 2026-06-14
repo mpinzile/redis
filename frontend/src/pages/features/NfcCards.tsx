@@ -3,14 +3,14 @@ import { useMeta } from "@/hooks/useMeta";
 
 const NfcCards = () => {
   useMeta({
-    title: "NuruCards — NFC Event Cards | Nuru",
+    title: "NuruCards · NFC Event Cards | Nuru",
     description:
       "Premium NFC cards for weddings, conferences and exclusive events. Tap to RSVP, tap to check in, tap to contribute. Designed in your event branding.",
   });
 
   return (
     <EditorialFeaturePage
-      kicker="Service · 04 — NuruCards"
+      kicker="Service - 04 - NuruCards"
       title="A card that knows the guest."
       lead="A premium NFC card branded for your event. One tap shares the invitation, confirms attendance, opens the contribution page, or checks the guest in at the door. The card is the experience."
       specs={[
@@ -22,9 +22,9 @@ const NfcCards = () => {
       sections={[
         {
           title: "Designed in your event identity.",
-          lead: "Choose a template or upload artwork. Each card carries the guest's name and a quiet, secure NFC chip. They feel like an heirloom — they work like a key.",
+          lead: "Choose a template or upload artwork. Each card carries the guest's name and a quiet, secure NFC chip. They feel like an heirloom · they work like a key.",
           bullets: [
-            "Custom finishes — matte, gloss, foil.",
+            "Custom finishes · matte, gloss, foil.",
             "Guest name and seat printed.",
             "Branded back with QR fallback.",
             "Programmed and verified before delivery.",
@@ -34,7 +34,7 @@ const NfcCards = () => {
         },
         {
           title: "One tap. Everything happens.",
-          lead: "The card is an entry point into the entire event. Tap a phone, the right page opens — every time.",
+          lead: "The card is an entry point into the entire event. Tap a phone, the right page opens · every time.",
           bullets: [
             "Tap to RSVP from the invitation.",
             "Tap to contribute without typing details.",

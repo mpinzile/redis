@@ -1,4 +1,4 @@
-// SvgCardRenderer (mobile) — mirror of src/components/invitation-cards/SvgCardRenderer.tsx
+// SvgCardRenderer (mobile) - mirror of src/components/invitation-cards/SvgCardRenderer.tsx
 //
 // Loads the raw SVG asset string, replaces the placeholder text content of
 // each <text id="..."> we recognise (guest data + InvitationContent overrides),
@@ -135,7 +135,7 @@ class _SvgCardRendererState extends State<SvgCardRenderer> {
     final offsetX = (c.maxWidth - renderW) / 2;
     final offsetY = (c.maxHeight - renderH) / 2;
 
-    // Fill the placeholder square edge-to-edge — no inset, no quiet zone.
+    // Fill the placeholder square edge-to-edge - no inset, no quiet zone.
     return Positioned(
       left: offsetX + qr.x * scale,
       top: offsetY + qr.y * scale,
@@ -196,7 +196,7 @@ String _injectDynamicData(
   final f = template.fields;
   final repl = <String, String>{};
 
-  // Name fields — match web mapping.
+  // Name fields - match web mapping.
   if (f.nameField == 'bride' || f.nameField == 'honoree' || f.nameField == 'couple') {
     repl[f.nameField] = data.guestName;
   } else if (f.nameField == 'eventTitle') {
@@ -234,7 +234,7 @@ String _injectDynamicData(
   return svg;
 }
 
-/// Find the QR placeholder rect — uniquely marked with opacity="0.001".
+/// Find the QR placeholder rect - uniquely marked with opacity="0.001".
 _QrPos? _findQrPlaceholder(String svg) {
   final re = RegExp(r'<rect\b([^>]*\bopacity="0\.001"[^>]*)\/>');
   double? attr(String attrs, String name) {

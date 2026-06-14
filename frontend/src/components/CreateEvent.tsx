@@ -24,7 +24,7 @@ import EventIcon from "@/components/icons/EventIcons";
 import { toast } from "sonner";
 import { showApiErrors, showCaughtError } from "@/lib/api";
 import { agreementsApi } from "@/lib/api/agreements";
-import EventRecommendations from "@/components/events/EventRecommendations";
+// EventRecommendations removed from create flow - moved post-creation.
 import EventTicketing from "@/components/EventTicketing";
 import BudgetAssistant from "@/components/BudgetAssistant";
 import AgreementModal from "@/components/AgreementModal";
@@ -268,6 +268,12 @@ const CreateEvent: React.FC = () => {
       toast.error("Please fix the highlighted errors before submitting.");
       return;
     }
+
+    if (ticketingEnabled && ticketClasses.length === 0) {
+      toast.error("Add at least one ticket class, or turn ticketing off to continue.");
+      return;
+    }
+
 
     if (createdForSomeoneElse && !eventOwner?.id) {
       toast.error("Please select the event owner (or register them) before continuing.");
@@ -590,7 +596,7 @@ const CreateEvent: React.FC = () => {
               )}
             </div>
 
-            {/* Event Owner — creating for someone else */}
+            {/* Event Owner - creating for someone else */}
             <div className="rounded-xl border-2 border-primary/40 bg-amber-50/60 dark:bg-primary/10 p-4 space-y-3 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -632,8 +638,8 @@ const CreateEvent: React.FC = () => {
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
                             {eventOwner.username ? `@${eventOwner.username}` : ""}
-                            {eventOwner.phone ? ` · ${eventOwner.phone}` : ""}
-                            {eventOwner.email ? ` · ${eventOwner.email}` : ""}
+                            {eventOwner.phone ? ` - ${eventOwner.phone}` : ""}
+                            {eventOwner.email ? ` - ${eventOwner.email}` : ""}
                           </p>
                         </div>
                         <Button type="button" variant="ghost" size="sm" onClick={() => setEventOwner(null)}>
@@ -648,7 +654,7 @@ const CreateEvent: React.FC = () => {
                       />
                     )}
                     <p className="text-[11px] text-muted-foreground mt-1.5">
-                      Can't find them? Register them with name and phone — we'll send them a secure
+                      Can't find them? Register them with name and phone · we'll send them a secure
                       link to claim the account.
                     </p>
                   </div>
@@ -783,7 +789,7 @@ const CreateEvent: React.FC = () => {
                   Additional notes <span className="text-muted-foreground font-normal">(optional)</span>
                 </label>
                 <Textarea
-                  placeholder="Anything else guests should know — schedule notes, parking, dress code reminders, etc."
+                  placeholder="Anything else guests should know · schedule notes, parking, dress code reminders, etc."
                   value={whatToExpectNotes}
                   onChange={(e) => setWhatToExpectNotes(e.target.value)}
                   rows={3}
@@ -973,15 +979,9 @@ const CreateEvent: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Service Recommendations */}
-        <EventRecommendations
-          eventTypeId={formData.eventType}
-          eventTypeName={displayedEventTypes.find(t => t.id === formData.eventType)?.name}
-          location={formData.location}
-          budget={formData.budget}
-          selectedServiceIds={selectedServices}
-          onToggleService={handleToggleService}
-        />
+        {/* Service recommendations and invitation card picker intentionally
+            removed here - they can be set later from the event management
+            page once the event exists. */}
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>

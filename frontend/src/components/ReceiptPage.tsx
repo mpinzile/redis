@@ -42,7 +42,7 @@ const ReceiptPage = () => {
 
   useWorkspaceMeta({
     title: transaction_code ? `Receipt ${transaction_code}` : "Receipt",
-    description: "Nuru transaction receipt — secure, verifiable, printable.",
+    description: "Nuru transaction receipt · secure, verifiable, printable.",
   });
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -144,7 +144,7 @@ const ReceiptPage = () => {
       {/* Header — matches Settings/Contribution-report pattern */}
       <div className="flex items-center gap-2">
         <h1 className="flex-1 min-w-0 text-xl md:text-2xl font-semibold truncate">
-          Receipt · <span className="font-mono text-base">{data.transaction_code}</span>
+          Receipt - <span className="font-mono text-base">{data.transaction_code}</span>
         </h1>
         <Button
           variant="ghost"
@@ -202,7 +202,7 @@ const ReceiptPage = () => {
       <ReportPreviewDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
-        title={`Receipt · ${data.transaction_code}`}
+        title={`Receipt - ${data.transaction_code}`}
         html={receiptHtml}
       />
     </div>

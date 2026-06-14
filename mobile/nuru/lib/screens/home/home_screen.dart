@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   bool _loading = true;
-  bool _showCreatePost = false; // Hidden by default — toggled via pill above feed
+  bool _showCreatePost = false; // Hidden by default - toggled via pill above feed
   Map<String, dynamic>? _profile;
   List<dynamic> _feedPosts = [];
   bool _feedLoading = true;
@@ -74,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _feedLoadingMore = false;
   int _feedPage = 1;
   int _feedTotalPages = 1;
-  // Session id for ranked feed — clearing it resets server impression history.
+  // Session id for ranked feed - clearing it resets server impression history.
   String _feedSessionId = FeedInteractionTracker.sessionId;
   int _feedRequestId = 0;
   List<dynamic> _myEvents = [];
@@ -137,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (HomeCache.myServices != null) _myServices = List<dynamic>.from(HomeCache.myServices!);
 
     // Once Home has loaded for this session, never show the full-page
-    // skeleton again on re-entry — refresh silently in the background like
+    // skeleton again on re-entry - refresh silently in the background like
     // WhatsApp/feed apps do.
     final silent = HomeCache.hasLoadedOnce ||
         (HomeCache.feedPosts != null && HomeCache.feedPosts!.isNotEmpty);
@@ -204,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// Refresh live data when the app returns from background so the user
   /// never sees stale My Events / notifications / unread counts after
-  /// switching apps. Runs silently — no skeleton flash.
+  /// switching apps. Runs silently - no skeleton flash.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
@@ -489,7 +489,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // IMPORTANT: if a background poll request fails (timeout/network/5xx),
     // _extractEvents returns null. We MUST keep the previously-loaded list
     // instead of clobbering it with []. Otherwise the My Events tab flashes
-    // an empty state ("No events — Create event") until the next pull-to-
+    // an empty state ("No events · Create event") until the next pull-to-
     // refresh succeeds. Only update lists whose request actually succeeded.
     final newMyEvents = _extractEvents(results[0]);
     final newInvitedEvents = _extractEvents(results[1]);
@@ -824,7 +824,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return pt == 'glimpse' || pt == 'moment_share' || p['moment'] != null || p['moment_id'] != null;
     }
     bool isMoment(dynamic p) {
-      // Plain user posts/feeds — exclude event-shares & glimpses
+      // Plain user posts/feeds - exclude event-shares & glimpses
       if (p is! Map) return false;
       if (isEventShare(p) || isGlimpse(p)) return false;
       return true;
@@ -921,9 +921,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               );
             }
             if (index == 3) return _feedTab == 3 ? const TrendingRail() : const SizedBox.shrink();
-            if (index == 4 && (_feedLoading || (listLen == 0 && !_feedFallbackTried))) {
+            if (index == 4 && (_feedLoading || (_feedPosts.isEmpty && !_feedFallbackTried) || (listLen == 0 && !_feedFallbackTried))) {
               return NuruSkeletonPostList(
-                itemCount: 3,
+                itemCount: 4,
                 variant: _feedTab == 1
                     ? FeedSkeletonVariant.moment
                     : _feedTab == 2
@@ -1008,7 +1008,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         // Sticky header (tabs + optional search). Each tab body owns its
         // own scrollable so switching tabs preserves scroll offset and the
-        // tab bar stays pinned — mirrors the event-detail screen pattern.
+        // tab bar stays pinned - mirrors the event-detail screen pattern.
         return Column(
           children: [
             Padding(
@@ -1144,7 +1144,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // (legacy _heroStat / _heroDivider removed — Events tab now uses clean white layout)
+  // (legacy _heroStat / _heroDivider removed - Events tab now uses clean white layout)
 
   Widget _eventsSearchBar(StateSetter setLocalState) {
     return NuruSearchBar(

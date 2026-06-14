@@ -15,9 +15,9 @@ import type { WaLog } from "@/lib/api/whatsappLogs";
 /** Human-readable Meta error codes — kept in sync with the backend. */
 export const WA_ERROR_LABELS: Record<string, string> = {
   "131026": "Recipient is not on WhatsApp",
-  "131047": "Outside 24-hour window — template required",
+  "131047": "Outside 24-hour window · template required",
   "131051": "Unsupported message type",
-  "131053": "Image rejected — convert PNG to JPG",
+  "131053": "Image rejected · convert PNG to JPG",
   "131056": "Pair rate limit reached",
   "132000": "Template parameter count mismatch",
   "132001": "Template missing in chosen language",
@@ -34,7 +34,7 @@ export const WA_ERROR_LABELS: Record<string, string> = {
 
 export function labelForErrorCode(code: string | null | undefined): string {
   if (!code) return "—";
-  return WA_ERROR_LABELS[code] ? `${code} · ${WA_ERROR_LABELS[code]}` : code;
+  return WA_ERROR_LABELS[code] ? `${code} - ${WA_ERROR_LABELS[code]}` : code;
 }
 
 function fmt(d: string | null | undefined) {
@@ -137,7 +137,7 @@ export async function exportLogsToPdf(
   doc.setFontSize(9.5);
   doc.setTextColor(100, 116, 139);
   doc.text(
-    `Generated ${new Date().toLocaleString()}  ·  ${logs.length} record${logs.length === 1 ? "" : "s"}`,
+    `Generated ${new Date().toLocaleString()}  -  ${logs.length} record${logs.length === 1 ? "" : "s"}`,
     textX,
     58,
   );
@@ -214,7 +214,7 @@ export async function exportLogsToPdf(
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
       doc.text(
-        `Page ${pageNum}  ·  WhatsApp Logs`,
+        `Page ${pageNum}  -  WhatsApp Logs`,
         pageWidth / 2,
         pageHeight - 18,
         { align: "center" },

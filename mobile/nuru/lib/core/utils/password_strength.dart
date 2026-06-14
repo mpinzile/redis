@@ -1,4 +1,4 @@
-/// Shared password strength validation — mirrors web app and backend rules.
+/// Shared password strength validation - mirrors web app and backend rules.
 /// Requirements:
 ///   - At least 8 characters
 ///   - At least one uppercase letter

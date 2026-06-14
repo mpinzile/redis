@@ -166,8 +166,8 @@ export default function AdminNotifications() {
           <div className="mt-5 bg-muted border border-border rounded-lg p-4 space-y-2">
             <div className="text-sm font-semibold text-foreground">Result</div>
             <div className="text-xs text-muted-foreground">
-              Devices: <strong>{testResult.devices ?? 0}</strong> · Sent:{" "}
-              <strong>{testResult.sent ?? 0}</strong> · Failed:{" "}
+              Devices: <strong>{testResult.devices ?? 0}</strong> - Sent:{" "}
+              <strong>{testResult.sent ?? 0}</strong> - Failed:{" "}
               <strong>{testResult.failed ?? 0}</strong>
             </div>
             <pre className="text-xs bg-background border border-border rounded p-3 overflow-auto max-h-72">

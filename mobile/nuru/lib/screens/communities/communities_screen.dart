@@ -14,7 +14,7 @@ import '../../core/l10n/l10n_helper.dart';
 import 'community_detail_screen.dart';
 import '../../core/widgets/nuru_search_bar.dart';
 
-/// Communities — pixel match to mockup.
+/// Communities - pixel match to mockup.
 /// Purple hero • My Communities horizontal scroll • Recommended for You list.
 class CommunitiesScreen extends StatefulWidget {
   const CommunitiesScreen({super.key});

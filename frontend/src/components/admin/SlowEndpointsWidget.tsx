@@ -77,7 +77,7 @@ export default function SlowEndpointsWidget() {
             <h3 className="text-sm font-bold tracking-tight text-foreground">Slowest Endpoints</h3>
             <p className="text-xs text-muted-foreground">
               {data
-                ? `Last ${data.window_minutes} min · ${data.total_samples.toLocaleString()} requests · threshold ${data.threshold_ms}ms`
+                ? `Last ${data.window_minutes} min - ${data.total_samples.toLocaleString()} requests - threshold ${data.threshold_ms}ms`
                 : "Loading…"}
             </p>
           </div>

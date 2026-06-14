@@ -11,7 +11,7 @@ import 'video_call_screen.dart';
 
 /// Full-screen in-app ringer shown when a call comes in while the app is in
 /// the foreground. (When the app is backgrounded / locked, CallKit /
-/// ConnectionService — wired in IncomingCallService — handles the ring.)
+/// ConnectionService - wired in IncomingCallService - handles the ring.)
 ///
 /// Tapping Accept pushes the appropriate call screen ([VoiceCallScreen] or
 /// [VideoCallScreen] depending on [kind]) which calls `/calls/{id}/answer`

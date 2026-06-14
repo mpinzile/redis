@@ -64,6 +64,11 @@ class EventContributor(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     event_id = Column(UUID(as_uuid=True), ForeignKey('events.id', ondelete='CASCADE'), nullable=False)
     contributor_id = Column(UUID(as_uuid=True), ForeignKey('user_contributors.id', ondelete='CASCADE'), nullable=False)
+    # Event-specific override for the contributor's display name. Falls back
+    # to the global ``user_contributors.name`` when NULL. Letting an event
+    # show "Mama John" without renaming the global address-book entry is the
+    # whole reason this column exists.
+    display_name = Column(Text, nullable=True)
     pledge_amount = Column(Numeric, default=0)
     notes = Column(Text)
     # Optional secondary phone for this contributor on this event, with a

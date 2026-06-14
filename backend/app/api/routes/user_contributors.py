@@ -184,11 +184,25 @@ def _event_contributor_dict(ec: EventContributor, show_recorder: bool = False,
     total_paid = sum(float(c.amount or 0) for c in ec.contributions if c.confirmation_status is None or c.confirmation_status == ContributionStatusEnum.confirmed)
     pledge = float(ec.pledge_amount or 0)
     has_link = bool(getattr(ec, "share_token_hash", None)) and not getattr(ec, "share_token_revoked_at", None)
+    # Event-specific display name override. Falls back to the global
+    # ``user_contributors.name`` so legacy rows continue to render. We also
+    # override ``contributor.name`` in the serialised payload so every
+    # existing consumer (lists, reports, exports, payment logs) automatically
+    # shows the per-event name — while preserving the original under
+    # ``contributor.global_name`` for picker UIs that still want it.
+    global_name = ec.contributor.name if ec.contributor else None
+    display_name = (getattr(ec, "display_name", None) or "").strip() or global_name
+    contributor_payload = _contributor_dict(ec.contributor, wa_map=wa_map) if ec.contributor else None
+    if contributor_payload is not None:
+        contributor_payload["global_name"] = global_name
+        contributor_payload["name"] = display_name or contributor_payload.get("name")
     return {
         "id": str(ec.id),
         "event_id": str(ec.event_id),
         "contributor_id": str(ec.contributor_id),
-        "contributor": _contributor_dict(ec.contributor, wa_map=wa_map) if ec.contributor else None,
+        "contributor": contributor_payload,
+        "display_name": display_name,
+        "global_name": global_name,
         "pledge_amount": pledge,
         "total_paid": total_paid,
         "balance": max(0.0, pledge - total_paid),
@@ -1159,6 +1173,7 @@ def add_to_event(event_id: str, body: dict = Body(...), background_tasks: Backgr
 
     now = datetime.now(EAT)
     contributor_id = body.get("contributor_id")
+    provided_name = (body.get("name") or "").strip()
 
     if contributor_id:
         # Link existing contributor
@@ -1172,8 +1187,7 @@ def add_to_event(event_id: str, body: dict = Body(...), background_tasks: Backgr
             return standard_response(False, "Contributor not found in address book")
     else:
         # Create new contributor inline
-        name = (body.get("name") or "").strip()
-        if not name:
+        if not provided_name:
             return standard_response(False, "Name is required for new contributors")
 
         inline_phone = (body.get("phone") or "").strip() or None
@@ -1183,7 +1197,11 @@ def add_to_event(event_id: str, body: dict = Body(...), background_tasks: Backgr
             except ValueError as e:
                 return standard_response(False, str(e))
 
-        # Look up by phone first (unique constraint), then by name
+        # Look up by phone first (unique constraint), then by name. When we
+        # find the contributor by phone we keep the global ``name`` intact
+        # so other events that reuse this address-book entry don't get
+        # silently renamed — the new name becomes a per-event override
+        # further down.
         contributor = None
         if inline_phone:
             contributor = db.query(UserContributor).filter(
@@ -1193,14 +1211,14 @@ def add_to_event(event_id: str, body: dict = Body(...), background_tasks: Backgr
         if not contributor:
             contributor = db.query(UserContributor).filter(
                 UserContributor.user_id == owner_id,
-                UserContributor.name == name,
+                UserContributor.name == provided_name,
             ).first()
 
         if not contributor:
             contributor = UserContributor(
                 id=uuid.uuid4(),
                 user_id=owner_id,
-                name=name,
+                name=provided_name,
                 email=(body.get("email") or "").strip() or None,
                 phone=inline_phone,
                 created_at=now,
@@ -1209,19 +1227,37 @@ def add_to_event(event_id: str, body: dict = Body(...), background_tasks: Backgr
             db.add(contributor)
             db.flush()
         else:
-            # Update name/email if provided and contributor was matched by phone
-            if contributor.name != name:
-                contributor.name = name
-            if body.get("email"):
+            # Only fill email if we don't have one yet. Never overwrite the
+            # global name from inside an event — that's what display_name is for.
+            if body.get("email") and not contributor.email:
                 contributor.email = (body.get("email") or "").strip() or contributor.email
-            contributor.updated_at = now
+                contributor.updated_at = now
 
-    # Check if already linked
-    existing = db.query(EventContributor).filter(
+    # Per-event display name: prefer the explicit name on this request,
+    # otherwise inherit the global name. Stored as NULL when it would just
+    # duplicate the global value so we can tell intentional overrides apart.
+    effective_name = provided_name or contributor.name
+    new_display = effective_name if effective_name and effective_name != contributor.name else None
+
+    # If a link already exists, support "soft re-add": same name → idempotent
+    # duplicate signal; different name → silently update the per-event
+    # display_name without erroring out.
+    existing = db.query(EventContributor).options(
+        joinedload(EventContributor.contributor),
+        joinedload(EventContributor.contributions),
+    ).filter(
         EventContributor.event_id == eid,
         EventContributor.contributor_id == contributor.id,
     ).first()
     if existing:
+        current_effective = (existing.display_name or contributor.name or "").strip()
+        if effective_name and effective_name != current_effective:
+            existing.display_name = new_display
+            existing.updated_at = now
+            db.commit()
+            db.refresh(existing)
+            return standard_response(True, "Event contributor name updated",
+                                     _event_contributor_dict(existing))
         return standard_response(False, "This contributor is already added to this event")
 
     # Fall back to address-book defaults when not explicitly provided.
@@ -1248,6 +1284,7 @@ def add_to_event(event_id: str, body: dict = Body(...), background_tasks: Backgr
         id=uuid.uuid4(),
         event_id=eid,
         contributor_id=contributor.id,
+        display_name=new_display,
         pledge_amount=body.get("pledge_amount", 0),
         notes=(body.get("notes") or "").strip() or None,
         secondary_phone=ec_secondary,
@@ -1287,7 +1324,7 @@ def add_to_event(event_id: str, body: dict = Body(...), background_tasks: Backgr
             organizer = db.query(User).filter(User.id == event.organizer_id).first()
             organizer_phone = format_phone_display(organizer.phone) if organizer and organizer.phone else None
             pay_instr = (event.contribution_payment_instructions or "").strip() or None
-            contrib_name = contributor.name
+            contrib_name = (ec.display_name or contributor.name)
             event_name = event.name
 
             try:
@@ -1358,6 +1395,15 @@ def update_event_contributor(event_id: str, ec_id: str, body: dict = Body(...), 
     if "notify_target" in body:
         nt = (body["notify_target"] or "primary").strip().lower()
         ec.notify_target = nt if nt in ("primary", "secondary", "both") else "primary"
+    # Per-event display name override. Accept either ``display_name`` or a
+    # plain ``name`` field — never propagates to the global address book.
+    if "display_name" in body or "name" in body:
+        raw_name = (body.get("display_name") if "display_name" in body else body.get("name"))
+        new_name = (raw_name or "").strip() or None
+        # Store NULL when it would just duplicate the global name so explicit
+        # overrides remain distinguishable from defaults.
+        global_name = (ec.contributor.name if ec.contributor else None)
+        ec.display_name = new_name if (new_name and new_name != global_name) else None
 
     ec.updated_at = datetime.now(EAT)
     db.commit()
@@ -1374,7 +1420,7 @@ def update_event_contributor(event_id: str, ec_id: str, body: dict = Body(...), 
             organizer_phone = format_phone_display(organizer.phone) if organizer and organizer.phone else None
             pay_instr = (event.contribution_payment_instructions or "").strip() or None
             is_increase = new_pledge > old_pledge and old_pledge > 0
-            contrib_name = ec.contributor.name
+            contrib_name = (ec.display_name or ec.contributor.name)
             event_name = event.name
 
             try:
@@ -1549,7 +1595,7 @@ def record_payment(
         id=uuid.uuid4(),
         event_id=eid,
         event_contributor_id=ec.id,
-        contributor_name=ec.contributor.name if ec.contributor else "Unknown",
+        contributor_name=(getattr(ec, "display_name", None) or (ec.contributor.name if ec.contributor else "Unknown")),
         amount=float(amount),
         payment_method=payment_method,
         transaction_ref=(body.get("payment_reference") or "").strip() or None,
@@ -2060,7 +2106,7 @@ def _legacy_bulk_add_contributors_inline(event_id: str, body: dict, db: Session,
                     id=uuid.uuid4(),
                     event_id=eid,
                     event_contributor_id=ec.id,
-                    contributor_name=contributor.name,
+                    contributor_name=(getattr(ec, "display_name", None) or contributor.name),
                     amount=amount,
                     payment_method=payment_method,
                     confirmation_status=ContributionStatusEnum.confirmed,

@@ -1,6 +1,6 @@
 import 'api_base.dart';
 
-/// WalletService — wraps backend `/wallet`, `/payments`, `/payment-profiles`
+/// WalletService - wraps backend `/wallet`, `/payments`, `/payment-profiles`
 /// endpoints. All responses use the standard `{success, message, data}` shape.
 class WalletService {
   // ── Wallets ──

@@ -83,7 +83,7 @@ const PromotedEvent = ({ title, date, location, image, attendees }: PromotedEven
 
       {/* Footer — minimal */}
       <div className="px-3 md:px-4 py-2 md:py-3 border-t border-border text-xs text-muted-foreground">
-        <span className="block sm:inline">Event promoted by Nuru · You can trust promoted content on the platform</span>
+        <span className="block sm:inline">Event promoted by Nuru - You can trust promoted content on the platform</span>
       </div>
     </div>
   );

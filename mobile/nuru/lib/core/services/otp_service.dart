@@ -1,9 +1,9 @@
 import 'api_service.dart';
 
 /// Service for OTP delivery via the Nuru backend API.
-/// All OTP calls are now proxied through api.nuru.tz — no direct Supabase access.
+/// All OTP calls are now proxied through api.nuru.tz - no direct Supabase access.
 class OtpService {
-  /// Request OTP — routed through backend which calls edge functions server-side
+  /// Request OTP - routed through backend which calls edge functions server-side
   static Future<Map<String, dynamic>> requestOtp({
     required String phone,
     String? userId,

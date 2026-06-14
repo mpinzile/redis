@@ -127,7 +127,7 @@ const Footer = () => {
         {/* Bottom */}
         <div className="pt-8 border-t border-background/10 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-sm text-background/40">
-            © {currentYear} Nuru Workspace · SEWMR Technologies
+            © {currentYear} Nuru Workspace - SEWMR Technologies
           </p>
           <div className="flex items-center gap-8 flex-wrap justify-center">
             <a

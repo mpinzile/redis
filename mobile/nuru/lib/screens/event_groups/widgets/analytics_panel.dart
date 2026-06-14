@@ -11,7 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/services/event_groups_service.dart';
 import '../../../core/widgets/nuru_skeleton.dart';
 
-/// AnalyticsPanel — Contribution Progress, AI Insight, time-series bar chart,
+/// AnalyticsPanel - Contribution Progress, AI Insight, time-series bar chart,
 /// Method/Status donuts and Engagement & Chat insights.
 ///
 /// Same data source as before (`/scoreboard`), with optional richer fields
@@ -342,7 +342,7 @@ class _AnalyticsPanelState extends State<AnalyticsPanel> {
         Row(children: [
           SvgPicture.asset('assets/icons/clock-icon.svg', width: 10, height: 10, colorFilter: ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
           const SizedBox(width: 3),
-          Flexible(child: Text(daysLeft != null ? '${daysLeft}d left' : '—',
+          Flexible(child: Text(daysLeft != null ? '${daysLeft}d left' : '-',
               maxLines: 1, overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(fontSize: 9, color: AppColors.textTertiary, fontWeight: FontWeight.w600))),
           const Spacer(),
@@ -420,7 +420,7 @@ class _AnalyticsPanelState extends State<AnalyticsPanel> {
 
   Widget _barChart(List<Map<String, dynamic>> daily, String cur) {
     // Build last N days worth of bars from the backend payload, or synthesise
-    // a placeholder ladder when there's nothing yet — never show fake totals.
+    // a placeholder ladder when there's nothing yet - never show fake totals.
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final byDay = <String, double>{};

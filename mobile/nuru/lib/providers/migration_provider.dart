@@ -2,12 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/services/migration_service.dart';
 
-/// MigrationPhase — drives the legacy-user upgrade UX escalation.
+/// MigrationPhase - drives the legacy-user upgrade UX escalation.
 ///
-///   • soft     — first 0-3 days. Welcome sheet appears once (dismissable),
+///   • soft     - first 0-3 days. Welcome sheet appears once (dismissable),
 ///                contextual banners on monetized pages.
-///   • nudge    — days 4-13. Banners harden, welcome sheet re-appears weekly.
-///   • restrict — day 14+. Money-OUT actions and NEW paid-creation actions
+///   • nudge    - days 4-13. Banners harden, welcome sheet re-appears weekly.
+///   • restrict - day 14+. Money-OUT actions and NEW paid-creation actions
 ///                blocked via `isRestricted`. Existing live items keep selling.
 enum MigrationPhase { soft, nudge, restrict }
 
@@ -107,7 +107,7 @@ class MigrationProvider extends ChangeNotifier {
         }
       }
     } catch (_) {
-      // Network failure — leave status null. UI treats that as "no nudge".
+      // Network failure - leave status null. UI treats that as "no nudge".
     } finally {
       _loading = false;
       notifyListeners();

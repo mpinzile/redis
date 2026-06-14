@@ -1,6 +1,6 @@
 import 'api_base.dart';
 
-/// MigrationService — wraps `/users/me/migration-status`.
+/// MigrationService - wraps `/users/me/migration-status`.
 ///
 /// Backend returns:
 ///   {

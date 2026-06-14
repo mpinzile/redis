@@ -16,6 +16,6 @@ Rect sharePositionOrigin(BuildContext context) {
       if (rect.width > 0 && rect.height > 0) return rect;
     }
   } catch (_) {}
-  // Safe fallback — non-zero rect inside the screen so iOS accepts it.
+  // Safe fallback - non-zero rect inside the screen so iOS accepts it.
   return const Rect.fromLTWH(0, 0, 1, 1);
 }

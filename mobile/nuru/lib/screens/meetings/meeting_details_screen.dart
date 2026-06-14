@@ -461,7 +461,7 @@ END:VCALENDAR''';
         : '';
     final dateLabel = scheduledAt != null
         ? DateFormat('MMM d, yyyy').format(scheduledAt)
-        : '—';
+        : '-';
     return Column(
       children: [
         Container(
@@ -655,7 +655,7 @@ END:VCALENDAR''';
     final allowBeforeHost = m['allow_join_before_host'] == true;
     final recording = m['recording_enabled'] == true ||
         (m['recording'] != null && m['recording'].toString().toLowerCase() != 'off');
-    final hostName = createdBy?['name']?.toString() ?? '—';
+    final hostName = createdBy?['name']?.toString() ?? '-';
 
     return _sectionCard(
       isDark: isDark,
@@ -688,7 +688,7 @@ END:VCALENDAR''';
               trailing: _copyTrailing(meetingId, () => _copy('Meeting ID', meetingId))),
           _divider(isDark),
           _row('assets/icons/secure-shield-icon.svg', 'Passcode',
-              trailing: _copyTrailing(passcode.isEmpty ? '—' : passcode,
+              trailing: _copyTrailing(passcode.isEmpty ? '-' : passcode,
                   passcode.isEmpty ? null : () => _copy('Passcode', passcode))),
           _divider(isDark),
           _row('assets/icons/user-icon.svg', 'Host',

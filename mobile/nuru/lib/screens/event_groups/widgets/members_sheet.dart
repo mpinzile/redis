@@ -73,7 +73,7 @@ class _MembersSheetState extends State<MembersSheet> {
       await Clipboard.setData(ClipboardData(text: url));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invite link copied — share with anyone')),
+        const SnackBar(content: Text('Invite link copied · share with anyone')),
       );
     }
   }
@@ -133,7 +133,7 @@ class _MembersSheetState extends State<MembersSheet> {
               ),
           ]),
         ),
-        // Search — matches "Search events" style: filled, pill, no border
+        // Search - matches "Search events" style: filled, pill, no border
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
           child: NuruSearchBar(
@@ -156,7 +156,7 @@ class _MembersSheetState extends State<MembersSheet> {
                   },
                 ),
         ),
-        // Footer: Invite Members pill (admin only) — outlined per mockup
+        // Footer: Invite Members pill (admin only) - outlined per mockup
         if (widget.isAdmin)
           Container(
             padding: EdgeInsets.fromLTRB(12, 8, 12, 12 + MediaQuery.of(context).padding.bottom),

@@ -1,4 +1,4 @@
-// CardRenderer — paints a CardDesignDoc into a fixed-size box. Used identically
+// CardRenderer - paints a CardDesignDoc into a fixed-size box. Used identically
 // for organiser preview, full-screen preview, and per-guest PNG export. The
 // only thing that changes between contexts is the CardRenderContext (real
 // guest data + qr payload), so every invited guest gets a unique card.
@@ -16,7 +16,7 @@ class CardRenderer extends StatelessWidget {
   final CardRenderContext context;
 
   /// Optional currently-selected layer id for editor overlays. The renderer
-  /// itself doesn't draw selection chrome — see CardDesignerScreen.
+  /// itself doesn't draw selection chrome - see CardDesignerScreen.
   final String? selectedLayerId;
 
   const CardRenderer({
@@ -179,7 +179,7 @@ class CardRenderer extends StatelessWidget {
   }
 
   Widget _qrBody(QrLayer q, double scale) {
-    final payload = context.qrPayload.isEmpty ? '—' : context.qrPayload;
+    final payload = context.qrPayload.isEmpty ? '-' : context.qrPayload;
     return ClipRRect(
       borderRadius: BorderRadius.circular(q.borderRadius * scale),
       child: Container(

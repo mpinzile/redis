@@ -28,11 +28,11 @@ const Map<MigrationSurface, _BannerCopy> _copy = {
   ),
   MigrationSurface.bookings: _BannerCopy(
     'Set up payments to confirm new paid bookings.',
-    "Customers can still browse — but checkouts pause until you're ready.",
+    "Customers can still browse · but checkouts pause until you're ready.",
   ),
   MigrationSurface.generic: _BannerCopy(
     'Complete your payment setup to keep earning.',
-    'Takes about a minute. Mobile money or bank — your choice.',
+    'Takes about a minute. Mobile money or bank · your choice.',
   ),
 };
 
@@ -42,7 +42,7 @@ class _BannerCopy {
   const _BannerCopy(this.headline, this.sub);
 }
 
-/// MigrationBanner — mobile companion to the web banner. Drop it at the top
+/// MigrationBanner - mobile companion to the web banner. Drop it at the top
 /// of any monetized page (events, services, wallet, tickets, bookings).
 /// Hides automatically when the user has no migration debt.
 class MigrationBanner extends StatefulWidget {

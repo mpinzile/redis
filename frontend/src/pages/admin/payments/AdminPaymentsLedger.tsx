@@ -219,7 +219,7 @@ function LedgerDrawer({ txId, onClose }: { txId: string | null; onClose: () => v
                     <li key={c.id} className="text-xs border-l-2 border-primary/40 pl-3 py-0.5">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground">
-                          {c.gateway ?? "GATEWAY"} · code {c.result_code ?? "—"}
+                          {c.gateway ?? "GATEWAY"} - code {c.result_code ?? "—"}
                         </span>
                         <span className="text-muted-foreground">{fmtDateTime(c.received_at)}</span>
                       </div>
@@ -249,7 +249,7 @@ function LedgerDrawer({ txId, onClose }: { txId: string | null; onClose: () => v
                   {data.admin_history.map((h: any, i: number) => (
                     <li key={i} className="text-xs border-l-2 border-primary pl-3 py-0.5">
                       <div className="font-medium text-foreground">{h.action}</div>
-                      <div className="text-muted-foreground">{fmtDateTime(h.created_at)} · {h.admin_name ?? "Admin"}</div>
+                      <div className="text-muted-foreground">{fmtDateTime(h.created_at)} - {h.admin_name ?? "Admin"}</div>
                       {h.note && <div className="text-muted-foreground italic mt-0.5">"{h.note}"</div>}
                     </li>
                   ))}

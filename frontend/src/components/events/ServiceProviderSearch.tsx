@@ -96,7 +96,7 @@ const ServiceProviderSearch = ({ value, onChange, placeholder = 'Search or type 
                 {(s.category_name || s.service_type_name) && (
                   <p className="text-xs text-muted-foreground truncate">
                     {s.category_name || s.service_type_name}
-                    {s.location ? ` · ${s.location}` : ''}
+                    {s.location ? ` - ${s.location}` : ''}
                   </p>
                 )}
               </div>

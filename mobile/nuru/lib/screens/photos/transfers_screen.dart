@@ -6,7 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/services/media_transfer_manager.dart';
 
-/// Background transfers list — shows uploads + downloads in progress / completed
+/// Background transfers list - shows uploads + downloads in progress / completed
 /// for one library (or all libraries if [libraryId] is null).
 class TransfersScreen extends StatelessWidget {
   final String? libraryId;
@@ -132,7 +132,7 @@ class _TransferRow extends StatelessWidget {
       case TransferStatus.error:
         return t.error ?? 'Failed';
       case TransferStatus.paused:
-        return 'Paused — $pct%';
+        return 'Paused · $pct%';
       case TransferStatus.cancelled:
         return 'Cancelled';
       case TransferStatus.queued:

@@ -21,7 +21,7 @@ class CheckinFailedScreen extends StatelessWidget {
   });
 
   String _fmtDateTime(String? iso) {
-    if (iso == null || iso.isEmpty) return '—';
+    if (iso == null || iso.isEmpty) return '-';
     final dt = DateTime.tryParse(iso)?.toLocal();
     if (dt == null) return iso;
     const months = [
@@ -78,8 +78,8 @@ class CheckinFailedScreen extends StatelessWidget {
     final ev = (data['event'] as Map?) ?? {};
     final scanTime = _fmtDateTime(data['scan_time']?.toString());
     final guestName = (data['name'] ?? 'Unknown').toString();
-    final eventName = (ev['name'] ?? '—').toString();
-    final code = (data['ticket_id'] ?? data['code'] ?? data['scanned_code'] ?? '—').toString();
+    final eventName = (ev['name'] ?? '-').toString();
+    final code = (data['ticket_id'] ?? data['code'] ?? data['scanned_code'] ?? '-').toString();
 
     return Scaffold(
       backgroundColor: Colors.white,

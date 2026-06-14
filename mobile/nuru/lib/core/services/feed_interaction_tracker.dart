@@ -77,7 +77,7 @@ class FeedInteractionTracker {
         }),
       );
     } catch (_) {
-      // Silently drop on failure — interactions are best-effort signals.
+      // Silently drop on failure - interactions are best-effort signals.
     }
   }
 

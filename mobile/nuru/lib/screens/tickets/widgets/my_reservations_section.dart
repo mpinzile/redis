@@ -1,4 +1,4 @@
-// MyReservationsSection — airline-style ticket holds shown at the top of the
+// MyReservationsSection - airline-style ticket holds shown at the top of the
 // My Tickets screen. Mirrors the web `MyReservations` component:
 //   - Live countdown to `reserved_until`
 //   - "Pay now" converts reservation → pending order → opens MakePaymentScreen

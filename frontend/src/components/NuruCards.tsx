@@ -380,7 +380,7 @@ const NuruCards = () => {
                   <div key={order.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                     <div>
                       <p className="font-medium capitalize">{order.card_type} Card</p>
-                      <p className="text-sm text-muted-foreground">{order.delivery_name} · {order.delivery_city}</p>
+                      <p className="text-sm text-muted-foreground">{order.delivery_name} - {order.delivery_city}</p>
                       <p className="text-xs text-muted-foreground">{order.created_at ? new Date(order.created_at).toLocaleDateString() : ''}</p>
                     </div>
                     <div className="text-right">

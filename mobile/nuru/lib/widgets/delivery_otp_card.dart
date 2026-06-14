@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/services/delivery_otp_service.dart';
 import '../core/theme/app_colors.dart';
 
-/// Phase 1.3 — On-site service-delivery check-in card.
+/// Phase 1.3 - On-site service-delivery check-in card.
 ///
 /// Vendor view: "Arrived" button → 6-digit input.
 /// Organiser view: shows the 6-digit code to read out.
@@ -219,14 +219,14 @@ class _DeliveryOtpCardState extends State<DeliveryOtpCard> {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              child: const Text("I've arrived — issue code"),
+              child: const Text("I've arrived · issue code"),
             ),
           ],
         ],
       );
     }
 
-    // Active code present — branch on viewer
+    // Active code present - branch on viewer
     if (widget.viewerRole == 'organiser') {
       final code = active['code']?.toString() ?? '';
       return Column(
@@ -260,7 +260,7 @@ class _DeliveryOtpCardState extends State<DeliveryOtpCard> {
             ),
           ),
           const SizedBox(height: 8),
-          Text('Do not share over phone or text — only in person.',
+          Text('Do not share over phone or text · only in person.',
               style: GoogleFonts.inter(
                   fontSize: 11, color: AppColors.textSecondary)),
         ],

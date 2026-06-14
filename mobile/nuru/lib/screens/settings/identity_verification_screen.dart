@@ -9,7 +9,7 @@ import '../../core/widgets/app_snackbar.dart';
 import '../../core/services/event_extras_service.dart';
 import '../../core/l10n/l10n_helper.dart';
 
-/// Identity Verification — premium redesign per Nuru mockup.
+/// Identity Verification - premium redesign per Nuru mockup.
 class IdentityVerificationScreen extends StatefulWidget {
   const IdentityVerificationScreen({super.key});
 
@@ -23,7 +23,7 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
   static const _maxBytes = 5 * 1024 * 1024;
   static const _allowedExt = {'jpg', 'jpeg', 'png', 'webp'};
 
-  // Palette — Nuru primary (gold) replaces the legacy orange accents.
+  // Palette - Nuru primary (gold) replaces the legacy orange accents.
   static const _navy = Color(0xFF0A1C40);
   static const _navySoft = Color(0xFF1A2A4F);
   static const Color _orange = AppColors.primary;      // Nuru gold

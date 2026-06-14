@@ -7,7 +7,7 @@ import 'app_icon.dart';
 /// Picker mode.
 enum NuruPickerMode { date, time, dateAndTime }
 
-/// Day-period buckets — mirrors the greeting logic in
+/// Day-period buckets - mirrors the greeting logic in
 /// `home_right_drawer._greeting()` so picker day-period chips and the
 /// home-drawer greeting stay aligned.
 ///

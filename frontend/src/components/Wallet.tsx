@@ -321,7 +321,7 @@ const WalletPage = () => {
             <DialogTitle>Withdraw from wallet</DialogTitle>
             <DialogDescription>
               {defaultProfile
-                ? `Funds will be sent to ${defaultProfile.account_holder_name}${defaultProfile.method_type === "mobile_money" ? ` · ${defaultProfile.network_name ?? "Mobile Money"}` : ` · ${defaultProfile.bank_name ?? "Bank"}`}`
+                ? `Funds will be sent to ${defaultProfile.account_holder_name}${defaultProfile.method_type === "mobile_money" ? ` - ${defaultProfile.network_name ?? "Mobile Money"}` : ` - ${defaultProfile.bank_name ?? "Bank"}`}`
                 : "Add a payout method before withdrawing."}
             </DialogDescription>
           </DialogHeader>
@@ -460,7 +460,7 @@ const LedgerRow = ({
             {humanize(entry.description) || humanize(entry.entry_type.replace(/_/g, " "))}
           </p>
           <p className="text-[11px] text-muted-foreground">
-            {formatLocalDateTime(entry.created_at)} · {entry.reference_code ?? "—"}
+            {formatLocalDateTime(entry.created_at)} - {entry.reference_code ?? "—"}
           </p>
         </div>
       </div>
@@ -518,7 +518,7 @@ const TransactionRow = ({
           {humanize(tx.payment_description) || humanize(tx.target_type?.replace(/_/g, " ")) || "Payment"}
         </p>
         <p className="text-[11px] text-muted-foreground truncate">
-          {tx.transaction_code} · {formatLocalDateTime(tx.initiated_at || tx.created_at)}
+          {tx.transaction_code} - {formatLocalDateTime(tx.initiated_at || tx.created_at)}
         </p>
       </div>
       <div className="text-right shrink-0 space-y-1">

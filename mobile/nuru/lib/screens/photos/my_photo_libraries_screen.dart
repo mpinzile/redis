@@ -15,7 +15,7 @@ import 'photo_library_screen.dart';
 import '../../core/widgets/video_thumbnail_image.dart';
 import '../../core/widgets/nuru_search_bar.dart';
 
-/// Photo Libraries — list (aggregate, per-service, or per-event).
+/// Photo Libraries - list (aggregate, per-service, or per-event).
 ///
 /// [canCreate] controls whether the "Create New Library" CTA shows. Vendors
 /// (service owners) see it; event organizers opening the screen from Manage
@@ -98,7 +98,7 @@ class _MyPhotoLibrariesScreenState extends State<MyPhotoLibrariesScreen> {
   }
 
   void _onSearchChanged(String v) {
-    // Client-side filter only — do NOT trigger a network reload on every
+    // Client-side filter only - do NOT trigger a network reload on every
     // keystroke. Previously this called _load() which flipped _loading=true
     // and rebuilt the whole screen, making it feel like a full page reload.
     if (_search == v) return;

@@ -244,11 +244,11 @@ export const CheckoutModal = ({
       }
 
       // STK push / bank: payment is now in-flight. Dismiss the modal
-      // immediately so the user isn't trapped behind a spinner — we'll
+      // immediately so the user isn't trapped behind a spinner · we'll
       // notify them via toast once the gateway confirms.
       toast.message(
         res.data.user_message ||
-          "Payment is being processed. Check your phone to approve — we'll notify you when it's confirmed.",
+          "Payment is being processed. Check your phone to approve · we'll notify you when it's confirmed.",
         { description: `Reference ${tx.transaction_code}`, duration: 6000 },
       );
       onOpenChange(false);
@@ -256,7 +256,7 @@ export const CheckoutModal = ({
 
       const final = await pollUntilTerminal(tx.id);
       const commission = Number(final?.commission_snapshot?.computed_fee ?? 0);
-      const commissionLine = commission > 0 ? ` · Fee ${format(commission)}` : "";
+      const commissionLine = commission > 0 ? ` - Fee ${format(commission)}` : "";
       if (final?.status === "succeeded" || final?.status === "paid" || final?.status === "credited") {
         toast.success("Payment confirmed", {
           description: `Reference ${final.transaction_code}${commissionLine}`,

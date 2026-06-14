@@ -349,9 +349,9 @@ const BrowseTickets = () => {
                     amount={(purchaseResult?.total_amount ?? reservation?.total_amount) || 0}
                     allowBank={false}
                     title={`Buy ${quantity} ${selectedClass.name} ticket${quantity > 1 ? 's' : ''}`}
-                    description={`Ticket for ${selectedEvent.name} — ${selectedClass.name} × ${quantity}`}
+                    description={`Ticket for ${selectedEvent.name} - ${selectedClass.name} × ${quantity}`}
                     onSuccess={() => {
-                      toast.success("Payment confirmed — your ticket is now issued.", {
+                      toast.success("Payment confirmed · your ticket is now issued.", {
                         description: "View it under My Tickets.",
                       });
                       setCheckoutOpen(false);
@@ -464,7 +464,7 @@ const BrowseTickets = () => {
                             disabled={purchasing || reserving}
                           >
                             {reserving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
-                            Reserve · pay later
+                            Reserve - pay later
                           </Button>
                           <p className="text-[11px] text-center text-muted-foreground">
                             Reserve to hold {quantity > 1 ? 'these tickets' : 'this ticket'} now and pay before the hold expires.

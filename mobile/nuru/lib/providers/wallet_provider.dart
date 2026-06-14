@@ -2,7 +2,7 @@ import 'package:nuru/core/utils/money_format.dart' show getActiveCurrency;
 import 'package:flutter/material.dart';
 import '../core/services/wallet_service.dart';
 
-/// WalletProvider — single source of truth for the user's wallet, ledger,
+/// WalletProvider - single source of truth for the user's wallet, ledger,
 /// and recent transactions. Screens listen to this and call refresh() after
 /// payments/top-ups complete.
 class WalletProvider extends ChangeNotifier {

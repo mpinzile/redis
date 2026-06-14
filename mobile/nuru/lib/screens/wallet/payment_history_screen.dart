@@ -12,18 +12,18 @@ import '../../providers/wallet_provider.dart';
 import '../../core/widgets/app_snackbar.dart';
 import 'receipt_screen.dart';
 
-/// Premium Payment History screen — matches the 2026 mockup exactly.
+/// Premium Payment History screen - matches the 2026 mockup exactly.
 ///
 /// Features:
 ///   • Yellow "Total Spent" hero card with 30-day trend pill
 ///   • Horizontal scrollable category tabs (All / Tickets / Contributions /
-///     Vendors / Promotions / Ads) — counts come from the backend
+///     Vendors / Promotions / Ads) - counts come from the backend
 ///   • Filter sheet (status + sort) reachable from the funnel icon
 ///   • Tap any row → ReceiptScreen (existing flow, unchanged)
 ///   • Pull-to-refresh + infinite scroll
 ///   • Empty state per category (Promotions / Ads return a friendly
 ///     "no payments yet" panel because they don't yet flow through the
-///     unified Transaction table — backend explicitly returns []).
+///     unified Transaction table - backend explicitly returns []).
 class PaymentHistoryScreen extends StatefulWidget {
   const PaymentHistoryScreen({super.key});
 
@@ -52,7 +52,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   List<dynamic> _txs = [];
   String? _emptyReason;
 
-  // Filter state — applied client-side over what the API returned.
+  // Filter state - applied client-side over what the API returned.
   String _statusFilter = 'all'; // all | paid | pending | failed
   String _sortBy = 'newest'; // newest | oldest | highest | lowest
 
@@ -598,7 +598,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
     } else {
       bg = const Color(0xFFEFF1F5);
       fg = AppColors.textSecondary;
-      label = status.isEmpty ? '—' : status;
+      label = status.isEmpty ? '-' : status;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

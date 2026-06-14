@@ -15,7 +15,7 @@ import '../../../core/widgets/deleting_overlay.dart';
 import '../../../core/theme/text_styles.dart';
 
 
-/// Full redesign — Expenses tab.
+/// Full redesign - Expenses tab.
 /// Flat surfaces, generous whitespace, only one icon per surface (no per-row
 /// chrome). Clean header summary, minimal export row, simple list cards.
 class EventExpensesTab extends StatefulWidget {
@@ -198,7 +198,7 @@ class _EventExpensesTabState extends State<EventExpensesTab>
           _smallMetric(
               'Average',
               _expenses.isEmpty
-                  ? '—'
+                  ? '-'
                   : _formatAmount(total / _expenses.length)),
         ]),
       ]),

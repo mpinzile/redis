@@ -177,7 +177,7 @@ export default function AdminMonitoring() {
         <div>
           <h1 className="text-xl font-bold text-foreground">System Monitoring</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {lastRefresh ? `Last refreshed ${lastRefresh.toLocaleTimeString()}` : "Loading..."} · Auto-refreshes every 30s
+            {lastRefresh ? `Last refreshed ${lastRefresh.toLocaleTimeString()}` : "Loading..."} - Auto-refreshes every 30s
           </p>
         </div>
         <button

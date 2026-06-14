@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// Stats summary row — modern card style
+/// Stats summary row - modern card style
 class StatItem {
   final String label;
   final String value;

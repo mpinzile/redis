@@ -11,7 +11,7 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/l10n/l10n_helper.dart';
 import '../../../widgets/app_select.dart';
 
-/// Full redesign — Checklist tab.
+/// Full redesign - Checklist tab.
 /// Flat surfaces, project SVG icons, skeleton loaders, background refresh,
 /// progress ring header, filter pills, modern task tile.
 class EventChecklistTab extends StatefulWidget {
@@ -777,7 +777,7 @@ class _EventChecklistTabState extends State<EventChecklistTab>
           border: Border.all(color: AppColors.borderLight),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          // Colorful template thumbnail — inline SVG (original colors preserved)
+          // Colorful template thumbnail - inline SVG (original colors preserved)
           Container(
             width: 52,
             height: 52,

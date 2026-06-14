@@ -34,7 +34,7 @@ import '../calls/voice_call_screen.dart';
 import '../../core/widgets/nuru_video_player.dart';
 import '../calls/video_call_screen.dart';
 
-/// Messages screen — matches web Messages.tsx design
+/// Messages screen - matches web Messages.tsx design
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
 
@@ -54,7 +54,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   void initState() {
     super.initState();
-    // Seed from cache so the list shows instantly on re-entry — the network
+    // Seed from cache so the list shows instantly on re-entry - the network
     // refresh below then updates it silently in the background.
     final cached = MessagesCache.conversations;
     if (cached != null && cached.isNotEmpty) {
@@ -122,7 +122,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   /// A conversation is a "vendor" conversation only from the CUSTOMER's
-  /// perspective — i.e. there is a service attached AND the current user is
+  /// perspective - i.e. there is a service attached AND the current user is
   /// NOT the service owner. The service owner side simply sees a normal
   /// chat with a customer.
   bool _isVendorConv(dynamic conv) {
@@ -426,7 +426,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             searching = false;
                             if (res['success'] == true) {
                               final data = res['data'];
-                              // API returns { items: [...] } — handle all response shapes
+                              // API returns { items: [...] } - handle all response shapes
                               searchResults = data is List ? data : (data is Map ? (data['items'] ?? data['users'] ?? data['results'] ?? []) : []);
                             }
                           });
@@ -513,7 +513,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       return;
     }
 
-    // Pop the picker sheet and go straight into the chat — no intermediate
+    // Pop the picker sheet and go straight into the chat - no intermediate
     // "Say hello" sheet. This matches the WhatsApp-style flow the user asked
     // for and avoids the multiple-pages-to-close issue.
     Navigator.pop(sheetCtx);
@@ -544,7 +544,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      // Header — matches Find Services screen exactly: arrow_back + centered
+      // Header - matches Find Services screen exactly: arrow_back + centered
       // "Messages" title. The only addition is a "+" action on the right for
       // starting a new conversation.
       appBar: AppBar(
@@ -602,7 +602,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            // Search bar — matches Find Services screen style
+            // Search bar - matches Find Services screen style
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -1123,7 +1123,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     ],
                   ),
                 ),
-                // Trailing column: time on top, unread badge below — both
+                // Trailing column: time on top, unread badge below - both
                 // anchored to the same right edge for clean vertical alignment
                 // across all rows (no zig-zag).
                 const SizedBox(width: 8),
@@ -1478,7 +1478,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void initState() {
     super.initState();
     _loadCurrentUserId();
-    // Seed instantly from cache so the chat opens like WhatsApp — no
+    // Seed instantly from cache so the chat opens like WhatsApp - no
     // spinner if we have anything to show.
     final cachedMsgs = MessagesCache.getMessages(widget.conversationId);
     final cachedCalls = MessagesCache.getCalls(widget.conversationId);
@@ -1691,7 +1691,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         _scrollToBottom();
       }
 
-      // Upload + send as attachment — backend treats it as a generic file URL
+      // Upload + send as attachment - backend treats it as a generic file URL
       // so older clients still display the conversation correctly.
       final uploadRes = await UploadsService.uploadFile(filePath);
       if (uploadRes['success'] != true) {
@@ -1774,7 +1774,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Future<void> _loadMessages({bool silent = false}) async {
     if (!silent) setState(() => _loading = true);
     // Fetch messages (server now embeds call logs in the same response so
-    // the timeline arrives in one round-trip — no more "messages first,
+    // the timeline arrives in one round-trip - no more "messages first,
     // calls second" flicker).
     final res = await MessagesService.getMessages(widget.conversationId, limit: 100);
     List<dynamic> callLogs = const [];
@@ -1837,7 +1837,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         final taggedCalls = mergedCallsById.values.toList();
 
         _messages = _mergeTimeline(serverMsgs, taggedCalls, localEchoes);
-        // Sort by parsed local DateTime — string compare can break when
+        // Sort by parsed local DateTime - string compare can break when
         // server timestamps mix tz-aware and naive formats, which is what
         // caused call rows to always appear at the top of the thread.
         _messages.sort((a, b) {
@@ -1890,7 +1890,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       }
       // The user is currently inside this conversation, so any new
       // incoming messages from the other participant should NOT count as
-      // unread. Tell the backend right away — otherwise the conversations
+      // unread. Tell the backend right away - otherwise the conversations
       // list keeps showing a stale unread badge until the user backs out
       // and re-opens the thread.
       if (newFromOthers > 0) {
@@ -2045,7 +2045,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (res == null || res.files.isEmpty || !mounted) return;
       // Files are uploaded as attachments; UI shows them as tiles.
       // For the "images only for now" rule we still let the user attach any
-      // file but only render image previews — non-image files appear as a
+      // file but only render image previews - non-image files appear as a
       // generic attachment chip in the bubble.
       final files = res.files.where((f) => f.path != null).map((f) => File(f.path!));
       setState(() {
@@ -2071,7 +2071,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         return;
       }
       final pos = await Geolocator.getCurrentPosition();
-      // Send as a text message with a maps URL — survives any client.
+      // Send as a text message with a maps URL - survives any client.
       final url = 'https://maps.google.com/?q=${pos.latitude},${pos.longitude}';
       _msgCtrl.text = '📍 My location: $url';
       setState(() {});
@@ -2919,7 +2919,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final ratio = _messages.isEmpty ? 0.0 : target / _messages.length;
     if (_scrollCtrl.hasClients) {
       final max = _scrollCtrl.position.maxScrollExtent;
-      // List is NOT reversed — bottom of list is at maxScrollExtent.
+      // List is NOT reversed - bottom of list is at maxScrollExtent.
       // Higher index = lower in list = larger scroll offset.
       _scrollCtrl.animateTo(
         (max * ratio).clamp(0.0, max),
@@ -2976,7 +2976,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Widget _buildThreadSearchBar() {
     // Mirrors the conversations-list search style: white pill, hairline
-    // border, soft prefix icon — so users get one consistent search affordance
+    // border, soft prefix icon - so users get one consistent search affordance
     // across the inbox and individual chats (WhatsApp-style "find in chat").
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 8),
@@ -3253,7 +3253,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       );
     }
 
-    // Always show the E2EE notice (WhatsApp-style) — do not hide it based on
+    // Always show the E2EE notice (WhatsApp-style) - do not hide it based on
     // server flag, so it stays persistently visible at the top of the thread.
 
     return Padding(
@@ -3354,7 +3354,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               Text(
                 'Your messages and calls in this conversation are secured with '
                 'end-to-end encryption. That means only you and the person you\'re '
-                'chatting with can read or listen to them — not even Nuru.',
+                'chatting with can read or listen to them · not even Nuru.',
                 style: GoogleFonts.inter(
                     fontSize: 14, height: 1.5,
                     color: AppColors.textPrimary.withValues(alpha: 0.85)),
@@ -3510,7 +3510,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget _messageBubble(dynamic msg) {
     if (msg is! Map) return const SizedBox.shrink();
 
-    // Call-log row — rendered as a centered, pill-shaped status chip rather
+    // Call-log row - rendered as a centered, pill-shaped status chip rather
     // than a left/right speech bubble. See _loadMessages where we tag these.
     if (msg['_type'] == 'call_log') {
       return _callLogBubble(msg);
@@ -3555,8 +3555,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       (reply['sender']?.toString().isNotEmpty ?? false)
     );
 
-    // Audio-only messages (voice notes) render naked — no card/border around
-    // them — so they look like the WhatsApp bubble-less voice chip.
+    // Audio-only messages (voice notes) render naked - no card/border around
+    // them - so they look like the WhatsApp bubble-less voice chip.
     final isAudioOnly = audioUrls.isNotEmpty &&
         text.isEmpty &&
         imageUrls.isEmpty &&
@@ -3618,7 +3618,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       onReply: () => _setReplyTo(msg),
       child: GestureDetector(
         onLongPress: () => _onMessageLongPress(msg),
-        // Note: no global onTap — media has its own tap handlers, and tap on
+        // Note: no global onTap - media has its own tap handlers, and tap on
         // text bubbles should NOT trigger reply (use swipe or long-press).
         child: Padding(
           padding: const EdgeInsets.only(bottom: 10),
@@ -3912,7 +3912,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ),
       );
     }
-    // In-app inline player — plays audio without opening a browser/asset link.
+    // In-app inline player - plays audio without opening a browser/asset link.
     return InlineVoicePlayer(url: url);
   }
 
@@ -4127,7 +4127,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Yellow "+" circle — INSIDE the pill, left side.
+                      // Yellow "+" circle - INSIDE the pill, left side.
                       GestureDetector(
                         onTap: _showAttachmentSheet,
                         behavior: HitTestBehavior.opaque,
@@ -4217,7 +4217,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 ),
         ),
 
-        // Emoji picker — slides in below the composer when toggled.
+        // Emoji picker - slides in below the composer when toggled.
         if (_showEmojiPicker)
           NuruEmojiPicker(
             height: MediaQuery.of(context).viewInsets.bottom > 0
@@ -4461,7 +4461,7 @@ class _ImageViewerScreen extends StatelessWidget {
   }
 }
 
-/// Swipeable fullscreen image gallery — pinch/zoom + page through all
+/// Swipeable fullscreen image gallery - pinch/zoom + page through all
 /// images in the same message.
 class _ImageGalleryScreen extends StatefulWidget {
   final List<String> urls;

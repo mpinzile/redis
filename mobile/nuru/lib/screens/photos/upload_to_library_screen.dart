@@ -13,7 +13,7 @@ import '../../core/services/photo_libraries_service.dart';
 import '../../core/services/media_transfer_manager.dart';
 import '../../core/widgets/app_snackbar.dart';
 
-/// Add to Library — upload files (photos/videos), create album, from cloud.
+/// Add to Library - upload files (photos/videos), create album, from cloud.
 ///
 /// Uses [MediaTransferManager] so uploads continue in the background while
 /// the user navigates away.
@@ -29,7 +29,7 @@ class _UploadToLibraryScreenState extends State<UploadToLibraryScreen> {
   int _tabIndex = 0;
   String _privacy = 'event_creator_only';
   bool _notify = true;
-  // Files the user has picked but NOT yet uploaded — uploads only start
+  // Files the user has picked but NOT yet uploaded - uploads only start
   // when they tap the bottom "Upload Files (N)" button.
   final List<_PendingFile> _pending = [];
   // Active/finished upload tasks tracked by the manager.
@@ -135,7 +135,7 @@ class _UploadToLibraryScreenState extends State<UploadToLibraryScreen> {
       }
       setState(() {});
       if (overflow > 0 && mounted) {
-        AppSnackbar.error(context, 'Some files skipped — photos and videos must be 10MB or less');
+        AppSnackbar.error(context, 'Some files skipped · photos and videos must be 10MB or less');
       }
     } catch (e) {
       print('[LibraryUploadUI] file picker error: ${e.runtimeType}: $e');
@@ -203,7 +203,7 @@ class _UploadToLibraryScreenState extends State<UploadToLibraryScreen> {
                   const SizedBox(height: 14),
                   if (_tabIndex == 0) ..._uploadTab(),
                   if (_tabIndex == 1) _comingSoon('Create Album', 'Group your media into albums'),
-                  if (_tabIndex == 2) _comingSoon('From Cloud', 'Google Drive & Dropbox — coming soon'),
+                  if (_tabIndex == 2) _comingSoon('From Cloud', 'Google Drive & Dropbox · coming soon'),
                 ],
               ),
             ),

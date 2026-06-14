@@ -7,7 +7,7 @@ import '../core/theme/app_colors.dart';
 ///
 /// Backed by `assets/icons/love-icon.svg`. Because the SVG uses
 /// `currentColor` via `colorFilter`, we can both stroke (outline) and fill
-/// (active) the same path — keeping a single consistent shape for the entire
+/// (active) the same path - keeping a single consistent shape for the entire
 /// product.
 class LoveIcon extends StatelessWidget {
   final bool active;
@@ -43,7 +43,7 @@ class LoveIcon extends StatelessWidget {
               height: size,
               colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
             ),
-          // Outline stroke (always visible — gives the emoji-style love look)
+          // Outline stroke (always visible - gives the emoji-style love look)
           SvgPicture.asset(
             'assets/icons/love-icon.svg',
             width: size,

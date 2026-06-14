@@ -9,7 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/services/event_groups_service.dart';
 import '../../../core/widgets/nuru_skeleton.dart';
 
-/// Contributors tab — stat grid + searchable, filterable contributor list.
+/// Contributors tab - stat grid + searchable, filterable contributor list.
 ///
 /// Reuses the `EventGroupsService.scoreboard` endpoint and the existing
 /// 8-second poll so live progress keeps refreshing.
@@ -112,7 +112,7 @@ class _ScoreboardPanelState extends State<ScoreboardPanel> {
     final paidPct = pledged > 0 ? ((paid / pledged) * 100).clamp(0, 100).round() : 0;
     final outstandingPct = pledged > 0 ? ((outstanding / pledged) * 100).clamp(0, 100).round() : 0;
 
-    // Apply search + filter (client-side only — no endpoint changes)
+    // Apply search + filter (client-side only - no endpoint changes)
     final q = _search.trim().toLowerCase();
     final filtered = _rows.where((r) {
       if (r is! Map) return false;
@@ -292,7 +292,7 @@ class _ScoreboardPanelState extends State<ScoreboardPanel> {
                 style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.textPrimary)),
             const SizedBox(height: 6),
             // Horizontal scroll so large amounts (e.g. TZS 2,000,000) never
-            // visually collide with adjacent columns — tap+drag to reveal.
+            // visually collide with adjacent columns - tap+drag to reveal.
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [

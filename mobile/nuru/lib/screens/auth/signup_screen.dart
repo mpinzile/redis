@@ -360,7 +360,7 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
       child: Scaffold(
         backgroundColor: _kBg,
-        // Keep decorative footer pinned — don't push it up with the keyboard
+        // Keep decorative footer pinned - don't push it up with the keyboard
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
@@ -452,7 +452,7 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // ─── STEP 1 — Name ───
+  // ─── STEP 1 - Name ───
   Widget _nameStep() {
     return Column(
       key: const ValueKey('s1'),
@@ -508,7 +508,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ─── STEP 2 — Username ───
+  // ─── STEP 2 - Username ───
   Widget _usernameStep() {
     return Column(
       key: const ValueKey('s2'),
@@ -612,7 +612,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ─── STEP 3 — Password ───
+  // ─── STEP 3 - Password ───
   Widget _passwordStep() {
     return Column(
       key: const ValueKey('s3'),
@@ -687,7 +687,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ─── STEP 4 — Phone (kept, styled to match) ───
+  // ─── STEP 4 - Phone (kept, styled to match) ───
   Widget _phoneStep() {
     return Column(
       key: const ValueKey('s4'),

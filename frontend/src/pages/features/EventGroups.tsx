@@ -3,14 +3,14 @@ import { useMeta } from "@/hooks/useMeta";
 
 const EventGroups = () => {
   useMeta({
-    title: "Event Groups — Contributors, Organisers & Committees | Nuru",
+    title: "Event Groups · Contributors, Organisers & Committees | Nuru",
     description:
-      "Bring contributors, organisers and committee members into one structured group per event. Coordinate, contribute, decide — without losing the audit trail.",
+      "Bring contributors, organisers and committee members into one structured group per event. Coordinate, contribute, decide · without losing the audit trail.",
   });
 
   return (
     <EditorialFeaturePage
-      kicker="Service · 07 — Event Groups"
+      kicker="Service - 07 - Event Groups"
       title="One group. Every role. Total clarity."
       lead="Every Nuru event has a structured group that brings together organisers, contributors and committee members. Roles are explicit, permissions are granular, and every conversation, contribution and decision is recorded against the event."
       specs={[
@@ -22,7 +22,7 @@ const EventGroups = () => {
       sections={[
         {
           title: "Roles that match how families actually run events.",
-          lead: "Organisers lead. Committee members run portfolios — food, decoration, transport, entertainment. Contributors give and stay informed. Each sees only what they need.",
+          lead: "Organisers lead. Committee members run portfolios · food, decoration, transport, entertainment. Contributors give and stay informed. Each sees only what they need.",
           bullets: [
             "Organiser, committee, contributor, guest roles.",
             "Custom committees per event (food, decor, transport…).",
@@ -46,7 +46,7 @@ const EventGroups = () => {
         },
         {
           title: "Every action lives on the ledger.",
-          lead: "Contributions, vendor decisions, budget changes, RSVP edits — every action is timestamped and attached to the event. No more 'who agreed to that?'",
+          lead: "Contributions, vendor decisions, budget changes, RSVP edits · every action is timestamped and attached to the event. No more 'who agreed to that?'",
           bullets: [
             "Full activity feed per event.",
             "Tamper-evident decision log.",

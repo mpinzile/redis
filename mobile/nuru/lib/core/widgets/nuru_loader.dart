@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// Modern animated loader — replaces all CircularProgressIndicator usage.
+/// Modern animated loader - replaces all CircularProgressIndicator usage.
 /// Three morphing dots with a subtle wave animation.
 class NuruLoader extends StatefulWidget {
   final double size;

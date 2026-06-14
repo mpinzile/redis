@@ -655,7 +655,7 @@ const PostDetail = () => {
               </h3>
               <p className="text-xs md:text-sm text-muted-foreground">
                 {postTimeAgo}
-                {postLocation && <span className="inline-flex items-center gap-0.5"> · <img src={CustomLocationIcon} alt="" className="w-3 h-3 inline dark:invert" /> {postLocation}</span>}
+                {postLocation && <span className="inline-flex items-center gap-0.5"> - <img src={CustomLocationIcon} alt="" className="w-3 h-3 inline dark:invert" /> {postLocation}</span>}
               </p>
             </div>
           </div>

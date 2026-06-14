@@ -4,7 +4,7 @@
 const String kNuruEventDefaultAsset = 'assets/images/event-default.png';
 
 /// Picks the best cover image URL for an event payload, returning ``null``
-/// when no remote image is available — callers should then render the local
+/// when no remote image is available - callers should then render the local
 /// asset above.
 String? resolveEventImageUrl(Map? ev) {
   if (ev == null) return null;

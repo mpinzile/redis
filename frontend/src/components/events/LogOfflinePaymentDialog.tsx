@@ -206,7 +206,7 @@ export function LogOfflinePaymentDialog({
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-foreground">{format(p.amount)}</div>
                     <div className="text-[11px] text-muted-foreground capitalize truncate">
-                      {p.method || "offline"}{p.reference ? ` · ${p.reference}` : ""}
+                      {p.method || "offline"}{p.reference ? ` - ${p.reference}` : ""}
                     </div>
                   </div>
                   <StatusPill status={p.status} />

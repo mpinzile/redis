@@ -55,7 +55,7 @@ class _MeetingRoomScreenState extends State<MeetingRoomScreen> with TickerProvid
   bool _screenShareEnabled = false;
   bool _handRaised = false;
 
-  // Pre-join state — true until user confirms mic/cam
+  // Pre-join state - true until user confirms mic/cam
   bool _preJoin = true;
 
   // Raised hands from other participants
@@ -1531,7 +1531,7 @@ class _MeetingRoomScreenState extends State<MeetingRoomScreen> with TickerProvid
                     },
                   ),
           ),
-          // Input — matches messages_screen.dart pill style (no attachment / no voice)
+          // Input - matches messages_screen.dart pill style (no attachment / no voice)
           SafeArea(
             top: false,
             child: Padding(
@@ -1612,7 +1612,7 @@ class _MeetingRoomScreenState extends State<MeetingRoomScreen> with TickerProvid
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Reactions row (always visible — matches mockup)
+            // Reactions row (always visible - matches mockup)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: _quickReactions

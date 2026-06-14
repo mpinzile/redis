@@ -21,7 +21,7 @@ import '../tickets/select_tickets_screen.dart';
 import '../../core/services/reminder_service.dart';
 import '../../core/theme/text_styles.dart';
 
-/// Public event view for invited guests — mirrors web EventView.
+/// Public event view for invited guests - mirrors web EventView.
 /// Shows event details, RSVP actions, schedule, dress code, and photo libraries.
 /// Does NOT show management tabs (budget, committee, expenses, etc.)
 class EventPublicViewScreen extends StatefulWidget {
@@ -879,6 +879,25 @@ class _EventPublicViewScreenState extends State<EventPublicViewScreen> {
     final description = extractStr(e['description']);
     final dressCode = extractStr(e['dress_code']);
     final specialInstructions = extractStr(e['special_instructions']);
+    final guestOfHonor = extractStr(e['guest_of_honor']);
+    final rawExtras = e['extra_details'];
+    final extraDetails = <Map<String, String>>[
+      if (rawExtras is List)
+        for (final it in rawExtras)
+          if (it is Map &&
+              (it['label'] ?? '').toString().trim().isNotEmpty &&
+              (it['details'] ?? it['description'] ?? '').toString().trim().isNotEmpty)
+            {
+              'label': (it['label']).toString().trim(),
+              'details': (it['details'] ?? it['description']).toString().trim(),
+            },
+      // Backwards compatibility - surface legacy fields only when the new
+      // ``extra_details`` payload has nothing of its own.
+      if ((rawExtras is! List || (rawExtras).isEmpty) && dressCode.isNotEmpty)
+        {'label': 'Dress code', 'details': dressCode},
+      if ((rawExtras is! List || (rawExtras).isEmpty) && specialInstructions.isNotEmpty)
+        {'label': 'Special instructions', 'details': specialInstructions},
+    ];
     final eventType = extractStr(e['event_type']);
     final schedule = e['schedule'] is List ? e['schedule'] as List : [];
     final hasReminder = _reminder != null;
@@ -1316,11 +1335,48 @@ class _EventPublicViewScreenState extends State<EventPublicViewScreen> {
                 _galleryStrip(e, cover),
                 const SizedBox(height: 14),
 
-                // ─── Dress Code & Instructions ───
-                if (dressCode.isNotEmpty || specialInstructions.isNotEmpty)
+                // ─── Guest of honor ───
+                if (guestOfHonor.isNotEmpty)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.borderLight),
+                    ),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                      Container(
+                        width: 42, height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.workspace_premium_rounded, size: 22, color: AppColors.primary),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(
+                          'Guest of honor',
+                          style: appText(size: 11, weight: FontWeight.w700, color: AppColors.textTertiary, letterSpacing: 0.3),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          guestOfHonor,
+                          style: appText(size: 15.5, weight: FontWeight.w700),
+                        ),
+                      ])),
+                    ]),
+                  ),
+
+                // ─── Extra details (user-defined label/details rows) ───
+                if (extraDetails.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -1329,42 +1385,33 @@ class _EventPublicViewScreenState extends State<EventPublicViewScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (dressCode.isNotEmpty) ...[
+                        for (int i = 0; i < extraDetails.length; i++) ...[
+                          if (i > 0)
+                            Container(
+                              height: 1,
+                              margin: const EdgeInsets.symmetric(vertical: 12),
+                              color: AppColors.borderLight,
+                            ),
                           Text(
-                            'Dress Code',
+                            extraDetails[i]['label']!,
                             style: appText(
                               size: 11,
-                              weight: FontWeight.w600,
+                              weight: FontWeight.w700,
                               color: AppColors.textTertiary,
+                              letterSpacing: 0.3,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            dressCode,
-                            style: appText(size: 14, weight: FontWeight.w500),
-                          ),
-                          if (specialInstructions.isNotEmpty)
-                            const SizedBox(height: 14),
-                        ],
-                        if (specialInstructions.isNotEmpty) ...[
-                          Text(
-                            'Special Instructions',
-                            style: appText(
-                              size: 11,
-                              weight: FontWeight.w600,
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            specialInstructions,
-                            style: appText(size: 14, weight: FontWeight.w500),
+                            extraDetails[i]['details']!,
+                            style: appText(size: 14.5, weight: FontWeight.w500, height: 1.4),
                           ),
                         ],
+                        const SizedBox(height: 6),
                       ],
                     ),
                   ),
-                if (dressCode.isNotEmpty || specialInstructions.isNotEmpty)
+                if (extraDetails.isNotEmpty)
                   const SizedBox(height: 14),
 
                 // ─── Schedule ───

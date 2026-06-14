@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'secure_token_storage.dart';
 
-/// Escrow Service — Phase 1.1
+/// Escrow Service - Phase 1.1
 /// Logical-only ledger for booking funds held by Nuru.
 class EscrowService {
   static String get _baseUrl => ApiConfig.baseUrl;

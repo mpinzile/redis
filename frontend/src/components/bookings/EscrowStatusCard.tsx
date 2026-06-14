@@ -171,7 +171,7 @@ export function EscrowStatusCard({ bookingId, viewerRole }: Props) {
                 {hold.transactions.slice().reverse().map((tx) => (
                   <li key={tx.id} className="flex items-center justify-between gap-2">
                     <span className="text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleString()} · {tx.type.replace(/_/g, " ").toLowerCase()}
+                      {new Date(tx.created_at).toLocaleString()} - {tx.type.replace(/_/g, " ").toLowerCase()}
                     </span>
                     <span className="font-medium">{formatPrice(tx.amount)}</span>
                   </li>

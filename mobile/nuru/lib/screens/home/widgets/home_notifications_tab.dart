@@ -16,8 +16,9 @@ import '../../../core/widgets/swipe_action_tile.dart';
 import '../../../core/widgets/nuru_refresh.dart';
 import '../../../core/utils/notification_center.dart';
 import '../../../core/widgets/nuru_skeleton.dart';
+import '../../../core/widgets/self_scrolling_pills.dart';
 
-/// Notifications screen — premium redesign matching the reference mock.
+/// Notifications screen - premium redesign matching the reference mock.
 class HomeNotificationsTab extends StatefulWidget {
   final List<dynamic> notifications;
   final int unreadCount;
@@ -181,42 +182,40 @@ class _HomeNotificationsTabState extends State<HomeNotificationsTab> {
   }
 
   Widget _filterRow() {
-    return SizedBox(
-      height: 38,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (_, i) {
-          final f = _filters[i];
-          final selected = f == _filter;
-          return GestureDetector(
-            onTap: () => setState(() => _filter = f),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary : AppColors.surface,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: selected ? AppColors.primary : const Color(0xFFE5E7EB),
-                  width: 1,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: SelfScrollingPills(
+        activeIndex: _filters.indexOf(_filter).clamp(0, _filters.length - 1),
+        height: 38,
+        spacing: 10,
+        children: [
+          for (final f in _filters)
+            GestureDetector(
+              onTap: () => setState(() => _filter = f),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                decoration: BoxDecoration(
+                  color: f == _filter ? AppColors.primary : AppColors.surface,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: f == _filter ? AppColors.primary : const Color(0xFFE5E7EB),
+                    width: 1,
+                  ),
                 ),
-              ),
-              child: Center(
-                child: Text(
-                  f,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                child: Center(
+                  child: Text(
+                    f,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: f == _filter ? Colors.white : AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ),
             ),
-          );
-        },
+        ],
       ),
     );
   }
