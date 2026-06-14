@@ -342,11 +342,12 @@ export default function WhatsappLogs() {
 
   /** Fetch the full filtered result set (across all pages) for export. */
   const fetchAllForExport = useCallback(async (): Promise<WaLog[]> => {
-    const PAGE = 200;
+    const PAGE = 100; // server caps page size at 100
     const collected: WaLog[] = [];
+    const seen = new Set<string>();
     let page = 1;
     // Hard cap so an over-eager admin can't run away with 100k rows.
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 500; i++) {
       const res: any = await listWhatsappLogs({
         ...filters,
         q: search || undefined,
@@ -358,10 +359,18 @@ export default function WhatsappLogs() {
       const items: WaLog[] = Array.isArray(payload) ? payload
         : Array.isArray(payload?.items) ? payload.items
         : Array.isArray(res?.items) ? res.items : [];
-      collected.push(...items);
+      if (!items.length) break;
+      let added = 0;
+      for (const it of items) {
+        if (it?.id && !seen.has(it.id)) { seen.add(it.id); collected.push(it); added++; }
+      }
       const pg = payload?.pagination ?? res?.pagination ?? null;
-      const total = pg?.total_pages ?? 1;
-      if (page >= total || items.length < PAGE) break;
+      const totalPages = pg?.total_pages ?? null;
+      if (totalPages != null) {
+        if (page >= totalPages) break;
+      } else if (added === 0) {
+        break;
+      }
       page += 1;
     }
     return collected;
@@ -387,14 +396,19 @@ export default function WhatsappLogs() {
   const onExport = async (kind: "xlsx" | "pdf") => {
     setExporting(true);
     try {
-      const all = await fetchAllForExport();
+      // Selection takes precedence; otherwise export ALL across pagination
+      // matching the current filters.
+      const all = selectedLogs.length > 0 ? selectedLogs : await fetchAllForExport();
       if (!all.length) {
         toast({ title: "Nothing to export", description: "No logs match the current filters." });
         return;
       }
       if (kind === "xlsx") exportLogsToExcel(all);
       else await exportLogsToPdf(all, activeFilterChips);
-      toast({ title: "Report ready", description: `${all.length} record${all.length === 1 ? "" : "s"} exported.` });
+      toast({
+        title: "Report ready",
+        description: `${all.length} record${all.length === 1 ? "" : "s"} exported${selectedLogs.length ? " (selected rows)" : ""}.`,
+      });
     } catch (e: any) {
       toast({ title: "Export failed", description: e?.message ?? "Try again.", variant: "destructive" });
     } finally {

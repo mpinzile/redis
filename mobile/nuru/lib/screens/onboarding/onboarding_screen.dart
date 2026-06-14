@@ -16,7 +16,7 @@ import '../auth/login_screen.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 // Brand palette
 // ─────────────────────────────────────────────────────────────────────────────
-const Color _kGold = Color(0xFFF5B400);
+const Color _kGold = Color(0xFFE7A622);
 const Color _kGoldSoft = Color(0xFFFFF4D6);
 const Color _kInk = Color(0xFF111111);
 const Color _kInkSoft = Color(0xFF6B7280);
@@ -515,7 +515,7 @@ class _Page2Workspace extends StatelessWidget {
                       duration: const Duration(milliseconds: 540),
                       delay: const Duration(milliseconds: 100),
                       child: Text(
-                        'From budgeting and ticketing to vendor booking,\ncontributions, and guest management —\nNuru keeps everything organized and transparent.',
+                        'From budgeting and ticketing to vendor booking,\ncontributions, and guest management,\nNuru keeps everything organized and transparent.',
                         textAlign: TextAlign.center,
                         style: _f(
                           size: 12.5,

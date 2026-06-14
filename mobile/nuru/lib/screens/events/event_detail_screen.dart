@@ -910,7 +910,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     );
     final donutSlices = <_DonutSlice>[];
     const sliceColors = [
-      Color(0xFFF5B400), // gold
+      Color(0xFFE7A622), // gold
       Color(0xFF111827), // black
       Color(0xFF6B7280), // gray
       Color(0xFFD1D5DB), // light gray
@@ -1317,7 +1317,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
         _DonutSlice(
           label: 'Paid',
           value: paid.toDouble(),
-          color: const Color(0xFFF5B400),
+          color: const Color(0xFFE7A622),
         ),
         _DonutSlice(
           label: 'Outstanding',

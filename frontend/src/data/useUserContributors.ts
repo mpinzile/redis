@@ -37,9 +37,16 @@ export const useUserContributors = () => {
           page++;
         } else break;
       }
-      _contributorsCache = all;
+      const seen = new Set<string>();
+      const deduped = all.filter(c => {
+        if (!c || seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      }).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+      _contributorsCache = deduped;
       _contributorsHasLoaded = true;
-      setContributors(all);
+      setContributors(deduped);
+
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, []);

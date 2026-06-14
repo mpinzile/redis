@@ -4,19 +4,19 @@ class AppTranslations {
     'app_name': {'en': 'Nuru', 'sw': 'Nuru'},
     'app_tagline': {
       'en': 'Keep your event together',
-      'sw': 'Weka tukio lako pamoja',
+      'sw': 'Panga tukio lako sehemu moja',
     },
 
     // ── Onboarding ──
     'onboarding_title_1': {
       'en': 'Keep your event\ntogether',
-      'sw': 'Weka tukio lako\npamoja',
+      'sw': 'Panga tukio lako\nsehemu moja',
     },
     'onboarding_desc_1': {
       'en':
           'Track contributions, coordinate guests, and work with trusted vendors from one clear place.',
       'sw':
-          'Fuatilia michango, ratibu wageni, na fanya kazi na watoa huduma waaminifu sehemu moja.',
+          'Fuatilia michango, ratibu wageni, na shirikiana na watoa huduma waaminifu kutoka sehemu moja.',
     },
     'onboarding_title_2': {
       'en': 'Every event type\none place',
@@ -26,43 +26,43 @@ class AppTranslations {
       'en':
           'Weddings, corporate events, birthdays, memorials, and more. Nuru keeps everything together in one place.',
       'sw':
-          'Harusi, matukio ya biashara, birthday, misiba, na zaidi. Nuru inaweka kila kitu pamoja sehemu moja.',
+          'Harusi, matukio ya kampuni, siku za kuzaliwa, misiba, na mengine mengi. Nuru hukuwekea kila kitu sehemu moja.',
     },
     'onboarding_title_3': {
       'en': 'See everything\nthat matters',
-      'sw': 'Ona kila kitu\nchenye umuhimu',
+      'sw': 'Ona kila kitu\ncha muhimu',
     },
     'onboarding_desc_3': {
       'en':
           'Contributions, guests, vendors, and progress. Keep every important detail clear and organized.',
       'sw':
-          'Michango, wageni, watoa huduma, na maendeleo. Weka kila undani muhimu wazi na kwa mpangilio.',
+          'Michango, wageni, watoa huduma, na maendeleo. Weka kila taarifa muhimu wazi na kwa mpangilio.',
     },
-    'get_started': {'en': 'Get Started', 'sw': 'Anza Sasa'},
+    'get_started': {'en': 'Get Started', 'sw': 'Anza sasa'},
     'skip': {'en': 'Skip for now', 'sw': 'Ruka kwa sasa'},
     'next': {'en': 'Next', 'sw': 'Endelea'},
 
     // ── Auth ──
-    'welcome_back': {'en': 'Welcome\nBack', 'sw': 'Karibu\nTena'},
+    'welcome_back': {'en': 'Welcome\nBack', 'sw': 'Karibu\ntena'},
     'sign_in_subtitle': {
       'en': 'Sign in to keep your events organized',
       'sw': 'Ingia ili kuweka matukio yako kwa mpangilio',
     },
-    'create_account': {'en': 'Create\nAccount', 'sw': 'Fungua\nAkaunti'},
+    'create_account': {'en': 'Create\nAccount', 'sw': 'Fungua\nakaunti'},
     'sign_up_subtitle': {
       'en': 'Join Nuru and start organizing your events with clarity',
       'sw': 'Jiunge na Nuru na uanze kupanga matukio yako kwa uwazi',
     },
-    'email': {'en': 'Email', 'sw': 'Email'},
-    'password': {'en': 'Password', 'sw': 'Password'},
+    'email': {'en': 'Email', 'sw': 'Barua pepe'},
+    'password': {'en': 'Password', 'sw': 'Nywila'},
     'full_name': {'en': 'Full Name', 'sw': 'Jina Kamili'},
     'first_name': {'en': 'First Name', 'sw': 'Jina la Kwanza'},
     'last_name': {'en': 'Last Name', 'sw': 'Jina la Mwisho'},
     'phone': {'en': 'Phone Number', 'sw': 'Namba ya Simu'},
-    'username': {'en': 'Username', 'sw': 'Username'},
+    'username': {'en': 'Username', 'sw': 'Jina la mtumiaji'},
     'sign_in': {'en': 'Sign In', 'sw': 'Ingia'},
     'sign_up': {'en': 'Sign Up', 'sw': 'Jisajili'},
-    'forgot_password': {'en': 'Forgot Password?', 'sw': 'Umesahau Password?'},
+    'forgot_password': {'en': 'Forgot Password?', 'sw': 'Umesahau nywila?'},
     'dont_have_account': {
       'en': "Don't have an account? ",
       'sw': 'Huna akaunti? ',
@@ -85,24 +85,20 @@ class AppTranslations {
     'register': {'en': 'Register', 'sw': 'Jisajili'},
     'verify': {'en': 'Verify', 'sw': 'Thibitisha'},
     'verification': {'en': 'Verification', 'sw': 'Uthibitisho'},
-    'enter_otp': {
-      'en': 'Enter the verification code',
-      'sw': 'Ingiza nambari ya uthibitisho',
-    },
-    'resend_code': {'en': 'Resend Code', 'sw': 'Tuma Tena Nambari'},
-    'reset_password': {'en': 'Reset Password', 'sw': 'Weka Password Mpya'},
-    'new_password': {'en': 'New Password', 'sw': 'Password Mpya'},
-    'confirm_password': {'en': 'Confirm Password', 'sw': 'Thibitisha Password'},
-    'phone_or_email': {'en': 'Phone or Email', 'sw': 'Simu au Email'},
+    'resend_code': {'en': 'Resend Code', 'sw': 'Tuma tena nambari'},
+    'reset_password': {'en': 'Reset Password', 'sw': 'Weka nywila mpya'},
+    'new_password': {'en': 'New Password', 'sw': 'Nywila mpya'},
+    'confirm_password': {'en': 'Confirm Password', 'sw': 'Thibitisha nywila'},
+    'phone_or_email': {'en': 'Phone or Email', 'sw': 'Simu au barua pepe'},
     'continue_text': {'en': 'Continue', 'sw': 'Endelea'},
 
     // ── Home ──
     'home': {'en': 'Home', 'sw': 'Nyumbani'},
-    'feed': {'en': 'Feed', 'sw': 'Feed'},
+    'feed': {'en': 'Feed', 'sw': 'Habari'},
     'explore': {'en': 'Explore', 'sw': 'Gundua'},
     'search': {'en': 'Search', 'sw': 'Tafuta'},
     'search_events': {'en': 'Search events...', 'sw': 'Tafuta matukio...'},
-    'trending': {'en': 'Trending', 'sw': 'Trending'},
+    'trending': {'en': 'Trending', 'sw': 'Maarufu'},
     'for_you': {'en': 'For You', 'sw': 'Kwako'},
     'discover': {'en': 'Discover', 'sw': 'Gundua'},
     'joined': {'en': 'Joined', 'sw': 'Umejiunga'},
@@ -114,14 +110,14 @@ class AppTranslations {
     'my_events': {'en': 'My Events', 'sw': 'Matukio Yangu'},
     'my_contributions': {'en': 'My Contributions', 'sw': 'Michango Yangu'},
 
-    'create_event': {'en': 'Create Event', 'sw': 'Unda Tukio'},
+    'create_event': {'en': 'Create Event', 'sw': 'Tengeneza Tukio'},
     'edit_event': {'en': 'Edit Event', 'sw': 'Hariri Tukio'},
     'delete_event': {'en': 'Delete Event', 'sw': 'Futa Tukio'},
     'event_details': {'en': 'Event Details', 'sw': 'Maelezo ya Tukio'},
     'event_title': {'en': 'Event Title', 'sw': 'Jina la Tukio'},
     'event_type': {'en': 'Event Type', 'sw': 'Aina ya Tukio'},
     'event_date': {'en': 'Event Date', 'sw': 'Tarehe ya Tukio'},
-    'event_time': {'en': 'Event Time', 'sw': 'Wakati wa Tukio'},
+    'event_time': {'en': 'Event Time', 'sw': 'Saa ya Tukio'},
     'event_location': {'en': 'Location', 'sw': 'Mahali'},
     'venue': {'en': 'Venue', 'sw': 'Mahali pa Tukio'},
     'description': {'en': 'Description', 'sw': 'Maelezo'},
@@ -129,20 +125,20 @@ class AppTranslations {
     'end_date': {'en': 'End Date', 'sw': 'Tarehe ya Mwisho'},
     'start_time': {'en': 'Start Time', 'sw': 'Wakati wa Kuanza'},
     'end_time': {'en': 'End Time', 'sw': 'Wakati wa Mwisho'},
-    'dress_code': {'en': 'Dress Code', 'sw': 'Dress Code'},
+    'dress_code': {'en': 'Dress Code', 'sw': 'Mavazi'},
     'budget': {'en': 'Budget', 'sw': 'Bajeti'},
     'guests': {'en': 'Guests', 'sw': 'Wageni'},
     'guest_list': {'en': 'Guest List', 'sw': 'Orodha ya Wageni'},
     'add_guest': {'en': 'Add Guest', 'sw': 'Ongeza Mgeni'},
     'invite_guests': {'en': 'Invite Guests', 'sw': 'Alika Wageni'},
     'rsvp': {'en': 'RSVP', 'sw': 'RSVP'},
-    'confirmed': {'en': 'Confirmed', 'sw': 'Imethibitishwa'},
+    'confirmed': {'en': 'Confirmed', 'sw': 'Amethibitisha'},
     'pending': {'en': 'Pending', 'sw': 'Inasubiri'},
-    'declined': {'en': 'Declined', 'sw': 'Imekataliwa'},
+    'declined': {'en': 'Declined', 'sw': 'Amekataa'},
     'attending': {'en': 'Attending', 'sw': 'Nitahudhuria'},
     'not_attending': {'en': 'Not Attending', 'sw': 'Sitahudhuria'},
-    'maybe': {'en': 'Maybe', 'sw': 'Labda'},
-    'upcoming': {'en': 'Upcoming', 'sw': 'Yanakuja'},
+    'maybe': {'en': 'Maybe', 'sw': 'Sina uhakika'},
+    'upcoming': {'en': 'Upcoming', 'sw': 'Yajayo'},
     'past': {'en': 'Past', 'sw': 'Yaliyopita'},
     'ongoing': {'en': 'Ongoing', 'sw': 'Yanaendelea'},
     'cancelled': {'en': 'Cancelled', 'sw': 'Yameghairiwa'},
@@ -151,13 +147,13 @@ class AppTranslations {
 
     // ── Event Types ──
     'wedding': {'en': 'Wedding', 'sw': 'Harusi'},
-    'birthday': {'en': 'Birthday', 'sw': 'Birthday'},
-    'corporate': {'en': 'Corporate', 'sw': 'Corporate'},
-    'memorial': {'en': 'Memorial', 'sw': 'Memorial'},
-    'anniversary': {'en': 'Anniversary', 'sw': 'Anniversary'},
-    'conference': {'en': 'Conference', 'sw': 'Conference'},
-    'graduation': {'en': 'Graduation', 'sw': 'Graduation'},
-    'sendoff': {'en': 'Send-off', 'sw': 'Send-off'},
+    'birthday': {'en': 'Birthday', 'sw': 'Siku ya Kuzaliwa'},
+    'corporate': {'en': 'Corporate', 'sw': 'Tukio la Kampuni'},
+    'memorial': {'en': 'Memorial', 'sw': 'Msiba'},
+    'anniversary': {'en': 'Anniversary', 'sw': 'Kumbukumbu ya Mwaka'},
+    'conference': {'en': 'Conference', 'sw': 'Kongamano'},
+    'graduation': {'en': 'Graduation', 'sw': 'Mahafali'},
+    'sendoff': {'en': 'Send-off', 'sw': 'Sendoff'},
 
     // ── Contributions ──
     'contributions': {'en': 'Contributions', 'sw': 'Michango'},
@@ -181,36 +177,36 @@ class AppTranslations {
     'available': {'en': 'Available', 'sw': 'Zinapatikana'},
 
     // ── Vendors / Services ──
-    'vendors': {'en': 'Vendors', 'sw': 'Vendors'},
+    'vendors': {'en': 'Vendors', 'sw': 'Watoa Huduma'},
     'all': {'en': 'All', 'sw': 'Zote'},
     'people': {'en': 'People', 'sw': 'Watu'},
     'services': {'en': 'Services', 'sw': 'Huduma'},
     'my_services': {'en': 'My Services', 'sw': 'Huduma Zangu'},
-    'find_services': {'en': 'Find Vendors', 'sw': 'Tafuta Vendors'},
-    'book_service': {'en': 'Book Vendor', 'sw': 'Weka Huduma'},
-    'bookings': {'en': 'Bookings', 'sw': 'Bookings'},
-    'my_bookings': {'en': 'My Bookings', 'sw': 'Bookings Zangu'},
-    'booked': {'en': 'Booked', 'sw': 'Imewekwa'},
-    'booking_details': {'en': 'Booking Details', 'sw': 'Maelezo ya Booking'},
+    'find_services': {'en': 'Find Vendors', 'sw': 'Tafuta Watoa Huduma'},
+    'book_service': {'en': 'Book Vendor', 'sw': 'Weka Oda ya Huduma'},
+    'bookings': {'en': 'Bookings', 'sw': 'Oda za Huduma'},
+    'my_bookings': {'en': 'My Bookings', 'sw': 'Oda Zangu za Huduma'},
+    'booked': {'en': 'Booked', 'sw': 'Imewekewa Oda'},
+    'booking_details': {'en': 'Booking Details', 'sw': 'Maelezo ya Oda'},
 
     // ── Profile ──
     'profile': {'en': 'Profile', 'sw': 'Wasifu'},
     'edit_profile': {'en': 'Edit Profile', 'sw': 'Hariri Wasifu'},
-    'bio': {'en': 'Bio', 'sw': 'Bio'},
+    'bio': {'en': 'Bio', 'sw': 'Maelezo mafupi'},
     'location': {'en': 'Location', 'sw': 'Mahali'},
-    'website': {'en': 'Website', 'sw': 'Website'},
-    'followers': {'en': 'Followers', 'sw': 'Wafuasi'},
-    'following': {'en': 'Following', 'sw': 'Unawafuata'},
+    'website': {'en': 'Website', 'sw': 'Tovuti'},
+    'followers': {'en': 'Followers', 'sw': 'Wanaokufuata'},
+    'following': {'en': 'Following', 'sw': 'Unaowafuata'},
     'follow': {'en': 'Follow', 'sw': 'Fuata'},
     'unfollow': {'en': 'Unfollow', 'sw': 'Acha Kufuata'},
-    'moments': {'en': 'Moments', 'sw': 'Moments'},
+    'moments': {'en': 'Moments', 'sw': 'Kumbukumbu'},
     'posts': {'en': 'Posts', 'sw': 'Machapisho'},
 
     // ── Settings ──
     'settings': {'en': 'Settings', 'sw': 'Mipangilio'},
     'account': {'en': 'Account', 'sw': 'Akaunti'},
     'preferences': {'en': 'Preferences', 'sw': 'Mapendeleo'},
-    'change_password': {'en': 'Change Password', 'sw': 'Badilisha Password'},
+    'change_password': {'en': 'Change Password', 'sw': 'Badilisha nywila'},
     'identity_verification': {
       'en': 'Identity Verification',
       'sw': 'Uthibitisho wa Kitambulisho',
@@ -237,7 +233,7 @@ class AppTranslations {
     },
     'update_account_password': {
       'en': 'Update your account password',
-      'sw': 'Sasisha password ya akaunti yako',
+      'sw': 'Sasisha nywila ya akaunti yako',
     },
     'manage_notifications': {
       'en': 'Choose what notifications you receive',
@@ -263,7 +259,7 @@ class AppTranslations {
     'delete': {'en': 'Delete', 'sw': 'Futa'},
     'edit': {'en': 'Edit', 'sw': 'Hariri'},
     'close': {'en': 'Close', 'sw': 'Funga'},
-    'done': {'en': 'Done', 'sw': 'Imekamilika'},
+    'done': {'en': 'Done', 'sw': 'Tayari'},
     'confirm': {'en': 'Confirm', 'sw': 'Thibitisha'},
     'submit': {'en': 'Submit', 'sw': 'Tuma'},
     'send': {'en': 'Send', 'sw': 'Tuma'},
@@ -274,7 +270,7 @@ class AppTranslations {
     'refresh': {'en': 'Refresh', 'sw': 'Onyesha upya'},
     'retry': {'en': 'Try again', 'sw': 'Jaribu Tena'},
     // ── Right Sidebar ──
-    'quick_view': {'en': 'Quick View', 'sw': 'Muhtasari'},
+    'quick_view': {'en': 'Quick View', 'sw': 'Muhtasari wa Haraka'},
     'upcoming_events': {'en': 'Upcoming Events', 'sw': 'Matukio Yanayokuja'},
     'my_meetings': {'en': 'My Meetings', 'sw': 'Mikutano Yangu'},
     'events_with_tickets': {
@@ -283,16 +279,16 @@ class AppTranslations {
     },
     'service_providers': {'en': 'Service Providers', 'sw': 'Watoa Huduma'},
     'suggested_for_you': {'en': 'Suggested for You', 'sw': 'Mapendekezo Kwako'},
-    'all_caught_up': {'en': 'All caught up!', 'sw': 'Umesoma yote!'},
+    'all_caught_up': {'en': 'All caught up!', 'sw': 'Umefika mwisho'},
     'nothing_here_yet': {
       'en': 'Nothing here yet',
       'sw': 'Hakuna chochote bado',
     },
     'from': {'en': 'From', 'sw': 'Kuanzia'},
     'today': {'en': 'Today', 'sw': 'Leo'},
-    'view': {'en': 'View', 'sw': 'Angalia'},
-    'view_all': {'en': 'View All', 'sw': 'Angalia Zote'},
-    'view_details': {'en': 'View Details', 'sw': 'Angalia Maelezo'},
+    'view': {'en': 'View', 'sw': 'Tazama'},
+    'view_all': {'en': 'View All', 'sw': 'Tazama Zote'},
+    'view_details': {'en': 'View Details', 'sw': 'Tazama Maelezo'},
     'add': {'en': 'Add', 'sw': 'Ongeza'},
     'remove': {'en': 'Remove', 'sw': 'Ondoa'},
     'apply': {'en': 'Apply', 'sw': 'Tumia'},
@@ -314,24 +310,24 @@ class AppTranslations {
     'create_post': {'en': 'Create Post', 'sw': 'Andika Chapisho'},
     'whats_on_your_mind': {
       'en': "What's on your mind?",
-      'sw': 'Una nini akilini?',
+      'sw': 'Unafikiria nini?',
     },
     'like': {'en': 'Like', 'sw': 'Penda'},
-    'comment': {'en': 'Comment', 'sw': 'Maoni'},
+    'comment': {'en': 'Comment', 'sw': 'Toa maoni'},
     'comments': {'en': 'Comments', 'sw': 'Maoni'},
     'write_comment': {'en': 'Write a comment...', 'sw': 'Andika maoni...'},
     'reply': {'en': 'Reply', 'sw': 'Jibu'},
-    'echoes': {'en': 'Echoes', 'sw': 'Echoes'},
-    'echo': {'en': 'Echo', 'sw': 'Echo'},
-    'glows': {'en': 'Glows', 'sw': 'Glows'},
-    'glow': {'en': 'Glow', 'sw': 'Glow'},
+    'echoes': {'en': 'Echoes', 'sw': 'Maoni'},
+    'echo': {'en': 'Echo', 'sw': 'Maoni'},
+    'glows': {'en': 'Glows', 'sw': 'Vipendwa'},
+    'glow': {'en': 'Glow', 'sw': 'Penda'},
 
     // ── Communities ──
     'communities': {'en': 'Communities', 'sw': 'Jumuiya'},
     'join': {'en': 'Join', 'sw': 'Jiunge'},
     'leave': {'en': 'Leave', 'sw': 'Ondoka'},
     'members': {'en': 'Members', 'sw': 'Wanachama'},
-    'admin': {'en': 'Admin', 'sw': 'Admin'},
+    'admin': {'en': 'Admin', 'sw': 'Msimamizi'},
 
     // ── Invitations ──
     'invitations': {'en': 'Invitations', 'sw': 'Mialiko'},
@@ -349,8 +345,8 @@ class AppTranslations {
     // ── Budget ──
     'budget_assistant': {'en': 'Budget Assistant', 'sw': 'Msaidizi wa Bajeti'},
     'total_budget': {'en': 'Total Budget', 'sw': 'Bajeti Jumla'},
-    'spent': {'en': 'Spent', 'sw': 'Imetumika'},
-    'remaining': {'en': 'Remaining', 'sw': 'Imebaki'},
+    'spent': {'en': 'Spent', 'sw': 'Kilichotumika'},
+    'remaining': {'en': 'Remaining', 'sw': 'Kilichobaki'},
     'income': {'en': 'Income', 'sw': 'Mapato'},
     'expenses': {'en': 'Expenses', 'sw': 'Matumizi'},
 
@@ -361,7 +357,7 @@ class AppTranslations {
     'take_photo': {'en': 'Take Photo', 'sw': 'Piga Picha'},
     'choose_from_gallery': {
       'en': 'Choose from Gallery',
-      'sw': 'Chagua kutoka Gallery',
+      'sw': 'Chagua kutoka kwenye picha',
     },
     'change_profile_photo': {
       'en': 'Change Profile Photo',
@@ -378,14 +374,14 @@ class AppTranslations {
     },
 
     // ── QR / Scanning ──
-    'scan_qr': {'en': 'Scan QR Code', 'sw': 'Scan QR Code'},
-    'qr_code': {'en': 'QR Code', 'sw': 'QR Code'},
+    'scan_qr': {'en': 'Scan QR Code', 'sw': 'Skani Msimbo wa QR'},
+    'qr_code': {'en': 'QR Code', 'sw': 'Msimbo wa QR'},
 
     // ── Help ──
     'help': {'en': 'Help', 'sw': 'Msaada'},
     'help_center': {'en': 'Help Center', 'sw': 'Kituo cha Msaada'},
     'contact_us': {'en': 'Contact Us', 'sw': 'Wasiliana Nasi'},
-    'faq': {'en': 'FAQ', 'sw': 'Maswali Yanayoulizwa Mara kwa Mara'},
+    'faq': {'en': 'FAQ', 'sw': 'Maswali ya Mara kwa Mara'},
 
     // ── Issues ──
     'issues': {'en': 'Issues', 'sw': 'Matatizo'},
@@ -403,14 +399,14 @@ class AppTranslations {
     // ── Misc ──
     'yesterday': {'en': 'Yesterday', 'sw': 'Jana'},
     'tomorrow': {'en': 'Tomorrow', 'sw': 'Kesho'},
-    'see_more': {'en': 'See More', 'sw': 'Angalia Zaidi'},
-    'see_less': {'en': 'See Less', 'sw': 'Angalia Kidogo'},
+    'see_more': {'en': 'See More', 'sw': 'Tazama Zaidi'},
+    'see_less': {'en': 'See Less', 'sw': 'Tazama Kidogo'},
     'no_events': {'en': 'No events yet', 'sw': 'Hakuna matukio bado'},
-    'no_moments': {'en': 'No moments yet', 'sw': 'Hakuna moments bado'},
-    'no_moments_yet': {'en': 'No moments yet', 'sw': 'Hakuna moments bado'},
+    'no_moments': {'en': 'No moments yet', 'sw': 'Hakuna kumbukumbu bado'},
+    'no_moments_yet': {'en': 'No moments yet', 'sw': 'Hakuna kumbukumbu bado'},
     'share_first_moment': {
       'en': 'Share your first moment!',
-      'sw': 'Shiriki moment yako ya kwanza!',
+      'sw': 'Shiriki kumbukumbu yako ya kwanza',
     },
     'no_notifications': {'en': 'No notifications', 'sw': 'Hakuna arifa'},
     'no_messages': {'en': 'No messages', 'sw': 'Hakuna ujumbe'},
@@ -431,15 +427,15 @@ class AppTranslations {
     },
     'required_field': {
       'en': 'This field cannot be empty',
-      'sw': 'Sehemu hii haiwezi kuwa tupu',
+      'sw': 'Sehemu hii haiwezi kuachwa wazi',
     },
     'invalid_email': {
       'en': 'Enter a valid email address',
-      'sw': 'Weka anwani sahihi ya email',
+      'sw': 'Weka barua pepe sahihi',
     },
     'password_too_short': {
       'en': 'Password is too short',
-      'sw': 'Password ni fupi sana',
+      'sw': 'Nywila ni fupi sana',
     },
     'verify_phone': {
       'en': 'Verify Phone Number',
@@ -477,18 +473,21 @@ class AppTranslations {
     },
 
     // ── Signup flow ──
-    'whats_your_name': {'en': "What's your name?", 'sw': 'Jina lako ni nani?'},
+    'whats_your_name': {'en': "What's your name?", 'sw': 'Unaitwa nani?'},
     'lets_start': {
       'en': "Let's start with the basics",
       'sw': 'Tuanze na mambo ya msingi',
     },
     'your_first_name': {'en': 'Your first name', 'sw': 'Jina lako la kwanza'},
     'your_last_name': {'en': 'Your last name', 'sw': 'Jina lako la mwisho'},
-    'looks_good': {'en': 'Looks good', 'sw': 'Inaonekana vizuri'},
-    'choose_username': {'en': 'Choose a username', 'sw': 'Chagua username'},
+    'looks_good': {'en': 'Looks good', 'sw': 'Inaonekana sawa'},
+    'choose_username': {
+      'en': 'Choose a username',
+      'sw': 'Chagua jina la mtumiaji',
+    },
     'how_others_find_you': {
       'en': 'This is how others will find you',
-      'sw': 'Hivi ndivyo wengine watakupataje',
+      'sw': 'Hivi ndivyo wengine watakavyokupata',
     },
     'checking': {'en': 'Checking...', 'sw': 'Inakagua...'},
     'available_text': {'en': 'Available', 'sw': 'Inapatikana'},
@@ -497,16 +496,16 @@ class AppTranslations {
     'secure_account': {'en': 'Secure your account', 'sw': 'Linda akaunti yako'},
     'create_strong_password': {
       'en': 'Create a strong password',
-      'sw': 'Tengeneza password imara',
+      'sw': 'Tengeneza nywila imara',
     },
-    'create_password': {'en': 'Create a password', 'sw': 'Tengeneza password'},
+    'create_password': {'en': 'Create a password', 'sw': 'Tengeneza nywila'},
     'reenter_password': {
       'en': 'Re-enter your password',
-      'sw': 'Ingiza tena password yako',
+      'sw': 'Ingiza tena nywila yako',
     },
     'verify_your_phone': {
       'en': 'Verify your phone',
-      'sw': 'Thibitisha simu yako',
+      'sw': 'Thibitisha namba yako ya simu',
     },
     'well_send_code': {
       'en': "We'll send you a verification code",
@@ -534,14 +533,13 @@ class AppTranslations {
     'welcome_user': {'en': 'Welcome', 'sw': 'Karibu'},
     'account_verified': {
       'en': 'Your account is verified.\nTaking you to your workspace...',
-      'sw':
-          'Akaunti yako imethibitishwa.\nTunakupeleka kwenye workspace yako...',
+      'sw': 'Akaunti yako imethibitishwa.\nTunakupeleka kwenye ukurasa wako...',
     },
 
     // ── Forgot Password ──
     'reset_via_email': {
       'en': 'Reset via email',
-      'sw': 'Weka upya kupitia email',
+      'sw': 'Weka upya kupitia barua pepe',
     },
     'reset_via_phone': {
       'en': 'Reset via phone',
@@ -550,7 +548,7 @@ class AppTranslations {
     'enter_code': {'en': 'Enter code', 'sw': 'Ingiza nambari'},
     'choose_recovery': {
       'en': 'Choose how to recover your account',
-      'sw': 'Chagua jinsi ya kurejesha akaunti yako',
+      'sw': 'Chagua njia ya kurejesha akaunti yako',
     },
     'send_reset_link': {
       'en': 'Send reset link',
@@ -562,28 +560,28 @@ class AppTranslations {
     },
     'well_send_reset_link': {
       'en': "We'll send a reset link",
-      'sw': 'Tutatuma kiungo cha kuweka upya',
+      'sw': 'Tutakutumia kiungo cha kuweka upya',
     },
     'well_send_otp': {
       'en': "We'll send an OTP code",
-      'sw': 'Tutatuma nambari ya OTP',
+      'sw': 'Tutakutumia nambari ya uthibitisho',
     },
-    'email_address': {'en': 'Email address', 'sw': 'Anwani ya email'},
+    'email_address': {'en': 'Email address', 'sw': 'Anwani ya barua pepe'},
     'enter_email_reset': {
       'en': 'Enter your email to receive reset instructions',
-      'sw': 'Ingiza email yako kupokea maelekezo ya kuweka upya',
+      'sw': 'Ingiza barua pepe yako ili upokee maelekezo ya kuweka upya',
     },
     'enter_phone_reset': {
       'en': 'Enter your phone to receive a reset code',
-      'sw': 'Ingiza simu yako kupokea nambari ya kuweka upya',
+      'sw': 'Ingiza namba yako ya simu ili upokee nambari ya kuweka upya',
     },
     'choose_new_password': {
       'en': 'Choose a new secure password',
-      'sw': 'Chagua password mpya salama',
+      'sw': 'Chagua nywila mpya iliyo salama',
     },
     'create_new_password': {
       'en': 'Create a new password',
-      'sw': 'Tengeneza password mpya',
+      'sw': 'Tengeneza nywila mpya',
     },
 
     // ── Search ──
@@ -608,8 +606,8 @@ class AppTranslations {
       'sw': 'Mipangilio ya Akaunti',
     },
     'safety_privacy': {'en': 'Safety & Privacy', 'sw': 'Usalama na Faragha'},
-    'ai_assistant': {'en': 'AI Assistant', 'sw': 'Msaidizi wa AI'},
-    'live_chat': {'en': 'Live Chat', 'sw': 'Chat ya Moja kwa Moja'},
+    'ai_assistant': {'en': 'AI Assistant', 'sw': 'Msaidizi wa Akili Bandia'},
+    'live_chat': {'en': 'Live Chat', 'sw': 'Mazungumzo ya Moja kwa Moja'},
 
     // ── Services ──
     'add_service': {'en': 'Add Service', 'sw': 'Ongeza Huduma'},
@@ -624,11 +622,11 @@ class AppTranslations {
       'en': 'Service Verification',
       'sw': 'Uthibitisho wa Huduma',
     },
-    'category': {'en': 'Category', 'sw': 'Kategoria'},
-    'price_range': {'en': 'Price Range', 'sw': 'Bei'},
-    'reviews': {'en': 'Reviews', 'sw': 'Tathmini'},
-    'rating': {'en': 'Rating', 'sw': 'Ukadiriaji'},
-    'book_now': {'en': 'Book Now', 'sw': 'Weka Sasa'},
+    'category': {'en': 'Category', 'sw': 'Aina'},
+    'price_range': {'en': 'Price Range', 'sw': 'Kiwango cha Bei'},
+    'reviews': {'en': 'Reviews', 'sw': 'Maoni ya Wateja'},
+    'rating': {'en': 'Rating', 'sw': 'Alama'},
+    'book_now': {'en': 'Book Now', 'sw': 'Weka Oda Sasa'},
     'contact_provider': {
       'en': 'Contact Vendor',
       'sw': 'Wasiliana na Mtoa Huduma',
@@ -662,14 +660,17 @@ class AppTranslations {
     'agenda': {'en': 'Agenda', 'sw': 'Ajenda'},
     'announcements': {'en': 'Announcements', 'sw': 'Matangazo'},
     'share_event': {'en': 'Share Event', 'sw': 'Shiriki Tukio'},
-    'manage_event': {'en': 'View Event', 'sw': 'Angalia Tukio'},
+    'manage_event': {'en': 'View Event', 'sw': 'Tazama Tukio'},
     'event_settings': {'en': 'Event Settings', 'sw': 'Mipangilio ya Tukio'},
 
     // ── Create Event ──
     'basic_info': {'en': 'Basic Info', 'sw': 'Taarifa za Msingi'},
     'date_and_time': {'en': 'Date & Time', 'sw': 'Tarehe na Wakati'},
     'location_venue': {'en': 'Location & Venue', 'sw': 'Mahali na Ukumbi'},
-    'additional_details': {'en': 'Additional Details', 'sw': 'Maelezo Zaidi'},
+    'additional_details': {
+      'en': 'Additional Details',
+      'sw': 'Maelezo ya Ziada',
+    },
     'publish_event': {'en': 'Publish Event', 'sw': 'Chapisha Tukio'},
     'save_draft': {'en': 'Save Draft', 'sw': 'Hifadhi Rasimu'},
     'select_date': {'en': 'Select Date', 'sw': 'Chagua Tarehe'},
@@ -692,7 +693,7 @@ class AppTranslations {
       'sw': 'Ripoti ya Michango',
     },
     'budget_report': {'en': 'Budget Report', 'sw': 'Ripoti ya Bajeti'},
-    'preview_report': {'en': 'Preview Report', 'sw': 'Hakiki Ripoti'},
+    'preview_report': {'en': 'Preview Report', 'sw': 'Kagua Ripoti'},
 
     // ── Photos extra ──
     'event_photos': {'en': 'Event Photos', 'sw': 'Picha za Tukio'},
@@ -716,11 +717,11 @@ class AppTranslations {
     'post_deleted': {'en': 'Post deleted', 'sw': 'Chapisho limefutwa'},
 
     // ── Moments ──
-    'my_moments': {'en': 'My Moments', 'sw': 'Moments Zangu'},
+    'my_moments': {'en': 'My Moments', 'sw': 'Kumbukumbu Zangu'},
     'no_posts_yet': {'en': 'No posts yet', 'sw': 'Hakuna machapisho bado'},
     'start_sharing': {
       'en': 'Share your first moment!',
-      'sw': 'Shiriki moment yako ya kwanza!',
+      'sw': 'Shiriki kumbukumbu yako ya kwanza',
     },
 
     // ── Messages ──
@@ -746,7 +747,8 @@ class AppTranslations {
       'sw': 'Inaondoa mazungumzo haya kwenye orodha yako tu.',
     },
     'delete_conversation_confirm': {
-      'en': 'Remove your conversation with {name}? It will only be hidden on your side.',
+      'en':
+          'Remove your conversation with {name}? It will only be hidden on your side.',
       'sw': 'Ondoa mazungumzo yako na {name}? Yatafichwa upande wako tu.',
     },
 
@@ -757,29 +759,32 @@ class AppTranslations {
     },
 
     // ── Forgot Password extra ──
-    'new_password_label': {'en': 'New Password', 'sw': 'Password Mpya'},
+    'new_password_label': {'en': 'New Password', 'sw': 'Nywila Mpya'},
     'confirm_password_label': {
       'en': 'Confirm Password',
-      'sw': 'Thibitisha Password',
+      'sw': 'Thibitisha Nywila',
     },
     'create_new_password_hint': {
       'en': 'Create a new password',
-      'sw': 'Tengeneza password mpya',
+      'sw': 'Tengeneza nywila mpya',
     },
     'reenter_password_hint': {
       'en': 'Re-enter your password',
-      'sw': 'Ingiza tena password yako',
+      'sw': 'Ingiza tena nywila yako',
     },
     'min_8_chars': {'en': 'At least 8 characters', 'sw': 'Angalau herufi 8'},
     'passwords_dont_match': {
       'en': "Passwords don't match",
-      'sw': 'Password hazilingani',
+      'sw': 'Nywila hazifanani',
     },
     'password_reset_success': {
       'en': 'Password reset! Please sign in.',
-      'sw': 'Password imewekwa upya! Tafadhali ingia.',
+      'sw': 'Nywila imewekwa upya. Tafadhali ingia.',
     },
-    'enter_your_email': {'en': 'Enter your email', 'sw': 'Ingiza email yako'},
+    'enter_your_email': {
+      'en': 'Enter your email',
+      'sw': 'Ingiza barua pepe yako',
+    },
     'enter_your_phone': {
       'en': 'Enter your phone',
       'sw': 'Ingiza namba yako ya simu',
@@ -799,7 +804,7 @@ class AppTranslations {
     },
     'reset_failed': {
       'en': "We couldn't reset your password. Please try again.",
-      'sw': 'Hatukuweza kuweka upya password yako. Tafadhali jaribu tena.',
+      'sw': 'Hatukuweza kuweka upya nywila yako. Tafadhali jaribu tena.',
     },
     'we_sent_code_to': {
       'en': 'We sent a 6-digit code to',
@@ -807,7 +812,7 @@ class AppTranslations {
     },
     'email_hint': {
       'en': 'your.email@example.com',
-      'sw': 'email.yako@mfano.com',
+      'sw': 'barua.pepe@mfano.com',
     },
 
     // ── Messages extra ──
@@ -834,7 +839,7 @@ class AppTranslations {
     'sending_text': {'en': 'Sending...', 'sw': 'Inatuma...'},
     'no_messages_yet': {'en': 'No messages yet', 'sw': 'Hakuna ujumbe bado'},
     'photo': {'en': 'Photo', 'sw': 'Picha'},
-    'chat': {'en': 'Chat', 'sw': 'Chat'},
+    'chat': {'en': 'Chat', 'sw': 'Mazungumzo'},
 
     // ── Settings extra ──
     'nuru_pass': {'en': 'Nuru Pass', 'sw': 'Nuru Pass'},
@@ -845,33 +850,33 @@ class AppTranslations {
       'sw': 'Tuambie kuhusu wewe...',
     },
     'city_country': {'en': 'City, Country', 'sw': 'Jiji, Nchi'},
-    'current_password': {'en': 'Current Password', 'sw': 'Password ya Sasa'},
+    'current_password': {'en': 'Current Password', 'sw': 'Nywila ya Sasa'},
     'enter_current_password': {
       'en': 'Enter current password',
-      'sw': 'Ingiza password ya sasa',
+      'sw': 'Ingiza nywila ya sasa',
     },
     'enter_new_password': {
       'en': 'Enter new password',
-      'sw': 'Ingiza password mpya',
+      'sw': 'Ingiza nywila mpya',
     },
     'confirm_new_password': {
       'en': 'Confirm new password',
-      'sw': 'Thibitisha password mpya',
+      'sw': 'Thibitisha nywila mpya',
     },
     'password_changed': {
       'en': 'Password changed successfully',
-      'sw': 'Password imebadilishwa',
+      'sw': 'Nywila imebadilishwa',
     },
     'password_hint': {
       'en': 'Make sure your new password is at least 8 characters long.',
-      'sw': 'Hakikisha password yako mpya ina angalau herufi 8.',
+      'sw': 'Hakikisha nywila yako mpya ina angalau herufi 8.',
     },
 
     // ── Privacy & Security ──
     'private_profile': {'en': 'Private Profile', 'sw': 'Wasifu wa Faragha'},
     'private_profile_desc': {
       'en': 'Only approved followers can see your content',
-      'sw': 'Wafuasi walioidhinishwa tu ndio wanaweza kuona maudhui yako',
+      'sw': 'Wafuasi uliowakubali tu ndio wataona maudhui yako',
     },
     'show_online_status': {
       'en': 'Show Online Status',
@@ -884,9 +889,9 @@ class AppTranslations {
     'show_last_seen': {'en': 'Show Last Seen', 'sw': 'Onyesha Mara ya Mwisho'},
     'show_last_seen_desc': {
       'en': 'Let others see when you were last active',
-      'sw': 'Waache wengine waone ulipokuwa active mara ya mwisho',
+      'sw': 'Ruhusu wengine waone mara ya mwisho ulipokuwa mtandaoni',
     },
-    'read_receipts': {'en': 'Read Receipts', 'sw': 'Risiti za Kusoma'},
+    'read_receipts': {'en': 'Read Receipts', 'sw': 'Taarifa za Kusoma'},
     'read_receipts_desc': {
       'en': "Show when you've read messages",
       'sw': 'Onyesha wakati umesoma ujumbe',
@@ -901,27 +906,27 @@ class AppTranslations {
     // ── Notifications settings ──
     'email_notifications': {
       'en': 'Email Notifications',
-      'sw': 'Arifa za Email',
+      'sw': 'Arifa za Barua Pepe',
     },
     'email_notifications_desc': {
       'en': 'Receive email about your account activity',
-      'sw': 'Pokea email kuhusu shughuli za akaunti yako',
+      'sw': 'Pokea barua pepe kuhusu shughuli za akaunti yako',
     },
-    'push_notifications': {'en': 'Push Notifications', 'sw': 'Arifa za Push'},
+    'push_notifications': {'en': 'Push Notifications', 'sw': 'Arifa za Simu'},
     'push_notifications_desc': {
       'en': 'Enable push notifications',
-      'sw': 'Washa arifa za push',
+      'sw': 'Washa arifa za simu',
     },
     'sms_notifications': {'en': 'SMS Notifications', 'sw': 'Arifa za SMS'},
     'sms_notifications_desc': {
       'en': 'Receive SMS for important updates',
-      'sw': 'Pokea SMS kwa sasisho muhimu',
+      'sw': 'Pokea SMS kuhusu taarifa muhimu',
     },
 
     // ── About ──
     'open_source_licenses': {
       'en': 'Open Source Licenses',
-      'sw': 'Leseni za Open Source',
+      'sw': 'Leseni za Programu Huria',
     },
     'settings_updated': {
       'en': 'Settings updated',
@@ -940,7 +945,7 @@ class AppTranslations {
     'venue_name': {'en': 'Venue Name', 'sw': 'Jina la Ukumbi'},
     'venue_name_optional': {
       'en': 'Venue name (optional)',
-      'sw': 'Jina la ukumbi (hiari)',
+      'sw': 'Jina la ukumbi (si lazima)',
     },
     'describe_event': {'en': 'Describe your event', 'sw': 'Eleza tukio lako'},
     'location_pinned': {
@@ -955,14 +960,17 @@ class AppTranslations {
     'cover_image': {'en': 'Cover Image', 'sw': 'Picha ya Jalada'},
     'tap_to_upload': {'en': 'Tap to upload image', 'sw': 'Gusa kupakia picha'},
     'visibility': {'en': 'Visibility', 'sw': 'Mwonekano'},
-    'enable_ticketing': {'en': 'Enable Ticketing', 'sw': 'Washa Tiketi'},
+    'enable_ticketing': {
+      'en': 'Enable Ticketing',
+      'sw': 'Washa Uuzaji wa Tiketi',
+    },
     'enable_ticketing_desc': {
       'en': 'Allow selling tickets for this event',
       'sw': 'Ruhusu kuuza tiketi kwa tukio hili',
     },
     'dress_code_hint': {
       'en': 'Dress code (e.g., Black Tie)',
-      'sw': 'Dress code (mfano, Black Tie)',
+      'sw': 'Mavazi (mfano, suti nyeusi)',
     },
     'special_instructions_hint': {
       'en': 'Special instructions for guests',
@@ -976,17 +984,17 @@ class AppTranslations {
     'public': {'en': 'Public', 'sw': 'Hadharani'},
 
     // ── Moments extra ──
-    'delete_moment': {'en': 'Delete Moment', 'sw': 'Futa Moment'},
-    'edit_moment': {'en': 'Edit Moment', 'sw': 'Hariri Moment'},
-    'moment_deleted': {'en': 'Moment deleted', 'sw': 'Moment imefutwa'},
-    'moment_updated': {'en': 'Moment updated', 'sw': 'Moment imesasishwa'},
+    'delete_moment': {'en': 'Delete Moment', 'sw': 'Futa Kumbukumbu'},
+    'edit_moment': {'en': 'Edit Moment', 'sw': 'Hariri Kumbukumbu'},
+    'moment_deleted': {'en': 'Moment deleted', 'sw': 'Kumbukumbu imefutwa'},
+    'moment_updated': {'en': 'Moment updated', 'sw': 'Kumbukumbu imesasishwa'},
     'make_public': {'en': 'Make Public', 'sw': 'Fanya Hadharani'},
-    'circle_only': {'en': 'Circle Only', 'sw': 'Duara Tu'},
+    'circle_only': {'en': 'Circle Only', 'sw': 'Kwa Duara Pekee'},
 
     // ── Circle extra ──
     'no_members_circle': {
       'en': 'No members in your circle',
-      'sw': 'Hakuna wanachama kwenye circle yako',
+      'sw': 'Hakuna wanachama kwenye duara lako',
     },
     'no_pending_requests': {
       'en': 'No pending requests',
@@ -1008,7 +1016,7 @@ class AppTranslations {
     'create': {'en': 'Create', 'sw': 'Unda'},
     'be_first_post': {
       'en': 'Be the first to post in this community',
-      'sw': 'Kuwa wa kwanza kuchapisha kwenye jumuiya hii',
+      'sw': 'Kuwa wa kwanza kuchapisha katika jumuiya hii',
     },
     'no_members': {'en': 'No members', 'sw': 'Hakuna wanachama'},
     'member': {'en': 'Member', 'sw': 'Mwanachama'},
@@ -1042,7 +1050,7 @@ class AppTranslations {
     },
     'contributor_address_book': {
       'en': 'Your contributor address book will appear here',
-      'sw': 'Kitabu chako cha anwani za wachangiaji kitaonekana hapa',
+      'sw': 'Orodha yako ya anwani za wachangiaji itaonekana hapa',
     },
     'name_field': {'en': 'Name', 'sw': 'Jina'},
     'phone_field': {'en': 'Phone', 'sw': 'Simu'},
@@ -1052,7 +1060,7 @@ class AppTranslations {
     // ── Budget Assistant extra ──
     'ai_budget_assistant': {
       'en': 'AI Budget Assistant',
-      'sw': 'Msaidizi wa Bajeti wa AI',
+      'sw': 'Msaidizi wa Bajeti wa Akili Bandia',
     },
     'powered_by_nuru_ai': {
       'en': 'Powered by Nuru AI',
@@ -1069,12 +1077,12 @@ class AppTranslations {
       'sw': 'Hatukuweza kutengeneza PDF. Tafadhali jaribu tena.',
     },
     'preparing_pdf': {'en': 'Preparing PDF...', 'sw': 'Inaandaa PDF...'},
-    'preview_pdf': {'en': 'Preview PDF', 'sw': 'Hakiki PDF'},
+    'preview_pdf': {'en': 'Preview PDF', 'sw': 'Kagua PDF'},
     'import_items': {'en': 'Import Items', 'sw': 'Ingiza Vipengele'},
 
     // ── Document verification ──
-    'document_type': {'en': 'Document Type', 'sw': 'Aina ya Hati'},
-    'upload_documents': {'en': 'Upload Documents', 'sw': 'Pakia Hati'},
+    'document_type': {'en': 'Document Type', 'sw': 'Aina ya Nyaraka'},
+    'upload_documents': {'en': 'Upload Documents', 'sw': 'Pakia Nyaraka'},
     'submit_verification': {
       'en': 'Submit for Verification',
       'sw': 'Tuma kwa Uthibitisho',
@@ -1096,15 +1104,15 @@ class AppTranslations {
     },
     'username_min_chars': {
       'en': 'Username must be at least 3 characters',
-      'sw': 'Username lazima iwe angalau herufi 3',
+      'sw': 'Jina la mtumiaji lazima liwe na angalau herufi 3',
     },
     'username_taken': {
       'en': 'Username is taken',
-      'sw': 'Username imechukuliwa',
+      'sw': 'Jina la mtumiaji limechukuliwa',
     },
     'meet_password_requirements': {
       'en': 'Meet all password requirements',
-      'sw': 'Timiza mahitaji yote ya password',
+      'sw': 'Timiza mahitaji yote ya nywila',
     },
     'enter_valid_phone': {
       'en': 'Enter a valid phone number',
@@ -1142,10 +1150,10 @@ class AppTranslations {
       'en': 'At least 8 characters',
       'sw': 'Angalau herufi 8',
     },
-    'one_number': {'en': 'One number', 'sw': 'Nambari moja'},
+    'one_number': {'en': 'One number', 'sw': 'Namba moja'},
     'one_special_char': {
       'en': 'One special character',
-      'sw': 'Alama moja maalum',
+      'sw': 'Alama maalum moja',
     },
     'continue': {'en': 'Continue', 'sw': 'Endelea'},
     'welcome_name': {'en': 'Welcome,', 'sw': 'Karibu,'},
@@ -1157,14 +1165,14 @@ class AppTranslations {
     },
     'account_suspended': {
       'en': 'Your account has been suspended. Contact support for help.',
-      'sw': 'Akaunti yako imesimamishwa. Wasiliana na msaada kwa usaidizi.',
+      'sw': 'Akaunti yako imesimamishwa. Wasiliana na huduma ya msaada.',
     },
 
     // ── Event Detail Tabs ──
     'overview': {'en': 'Overview', 'sw': 'Muhtasari'},
     'sponsors': {'en': 'Sponsors', 'sw': 'Wadhamini'},
-    'checklist': {'en': 'Checklist', 'sw': 'Orodha'},
-    'check_in': {'en': 'Check-In', 'sw': 'Check-In'},
+    'checklist': {'en': 'Checklist', 'sw': 'Orodha ya Kazi'},
+    'check_in': {'en': 'Check-In', 'sw': 'Kuingiza Wageni'},
     'reminders': {'en': 'Reminders', 'sw': 'Vikumbusho'},
     'invitation': {'en': 'Invitation', 'sw': 'Mwaliko'},
     'schedule': {'en': 'Schedule', 'sw': 'Ratiba'},
@@ -1176,11 +1184,11 @@ class AppTranslations {
     'total_collected': {'en': 'Total Collected', 'sw': 'Jumla Iliyokusanywa'},
     'budget_shortfall': {'en': 'Budget Shortfall', 'sw': 'Upungufu wa Bajeti'},
     'total_pledged': {'en': 'Total Pledged', 'sw': 'Jumla ya Ahadi'},
-    'outstanding': {'en': 'Outstanding', 'sw': 'Bado Hajalipwa'},
+    'outstanding': {'en': 'Outstanding', 'sw': 'Bado Haijalipwa'},
     'unpledged': {'en': 'Unpledged', 'sw': 'Bila Ahadi'},
     'budget_vs_raised': {
       'en': 'Budget vs Raised',
-      'sw': 'Bajeti dhidi ya Kilichokusanywa',
+      'sw': 'Bajeti na Kilichokusanywa',
     },
     'collection_progress': {
       'en': 'Collection Progress',
@@ -1216,7 +1224,7 @@ class AppTranslations {
     'guest_overview': {'en': 'Guest Overview', 'sw': 'Muhtasari wa Wageni'},
     'confirmed_guests': {
       'en': 'Confirmed Guests',
-      'sw': 'Wageni Waliothibitishwa',
+      'sw': 'Wageni Waliothibitisha',
     },
     'event_description': {'en': 'Event Description', 'sw': 'Maelezo ya Tukio'},
     'edit_event_btn': {'en': 'Edit Event', 'sw': 'Hariri Tukio'},
@@ -1246,10 +1254,10 @@ class AppTranslations {
       'sw': 'Ujumbe kwa Wachangiaji',
     },
     'no_contribution': {'en': 'No Contribution', 'sw': 'Hakuna Mchango'},
-    'partial_payment': {'en': 'Partial', 'sw': 'Sehemu'},
+    'partial_payment': {'en': 'Partial', 'sw': 'Malipo ya Sehemu'},
     'completed_payment': {'en': 'Completed', 'sw': 'Imekamilika'},
     'recipients': {'en': 'Recipients', 'sw': 'Wapokeaji'},
-    'message_template': {'en': 'Message Template', 'sw': 'Kiolezo cha Ujumbe'},
+    'message_template': {'en': 'Message Template', 'sw': 'Mfumo wa Ujumbe'},
     'reset': {'en': 'Reset', 'sw': 'Weka Upya'},
     'preview': {'en': 'Preview', 'sw': 'Hakiki'},
     'confirm_send': {'en': 'Confirm & Send', 'sw': 'Thibitisha na Tuma'},
@@ -1287,7 +1295,7 @@ class AppTranslations {
       'en': 'Bulk Upload Contributors',
       'sw': 'Pakia Wachangiaji kwa Wingi',
     },
-    'upload_mode': {'en': 'Upload Mode', 'sw': 'Hali ya Kupakia'},
+    'upload_mode': {'en': 'Upload Mode', 'sw': 'Njia ya Kupakia'},
     'set_pledge_targets': {
       'en': 'Set Pledge Targets',
       'sw': 'Weka Malengo ya Ahadi',
@@ -1322,7 +1330,7 @@ class AppTranslations {
     'preview_and_share': {'en': 'Preview and share', 'sw': 'Hakiki na shiriki'},
     'open_in_spreadsheet': {
       'en': 'Open in spreadsheet apps',
-      'sw': 'Fungua kwenye programu za karatasi',
+      'sw': 'Fungua kwenye programu za majedwali',
     },
 
     // ── Meetings ──
@@ -1341,7 +1349,8 @@ class AppTranslations {
     'no_meetings_desc': {
       'en':
           'Schedule a meeting to coordinate with your team. Everyone stays aligned.',
-      'sw': 'Panga mkutano kuratibu na timu yako. Kila mtu anakuwa sawa.',
+      'sw':
+          'Panga mkutano ili kuratibu na timu yako. Kila mtu atakuwa na taarifa sawa.',
     },
     'meeting_title': {'en': 'Meeting title', 'sw': 'Jina la mkutano'},
     'meeting_title_placeholder': {
@@ -1358,14 +1367,14 @@ class AppTranslations {
     },
     'meeting_invite_subtitle': {
       'en': 'Bring your team together. Participants will be notified.',
-      'sw': 'Kusanya timu yako. Washiriki wataarifiwa.',
+      'sw': 'Kusanya timu yako. Washiriki watajulishwa.',
     },
     'pick_date': {'en': 'Pick date', 'sw': 'Chagua tarehe'},
     'pick_time': {'en': 'Pick time', 'sw': 'Chagua saa'},
     'duration': {'en': 'Duration', 'sw': 'Muda'},
     'minutes_30': {'en': '30 minutes', 'sw': 'Dakika 30'},
     'hour_1': {'en': '1 hour', 'sw': 'Saa 1'},
-    'hours_1_5': {'en': '1.5 hours', 'sw': 'Saa 1.5'},
+    'hours_1_5': {'en': '1.5 hours', 'sw': 'Saa 1 na dakika 30'},
     'hours_2': {'en': '2 hours', 'sw': 'Saa 2'},
     'schedule_meeting_btn': {'en': 'Schedule meeting', 'sw': 'Panga mkutano'},
     'enter_title_date_time': {
@@ -1409,14 +1418,14 @@ class AppTranslations {
     'edit_meeting_subtitle': {
       'en': 'Update meeting details. Only scheduled meetings can be edited.',
       'sw':
-          'Sasisha maelezo ya mkutano. Mikutano iliyopangwa tu ndiyo inayoweza kuhaririwa.',
+          'Sasisha maelezo ya mkutano. Ni mikutano iliyopangwa pekee inayoweza kuhaririwa.',
     },
     'meeting_updated': {'en': 'Meeting updated.', 'sw': 'Mkutano umesasishwa.'},
     'update_meeting': {'en': 'Update Meeting', 'sw': 'Sasisha Mkutano'},
 
     // Meeting Agenda & Minutes
-    'minutes': {'en': 'Minutes', 'sw': 'Muhtasari'},
-    'agenda_minutes': {'en': 'Agenda & Minutes', 'sw': 'Ajenda na Muhtasari'},
+    'minutes': {'en': 'Minutes', 'sw': 'Kumbukumbu za Mkutano'},
+    'agenda_minutes': {'en': 'Agenda & Minutes', 'sw': 'Ajenda na Kumbukumbu'},
     'no_agenda_yet': {'en': 'No agenda items yet', 'sw': 'Hakuna ajenda bado'},
     'no_agenda_desc': {
       'en': 'Add agenda items to structure your meeting.',
@@ -1441,13 +1450,14 @@ class AppTranslations {
     'duration_placeholder': {'en': 'e.g. 15', 'sw': 'k.m. 15'},
     'no_minutes_yet': {
       'en': 'No minutes recorded',
-      'sw': 'Hakuna muhtasari bado',
+      'sw': 'Hakuna kumbukumbu za mkutano bado',
     },
     'no_minutes_desc': {
       'en': 'Record meeting minutes to capture discussions and decisions.',
-      'sw': 'Andika muhtasari wa mkutano kuhifadhi majadiliano na maamuzi.',
+      'sw':
+          'Andika kumbukumbu za mkutano ili kuhifadhi majadiliano na maamuzi.',
     },
-    'record_minutes': {'en': 'Record Minutes', 'sw': 'Andika Muhtasari'},
+    'record_minutes': {'en': 'Record Minutes', 'sw': 'Andika Kumbukumbu'},
     'meeting_notes': {'en': 'Meeting Notes', 'sw': 'Maelezo ya Mkutano'},
     'minutes_placeholder': {
       'en': 'Write detailed meeting notes here...',
@@ -1463,15 +1473,228 @@ class AppTranslations {
       'en': 'List key decisions...',
       'sw': 'Orodhesha maamuzi muhimu...',
     },
-    'action_items': {'en': 'Action Items', 'sw': 'Hatua za Kufanya'},
+    'action_items': {'en': 'Action Items', 'sw': 'Majukumu'},
     'action_items_placeholder': {
       'en': 'List action items...',
-      'sw': 'Orodhesha hatua za kufanya...',
+      'sw': 'Orodhesha majukumu...',
     },
-    'save_minutes': {'en': 'Save Minutes', 'sw': 'Hifadhi Muhtasari'},
-    'minutes_saved': {'en': 'Minutes saved', 'sw': 'Muhtasari umehifadhiwa'},
+    'save_minutes': {'en': 'Save Minutes', 'sw': 'Hifadhi Kumbukumbu'},
+    'minutes_saved': {'en': 'Minutes saved', 'sw': 'Kumbukumbu zimehifadhiwa'},
     'recorded_by': {'en': 'Recorded by', 'sw': 'Imeandikwa na'},
     'export_pdf': {'en': 'Export PDF', 'sw': 'Hamisha PDF'},
+
+    // ── Interests onboarding (post-signup personalisation) ──
+    'interests_step_intent_title': {
+      'en': 'What brings you to Nuru?',
+      'sw': 'Nini kimekuleta Nuru?',
+    },
+    'interests_step_intent_subtitle': {
+      'en':
+          'No wrong answer. Pick anything that fits. You can choose more than one.',
+      'sw':
+          'Hakuna jibu baya. Chagua chochote kinachokufaa. Unaweza kuchagua zaidi ya kimoja.',
+    },
+    'interests_step_kinds_title': {
+      'en': 'What kind of events interest you?',
+      'sw': 'Ni aina gani za matukio zinakuvutia?',
+    },
+    'interests_step_kinds_subtitle': {
+      'en':
+          'Pick at least 3. We will personalise your feed, communities and event recommendations around them.',
+      'sw':
+          'Chagua angalau 3. Tutaboresha habari zako, jumuiya na mapendekezo ya matukio kulingana nazo.',
+    },
+    'interests_step_role_title': {
+      'en': 'How do you usually do events?',
+      'sw': 'Kawaida unashiriki vipi katika matukio?',
+    },
+    'interests_step_role_subtitle': {
+      'en':
+          'This helps us show the right tools. Discovery for attendees, planning surfaces for hosts.',
+      'sw':
+          'Hii hutusaidia kukuonyesha zana zinazokufaa. Wahudhuriaji huona matukio, waandaaji huona zana za kupanga.',
+    },
+    'interests_pick_at_least_one': {
+      'en': 'Pick at least one',
+      'sw': 'Chagua angalau moja',
+    },
+    'interests_pick_n_more': {'en': 'Pick {n} more', 'sw': 'Chagua {n} zaidi'},
+    'interests_finish': {'en': 'Finish', 'sw': 'Maliza'},
+    'interests_lets_go': {'en': "Let's go", 'sw': 'Twende'},
+    'interests_save_changes': {
+      'en': 'Save changes',
+      'sw': 'Hifadhi mabadiliko',
+    },
+    'interests_title_editing': {
+      'en': 'Your interests',
+      'sw': 'Mapendeleo yako',
+    },
+
+    // Intent slugs
+    'intent_plan_event': {
+      'en': 'Plan my own event',
+      'sw': 'Panga tukio langu mwenyewe',
+    },
+    'intent_plan_event_hint': {
+      'en': 'Weddings, birthdays, meetups',
+      'sw': 'Harusi, siku za kuzaliwa, mikutano',
+    },
+    'intent_buy_tickets': {
+      'en': 'Buy tickets to events',
+      'sw': 'Nunua tiketi za matukio',
+    },
+    'intent_buy_tickets_hint': {
+      'en': 'Concerts, festivals, shows',
+      'sw': 'Matamasha, sherehe, maonyesho',
+    },
+    'intent_discover_events': {
+      'en': "Discover what's happening",
+      'sw': 'Gundua yanayotokea',
+    },
+    'intent_discover_events_hint': {
+      'en': "See what's on near me",
+      'sw': 'Ona yaliyopo karibu nami',
+    },
+    'intent_offer_service': {
+      'en': 'Offer a service or vendor',
+      'sw': 'Toa huduma',
+    },
+    'intent_offer_service_hint': {
+      'en': 'Photography, catering, DJ',
+      'sw': 'Upigaji picha, chakula, DJ',
+    },
+    'intent_host_community': {'en': 'Build a community', 'sw': 'Jenga jumuiya'},
+    'intent_host_community_hint': {
+      'en': 'Bring people together',
+      'sw': 'Kuwakutanisha watu pamoja',
+    },
+    'intent_share_moments': {
+      'en': 'Share my event moments',
+      'sw': 'Shiriki kumbukumbu za matukio yangu',
+    },
+    'intent_share_moments_hint': {
+      'en': 'Photos, videos, memories',
+      'sw': 'Picha, video, kumbukumbu',
+    },
+    'intent_network': {
+      'en': 'Meet people and network',
+      'sw': 'Kutana na watu na ujenge mtandao',
+    },
+    'intent_network_hint': {
+      'en': 'New connections and friends',
+      'sw': 'Marafiki na uhusiano mpya',
+    },
+    'intent_just_exploring': {
+      'en': 'Just exploring for now',
+      'sw': 'Naangalia tu kwa sasa',
+    },
+    'intent_just_exploring_hint': {
+      'en': 'Looking around',
+      'sw': 'Naangalia tu',
+    },
+
+    // Interest categories
+    'interest_weddings': {'en': 'Weddings', 'sw': 'Harusi'},
+    'interest_birthdays': {'en': 'Birthdays', 'sw': 'Siku za Kuzaliwa'},
+    'interest_graduations': {'en': 'Graduations', 'sw': 'Mahafali'},
+    'interest_anniversaries': {
+      'en': 'Anniversaries',
+      'sw': 'Kumbukumbu za Mwaka',
+    },
+    'interest_baby_showers': {'en': 'Baby showers', 'sw': 'Sherehe za Mtoto'},
+    'interest_private_parties': {
+      'en': 'Private parties',
+      'sw': 'Sherehe binafsi',
+    },
+    'interest_concerts': {'en': 'Concerts', 'sw': 'Matamasha'},
+    'interest_festivals': {'en': 'Festivals', 'sw': 'Tamasha'},
+    'interest_nightlife': {'en': 'Nightlife', 'sw': 'Burudani za Usiku'},
+    'interest_conferences': {'en': 'Conferences', 'sw': 'Makongamano'},
+    'interest_workshops': {'en': 'Workshops', 'sw': 'Warsha'},
+    'interest_networking': {'en': 'Networking', 'sw': 'Kutengeneza Mtandao'},
+    'interest_corporate': {
+      'en': 'Corporate events',
+      'sw': 'Matukio ya biashara',
+    },
+    'interest_exhibitions': {'en': 'Exhibitions and expos', 'sw': 'Maonyesho'},
+    'interest_fashion_shows': {
+      'en': 'Fashion shows',
+      'sw': 'Maonyesho ya mitindo',
+    },
+    'interest_sports_events': {'en': 'Sports events', 'sw': 'Michezo'},
+    'interest_faith': {'en': 'Faith gatherings', 'sw': 'Mikutano ya Kidini'},
+    'interest_cultural': {
+      'en': 'Cultural events',
+      'sw': 'Matukio ya kitamaduni',
+    },
+    'interest_community': {
+      'en': 'Community meetups',
+      'sw': 'Mikutano ya jumuiya',
+    },
+    'interest_charity': {
+      'en': 'Charity and fundraisers',
+      'sw': 'Misaada na Harambee',
+    },
+    'interest_food_events': {
+      'en': 'Food and dining',
+      'sw': 'Chakula na Vinywaji',
+    },
+    'interest_memorials': {'en': 'Memorials', 'sw': 'Misiba'},
+    'interest_retreats': {'en': 'Retreats and getaways', 'sw': 'Mapumziko'},
+
+    // Roles
+    'role_attendee': {
+      'en': 'I love attending events',
+      'sw': 'Napenda kuhudhuria matukio',
+    },
+    'role_host': {
+      'en': 'I host my own events',
+      'sw': 'Naandaa matukio yangu mwenyewe',
+    },
+    'role_planner': {
+      'en': 'I plan events for others',
+      'sw': 'Nawapangia wengine matukio',
+    },
+    'role_vendor': {
+      'en': "I'm a vendor or service",
+      'sw': 'Mimi ni mtoa huduma',
+    },
+
+    // Common UI labels used across many screens
+    'try_again': {'en': 'Try again', 'sw': 'Jaribu tena'},
+    'search_placeholder': {'en': 'Search', 'sw': 'Tafuta'},
+    'optional_field': {'en': 'Optional', 'sw': 'Hiari'},
+    'no_internet': {'en': 'No internet connection', 'sw': 'Hakuna intaneti'},
+    'updated': {'en': 'Updated', 'sw': 'Imesasishwa'},
+    'copied': {'en': 'Copied', 'sw': 'Imenakiliwa'},
+    'receipt': {'en': 'Receipt', 'sw': 'Risiti'},
+    'transaction_id': {
+      'en': 'Transaction ID',
+      'sw': 'Kitambulisho cha muamala',
+    },
+    'reference': {'en': 'Reference', 'sw': 'Marejeleo'},
+    'paid_on': {'en': 'Paid on', 'sw': 'Ililipwa tarehe'},
+    'method': {'en': 'Method', 'sw': 'Njia'},
+    'status': {'en': 'Status', 'sw': 'Hali'},
+    'subtotal': {'en': 'Subtotal', 'sw': 'Jumla ndogo'},
+    'fees': {'en': 'Fees', 'sw': 'Ada'},
+    'generated_on': {'en': 'Generated on', 'sw': 'Ilitengenezwa tarehe'},
+
+    // Placeholders / inputs
+    'enter_amount': {'en': 'Enter amount', 'sw': 'Weka kiasi'},
+    'enter_email': {'en': 'Enter your email', 'sw': 'Weka barua pepe yako'},
+    'enter_phone': {'en': 'Enter phone number', 'sw': 'Weka namba ya simu'},
+    'enter_password': {'en': 'Enter password', 'sw': 'Weka nywila'},
+    'enter_otp': {
+      'en': 'Enter verification code',
+      'sw': 'Weka msimbo wa uthibitisho',
+    },
+
+    // Tooltips
+    'tooltip_more_options': {'en': 'More options', 'sw': 'Chaguo zaidi'},
+    'tooltip_refresh': {'en': 'Refresh', 'sw': 'Onyesha upya'},
+    'tooltip_filter': {'en': 'Filter', 'sw': 'Chuja'},
+    'tooltip_sort': {'en': 'Sort', 'sw': 'Panga'},
   };
 
   static String tr(String key, String locale) {

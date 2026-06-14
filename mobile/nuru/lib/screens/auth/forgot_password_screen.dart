@@ -9,6 +9,7 @@ import '../../core/widgets/otp_input.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../core/widgets/auth_skyline.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/utils/password_strength.dart';
 
 import 'widgets/auth_text_field.dart';
 import '../../core/l10n/l10n_helper.dart';
@@ -126,8 +127,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _handleResetPassword() async {
-    if (_newPwCtrl.text.length < 8) {
-      AppSnackbar.error(context, context.tr('min_8_chars'));
+    final err = PasswordStrength.firstError(_newPwCtrl.text);
+    if (err != null) {
+      AppSnackbar.error(context, err);
       return;
     }
     if (_newPwCtrl.text != _confirmPwCtrl.text) {

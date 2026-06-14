@@ -42,6 +42,23 @@ class _MyContributionPaymentsTabState extends State<MyContributionPaymentsTab>
   String _search = '';
   String _filter = 'all'; // all | credited | failed
   final _searchCtrl = TextEditingController();
+  final Map<String, GlobalKey> _chipKeys = {
+    'all': GlobalKey(), 'credited': GlobalKey(),
+    'failed': GlobalKey(), 'pending': GlobalKey(),
+  };
+
+  void _selectFilter(String id) {
+    setState(() => _filter = id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _chipKeys[id]?.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx,
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+            alignment: 0.5);
+      }
+    });
+  }
 
   @override
   bool get wantKeepAlive => true;
@@ -310,7 +327,7 @@ class _MyContributionPaymentsTabState extends State<MyContributionPaymentsTab>
           final active = _filter == id;
           return ListTile(
             onTap: () {
-              setState(() => _filter = id);
+              _selectFilter(id);
               Navigator.pop(context);
             },
             leading: dot == null
@@ -389,7 +406,8 @@ class _MyContributionPaymentsTabState extends State<MyContributionPaymentsTab>
     final bg = active ? _navy : Colors.white;
     final fg = active ? Colors.white : _ink;
     return GestureDetector(
-      onTap: () => setState(() => _filter = id),
+      key: _chipKeys[id],
+      onTap: () => _selectFilter(id),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(

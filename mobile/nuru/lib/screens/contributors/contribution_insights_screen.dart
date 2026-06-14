@@ -70,19 +70,76 @@ class _ContributionInsightsScreenState extends State<ContributionInsightsScreen>
 
   Widget _skeleton() => NuruSkeletonGroup(
     child: ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
-        NuruSkeleton.box(height: 140, radius: 16),
-        const SizedBox(height: 14),
-        const NuruSkeletonStats(count: 2, padding: EdgeInsets.zero),
-        const SizedBox(height: 14),
-        NuruSkeleton.box(height: 200, radius: 16),
-        const SizedBox(height: 14),
-        const NuruSkeletonList(
-          itemCount: 4,
-          padding: EdgeInsets.zero,
-          showTrailing: true,
+        // Hero gradient card placeholder
+        NuruSkeleton.box(height: 196, radius: 22),
+        const SizedBox(height: 16),
+        // 4 quick stat tiles
+        Row(children: List.generate(4, (i) => Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: i == 3 ? 0 : 10),
+            child: NuruSkeleton.box(height: 84, radius: 16),
+          ),
+        ))),
+        const SizedBox(height: 18),
+        NuruSkeleton.box(width: 200, height: 14, radius: 6),
+        const SizedBox(height: 10),
+        // Trend card
+        NuruSkeleton.box(height: 170, radius: 18),
+        const SizedBox(height: 18),
+        NuruSkeleton.box(width: 130, height: 14, radius: 6),
+        const SizedBox(height: 10),
+        // Method rows
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Column(children: List.generate(3, (i) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(children: [
+              NuruSkeleton.box(width: 36, height: 36, radius: 11),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                NuruSkeleton.box(width: 120, height: 12, radius: 6),
+                const SizedBox(height: 8),
+                NuruSkeleton.box(height: 6, radius: 6),
+                const SizedBox(height: 8),
+                NuruSkeleton.box(width: 80, height: 10, radius: 6),
+              ])),
+            ]),
+          ))),
+        ),
+        const SizedBox(height: 18),
+        NuruSkeleton.box(width: 160, height: 14, radius: 6),
+        const SizedBox(height: 10),
+        NuruSkeleton.box(height: 80, radius: 18),
+        const SizedBox(height: 18),
+        NuruSkeleton.box(width: 180, height: 14, radius: 6),
+        const SizedBox(height: 10),
+        // Top organisers rows
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Column(children: List.generate(3, (i) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(children: [
+              NuruSkeleton.circle(size: 36),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                NuruSkeleton.box(width: 140, height: 12, radius: 6),
+                const SizedBox(height: 6),
+                NuruSkeleton.box(width: 60, height: 10, radius: 6),
+              ])),
+              NuruSkeleton.box(width: 60, height: 14, radius: 6),
+            ]),
+          ))),
         ),
       ],
     ),
@@ -191,8 +248,8 @@ class _ContributionInsightsScreenState extends State<ContributionInsightsScreen>
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.local_fire_department_rounded,
-                color: Colors.white, size: 14),
+              SvgPicture.asset('assets/icons/thunder-icon.svg', width: 12, height: 12,
+                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
               const SizedBox(width: 4),
               Text('$streak mo streak',
                 style: GoogleFonts.inter(
@@ -232,8 +289,8 @@ class _ContributionInsightsScreenState extends State<ContributionInsightsScreen>
               border: Border.all(color: Colors.white.withOpacity(0.18)),
             ),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Icon(Icons.auto_awesome_rounded,
-                color: Colors.white, size: 16),
+              SvgPicture.asset('assets/icons/sparkle-icon.svg', width: 16, height: 16,
+                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
               const SizedBox(width: 8),
               Expanded(child: Text(impact,
                 style: GoogleFonts.inter(
@@ -274,33 +331,33 @@ class _ContributionInsightsScreenState extends State<ContributionInsightsScreen>
   Widget _quickStats(Map counts, double avg, double onTime) {
     return Row(children: [
       Expanded(child: _statBox(
-        icon: Icons.groups_2_rounded,
+        iconAsset: 'assets/icons/users-icon.svg',
         label: 'Organisers',
         value: '${counts['organisations_supported'] ?? 0}',
       )),
       const SizedBox(width: 10),
       Expanded(child: _statBox(
-        icon: Icons.task_alt_rounded,
+        iconAsset: 'assets/icons/double-check-icon.svg',
         label: 'Completed',
         value: '${counts['complete_count'] ?? 0}',
       )),
       const SizedBox(width: 10),
       Expanded(child: _statBox(
-        icon: Icons.payments_rounded,
+        iconAsset: 'assets/icons/wallet-icon.svg',
         label: 'Avg / event',
         value: formatMoney(avg, currency: _currency),
         small: true,
       )),
       const SizedBox(width: 10),
       Expanded(child: _statBox(
-        icon: Icons.bolt_rounded,
+        iconAsset: 'assets/icons/thunder-icon.svg',
         label: 'On-time',
         value: '${onTime.toStringAsFixed(0)}%',
       )),
     ]);
   }
 
-  Widget _statBox({required IconData icon, required String label,
+  Widget _statBox({required String iconAsset, required String label,
       required String value, bool small = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
@@ -317,7 +374,8 @@ class _ContributionInsightsScreenState extends State<ContributionInsightsScreen>
             borderRadius: BorderRadius.circular(9),
           ),
           alignment: Alignment.center,
-          child: Icon(icon, size: 16, color: AppColors.primary),
+          child: SvgPicture.asset(iconAsset, width: 14, height: 14,
+              colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
         ),
         const SizedBox(height: 8),
         Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -534,8 +592,8 @@ class _ContributionInsightsScreenState extends State<ContributionInsightsScreen>
             borderRadius: BorderRadius.circular(14),
           ),
           alignment: Alignment.center,
-          child: const Icon(Icons.emoji_events_rounded,
-            size: 24, color: AppColors.primary),
+          child: SvgPicture.asset('assets/icons/crown-icon.svg', width: 22, height: 22,
+              colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -588,6 +646,13 @@ class _ContributionInsightsScreenState extends State<ContributionInsightsScreen>
     final initials = name.split(RegExp(r'\s+'))
         .where((s) => s.isNotEmpty).take(2)
         .map((s) => s[0].toUpperCase()).join();
+    // Try several common keys the API might return for the organiser photo.
+    String? avatar;
+    for (final k in const ['avatar_url','profile_image','profile_image_url',
+        'image_url','photo','photo_url','picture','avatar']) {
+      final v = o[k]?.toString();
+      if (v != null && v.trim().isNotEmpty) { avatar = v.trim(); break; }
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(children: [
@@ -595,13 +660,18 @@ class _ContributionInsightsScreenState extends State<ContributionInsightsScreen>
           width: 36, height: 36,
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(18),
+            shape: BoxShape.circle,
+            image: (avatar != null && (avatar.startsWith('http://') || avatar.startsWith('https://')))
+                ? DecorationImage(image: NetworkImage(avatar), fit: BoxFit.cover)
+                : null,
           ),
           alignment: Alignment.center,
-          child: Text(initials.isEmpty ? '?' : initials,
-            style: GoogleFonts.inter(
-              fontSize: 12, fontWeight: FontWeight.w800,
-              color: AppColors.primary)),
+          child: (avatar != null && (avatar.startsWith('http://') || avatar.startsWith('https://')))
+              ? null
+              : Text(initials.isEmpty ? '?' : initials,
+                  style: GoogleFonts.inter(
+                    fontSize: 12, fontWeight: FontWeight.w800,
+                    color: AppColors.primary)),
         ),
         const SizedBox(width: 12),
         Expanded(
