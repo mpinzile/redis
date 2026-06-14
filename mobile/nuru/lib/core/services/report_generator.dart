@@ -25,7 +25,7 @@ class ReportGenerator {
   static const _surfaceWarm = PdfColor.fromInt(0xFFFAF9F7);
   static const _borderSoft = PdfColor.fromInt(0xFFE8ECF2);
   static const _borderFaint = PdfColor.fromInt(0xFFF0F2F5);
-  static const _accentOrange = PdfColor.fromInt(0xFFFF7145);
+  static const _accentOrange = PdfColor.fromInt(0xFFE7A622);
   static const _accentOrangeSoft = PdfColor.fromInt(0xFFFFF4F0);
   static const _accentGreen = PdfColor.fromInt(0xFF22C55E);
   static const _accentGreenSoft = PdfColor.fromInt(0xFFF0FDF4);

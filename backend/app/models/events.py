@@ -82,6 +82,9 @@ class Event(Base):
     # SMS and WhatsApp messages whenever a contribution target is set or
     # updated. When NULL we render a language-specific default.
     contribution_payment_instructions = Column(Text, nullable=True)
+    # Structured "what to expect" entries shown on the public event view.
+    what_to_expect = Column(JSONB, nullable=True)
+    what_to_expect_notes = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

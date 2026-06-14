@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/l10n/l10n_helper.dart';
 import '../../core/services/api_base.dart';
 import '../../core/theme/app_colors.dart';
 import '../home/home_screen.dart';
 
 /// Post-signup personalisation: which kinds of events the user cares about
-/// + how they engage with events on Nuru. Two short steps, event-themed,
-/// emoji-led so it feels personal instead of like a tax form.
+/// + how they engage with events on Nuru. Three short steps, icon-led,
+/// translation-aware, no emojis.
 class InterestsOnboardingScreen extends StatefulWidget {
-  /// When true, behaves as an in-app editor opened from Settings → Your
-  /// interests: pops back instead of pushing HomeScreen, "Skip" becomes
-  /// "Cancel", and the title reflects editing.
+  /// When true, behaves as an in-app editor opened from Settings.
+  /// Pops back instead of pushing HomeScreen, "Skip" becomes "Cancel".
   final bool fromSettings;
   const InterestsOnboardingScreen({super.key, this.fromSettings = false});
 
   @override
-  State<InterestsOnboardingScreen> createState() => _InterestsOnboardingScreenState();
+  State<InterestsOnboardingScreen> createState() =>
+      _InterestsOnboardingScreenState();
 }
 
 class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
@@ -32,48 +32,100 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
   final Set<String> _intents = {};
   String? _role;
 
+  // Icon mapping per slug (Material icons, since per-category SVGs not bundled)
+  static const Map<String, IconData> _interestIcons = {
+    'weddings': Icons.favorite_outline,
+    'birthdays': Icons.cake_outlined,
+    'graduations': Icons.school_outlined,
+    'anniversaries': Icons.celebration_outlined,
+    'baby_showers': Icons.child_friendly_outlined,
+    'private_parties': Icons.local_bar_outlined,
+    'concerts': Icons.music_note_outlined,
+    'festivals': Icons.festival_outlined,
+    'nightlife': Icons.nights_stay_outlined,
+    'conferences': Icons.mic_external_on_outlined,
+    'workshops': Icons.build_outlined,
+    'networking': Icons.people_outline,
+    'corporate': Icons.business_center_outlined,
+    'exhibitions': Icons.photo_library_outlined,
+    'fashion_shows': Icons.checkroom_outlined,
+    'sports_events': Icons.sports_soccer_outlined,
+    'faith': Icons.volunteer_activism_outlined,
+    'cultural': Icons.theater_comedy_outlined,
+    'community': Icons.diversity_3_outlined,
+    'charity': Icons.favorite_border_outlined,
+    'food_events': Icons.restaurant_outlined,
+    'memorials': Icons.spa_outlined,
+    'retreats': Icons.park_outlined,
+  };
+
+  static const Map<String, IconData> _intentIcons = {
+    'plan_event': Icons.event_note_outlined,
+    'buy_tickets': Icons.confirmation_number_outlined,
+    'discover_events': Icons.travel_explore_outlined,
+    'offer_service': Icons.room_service_outlined,
+    'host_community': Icons.diversity_3_outlined,
+    'share_moments': Icons.photo_camera_outlined,
+    'network': Icons.handshake_outlined,
+    'just_exploring': Icons.auto_awesome_outlined,
+  };
+
+  static const Map<String, IconData> _roleIcons = {
+    'attendee': Icons.local_activity_outlined,
+    'host': Icons.celebration_outlined,
+    'planner': Icons.assignment_outlined,
+    'vendor': Icons.store_outlined,
+  };
+
+  IconData _iconForIntent(String slug) =>
+      _intentIcons[slug] ?? Icons.auto_awesome_outlined;
+  IconData _iconForInterest(String slug) =>
+      _interestIcons[slug] ?? Icons.event_outlined;
+  IconData _iconForRole(String slug) =>
+      _roleIcons[slug] ?? Icons.person_outline;
+
   static const _fallbackCatalogue = <Map<String, dynamic>>[
-    {'slug': 'weddings',        'label': 'Weddings',             'emoji': '💍'},
-    {'slug': 'birthdays',       'label': 'Birthdays',            'emoji': '🎂'},
-    {'slug': 'graduations',     'label': 'Graduations',          'emoji': '🎓'},
-    {'slug': 'anniversaries',   'label': 'Anniversaries',        'emoji': '🥂'},
-    {'slug': 'baby_showers',    'label': 'Baby showers',         'emoji': '🍼'},
-    {'slug': 'private_parties', 'label': 'Private parties',      'emoji': '🎉'},
-    {'slug': 'concerts',        'label': 'Concerts',             'emoji': '🎤'},
-    {'slug': 'festivals',       'label': 'Festivals',            'emoji': '🎪'},
-    {'slug': 'nightlife',       'label': 'Nightlife',            'emoji': '🪩'},
-    {'slug': 'conferences',     'label': 'Conferences',          'emoji': '🎙️'},
-    {'slug': 'workshops',       'label': 'Workshops',            'emoji': '🛠️'},
-    {'slug': 'networking',      'label': 'Networking',           'emoji': '🤝'},
-    {'slug': 'corporate',       'label': 'Corporate events',     'emoji': '💼'},
-    {'slug': 'exhibitions',     'label': 'Exhibitions & expos',  'emoji': '🖼️'},
-    {'slug': 'fashion_shows',   'label': 'Fashion shows',        'emoji': '👗'},
-    {'slug': 'sports_events',   'label': 'Sports events',        'emoji': '🏟️'},
-    {'slug': 'faith',           'label': 'Faith gatherings',     'emoji': '🙏'},
-    {'slug': 'cultural',        'label': 'Cultural events',      'emoji': '🪘'},
-    {'slug': 'community',       'label': 'Community meetups',    'emoji': '🫂'},
-    {'slug': 'charity',         'label': 'Charity & fundraisers','emoji': '❤️'},
-    {'slug': 'food_events',     'label': 'Food & dining',        'emoji': '🍽️'},
-    {'slug': 'memorials',       'label': 'Memorials',            'emoji': '🕊️'},
-    {'slug': 'retreats',        'label': 'Retreats & getaways',  'emoji': '🌿'},
+    {'slug': 'weddings'},
+    {'slug': 'birthdays'},
+    {'slug': 'graduations'},
+    {'slug': 'anniversaries'},
+    {'slug': 'baby_showers'},
+    {'slug': 'private_parties'},
+    {'slug': 'concerts'},
+    {'slug': 'festivals'},
+    {'slug': 'nightlife'},
+    {'slug': 'conferences'},
+    {'slug': 'workshops'},
+    {'slug': 'networking'},
+    {'slug': 'corporate'},
+    {'slug': 'exhibitions'},
+    {'slug': 'fashion_shows'},
+    {'slug': 'sports_events'},
+    {'slug': 'faith'},
+    {'slug': 'cultural'},
+    {'slug': 'community'},
+    {'slug': 'charity'},
+    {'slug': 'food_events'},
+    {'slug': 'memorials'},
+    {'slug': 'retreats'},
   ];
 
   static const _fallbackRoles = <Map<String, dynamic>>[
-    {'slug': 'attendee', 'label': 'I love attending events',  'emoji': '🎟️'},
-    {'slug': 'host',     'label': 'I host my own events',     'emoji': '🎈'},
-    {'slug': 'planner',  'label': 'I plan events for others', 'emoji': '📋'},
-    {'slug': 'vendor',   'label': "I'm a vendor or service",  'emoji': '🛎️'},
+    {'slug': 'attendee'},
+    {'slug': 'host'},
+    {'slug': 'planner'},
+    {'slug': 'vendor'},
   ];
 
   static const _fallbackIntents = <Map<String, dynamic>>[
-    {'slug': 'plan_event',      'label': 'Plan my own event',         'emoji': '🗓️', 'hint': 'Weddings, birthdays, meetups…'},
-    {'slug': 'buy_tickets',     'label': 'Buy tickets to events',     'emoji': '🎟️', 'hint': 'Concerts, festivals, shows'},
-    {'slug': 'discover_events', 'label': "Discover what's happening", 'emoji': '🔭', 'hint': "See what's on near me"},
-    {'slug': 'offer_service',   'label': 'Offer a service or vendor', 'emoji': '🛎️', 'hint': 'Photography, catering, DJ…'},
-    {'slug': 'host_community',  'label': 'Build a community',         'emoji': '🫂', 'hint': 'Bring people together'},
-    {'slug': 'share_moments',   'label': 'Share my event moments',    'emoji': '📸', 'hint': 'Photos, videos, memories'},
-    {'slug': 'network',         'label': 'Meet people & network',     'emoji': '🤝', 'hint': 'New connections & friends'},
-    {'slug': 'just_exploring',  'label': 'Just exploring for now',    'emoji': '✨', 'hint': 'Looking around'},
+    {'slug': 'plan_event'},
+    {'slug': 'buy_tickets'},
+    {'slug': 'discover_events'},
+    {'slug': 'offer_service'},
+    {'slug': 'host_community'},
+    {'slug': 'share_moments'},
+    {'slug': 'network'},
+    {'slug': 'just_exploring'},
   ];
 
   @override
@@ -95,13 +147,22 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
     setState(() {
       _loading = false;
       _catalogue = (cat is List && cat.isNotEmpty)
-          ? cat.whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList()
+          ? cat
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList()
           : _fallbackCatalogue;
       _roles = (roles is List && roles.isNotEmpty)
-          ? roles.whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList()
+          ? roles
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList()
           : _fallbackRoles;
       _intentsCatalogue = (intentsCat is List && intentsCat.isNotEmpty)
-          ? intentsCat.whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList()
+          ? intentsCat
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList()
           : _fallbackIntents;
       if (sel is List) _selected.addAll(sel.map((e) => e.toString()));
       if (intentsSel is List) _intents.addAll(intentsSel.map((e) => e.toString()));
@@ -143,26 +204,36 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
     _finish();
   }
 
-  String get _primaryCta {
+  String _primaryCta(BuildContext context) {
     if (_step == 0) {
-      if (_intents.isEmpty) return 'Pick at least one';
-      return 'Continue';
+      if (_intents.isEmpty) return context.trw('interests_pick_at_least_one');
+      return context.trw('continue');
     }
     if (_step == 1) {
-      if (_selected.length < 3) return 'Pick ${3 - _selected.length} more';
-      return 'Continue';
+      if (_selected.length < 3) {
+        return context
+            .trw('interests_pick_n_more')
+            .replaceAll('{n}', '${3 - _selected.length}');
+      }
+      return context.trw('continue');
     }
+    if (widget.fromSettings) return context.trw('interests_save_changes');
     return _role == null
-        ? (widget.fromSettings ? 'Save' : 'Finish')
-        : (widget.fromSettings ? 'Save changes' : "Let's go");
+        ? context.trw('interests_finish')
+        : context.trw('interests_lets_go');
   }
 
   bool get _canPrimary {
     if (_saving) return false;
     if (_step == 0) return _intents.isNotEmpty;
     if (_step == 1) return _selected.length >= 3;
-    return true; // role is optional on step 2
+    return true;
   }
+
+  String _intentLabel(String slug) => context.trw('intent_$slug');
+  String _intentHint(String slug) => context.trw('intent_${slug}_hint');
+  String _interestLabel(String slug) => context.trw('interest_$slug');
+  String _roleLabel(String slug) => context.trw('role_$slug');
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +256,7 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
                           : (_step == 1 ? _stepInterests() : _stepRole()),
                     ),
                   ),
-                  _footer(),
+                  _footer(context),
                 ],
               ),
       ),
@@ -208,10 +279,8 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFEDEDF2)),
                 ),
-                child: SvgPicture.asset('assets/icons/chevron-left-icon.svg',
-                    width: 18, height: 18,
-                    colorFilter: const ColorFilter.mode(
-                        AppColors.textPrimary, BlendMode.srcIn)),
+                child: const Icon(Icons.chevron_left_rounded,
+                    size: 20, color: AppColors.textPrimary),
               ),
             ),
           const Spacer(),
@@ -221,11 +290,16 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
                 : (widget.fromSettings
                     ? () => Navigator.of(context).pop()
                     : _finish),
-            child: Text(widget.fromSettings ? 'Cancel' : 'Skip for now',
-                style: GoogleFonts.inter(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textTertiary)),
+            child: Text(
+              widget.fromSettings
+                  ? context.trw('cancel')
+                  : context.trw('skip'),
+              style: GoogleFonts.inter(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textTertiary,
+              ),
+            ),
           ),
         ],
       ),
@@ -260,19 +334,23 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
       key: const ValueKey('s0'),
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
       children: [
-        Text("What brings you to Nuru?",
-            style: GoogleFonts.inter(
-                fontSize: 26,
-                height: 1.15,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary)),
+        Text(
+          context.trw('interests_step_intent_title'),
+          style: GoogleFonts.inter(
+            fontSize: 26,
+            height: 1.15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
-          "No wrong answer — pick anything that fits. You can choose more than one.",
+          context.trw('interests_step_intent_subtitle'),
           style: GoogleFonts.inter(
-              fontSize: 13.5,
-              color: AppColors.textSecondary,
-              height: 1.45),
+            fontSize: 13.5,
+            color: AppColors.textSecondary,
+            height: 1.45,
+          ),
         ),
         const SizedBox(height: 18),
         ..._intentsCatalogue.map(_intentCard),
@@ -282,9 +360,6 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
 
   Widget _intentCard(Map<String, dynamic> r) {
     final slug = r['slug']?.toString() ?? '';
-    final label = r['label']?.toString() ?? slug;
-    final emoji = r['emoji']?.toString() ?? '';
-    final hint = r['hint']?.toString() ?? '';
     final on = _intents.contains(slug);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -303,55 +378,67 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
-            color: on ? AppColors.primary.withOpacity(0.08) : Colors.white,
+            color: on ? AppColors.primarySoft : Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-                color: on ? AppColors.primary : const Color(0xFFEDEDF2),
-                width: on ? 1.5 : 1),
+              color: on ? AppColors.primary : const Color(0xFFEDEDF2),
+              width: on ? 1.5 : 1,
+            ),
           ),
           child: Row(children: [
             Container(
-              width: 44, height: 44,
+              width: 46,
+              height: 46,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFFFBFAF7),
+                color: on ? AppColors.primary : const Color(0xFFFBFAF7),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Text(emoji.isEmpty ? '✨' : emoji,
-                  style: const TextStyle(fontSize: 22)),
+              child: Icon(
+                _iconForIntent(slug),
+                size: 22,
+                color: on ? Colors.white : AppColors.textPrimary,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label,
-                      style: GoogleFonts.inter(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary)),
-                  if (hint.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(hint,
-                        style: GoogleFonts.inter(
-                            fontSize: 12.5,
-                            color: AppColors.textTertiary)),
-                  ],
+                  Text(
+                    _intentLabel(slug),
+                    style: GoogleFonts.inter(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _intentHint(slug),
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
                 ],
               ),
             ),
             AnimatedContainer(
               duration: const Duration(milliseconds: 160),
-              width: 22, height: 22,
+              width: 22,
+              height: 22,
               decoration: BoxDecoration(
                 color: on ? AppColors.primary : Colors.transparent,
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                    color: on ? AppColors.primary : const Color(0xFFD8D6CD),
-                    width: 1.5),
+                  color: on ? AppColors.primary : const Color(0xFFD8D6CD),
+                  width: 1.5,
+                ),
               ),
               child: on
-                  ? const Icon(Icons.check_rounded, size: 14, color: Colors.black)
+                  ? const Icon(Icons.check_rounded,
+                      size: 14, color: Colors.white)
                   : null,
             ),
           ]),
@@ -366,19 +453,23 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
       key: const ValueKey('s1'),
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
       children: [
-        Text('What kind of events interest you?',
-            style: GoogleFonts.inter(
-                fontSize: 26,
-                height: 1.15,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary)),
+        Text(
+          context.trw('interests_step_kinds_title'),
+          style: GoogleFonts.inter(
+            fontSize: 26,
+            height: 1.15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
-          'Pick at least 3 — we\'ll personalise your feed, communities and event recommendations around them.',
+          context.trw('interests_step_kinds_subtitle'),
           style: GoogleFonts.inter(
-              fontSize: 13.5,
-              color: AppColors.textSecondary,
-              height: 1.45),
+            fontSize: 13.5,
+            color: AppColors.textSecondary,
+            height: 1.45,
+          ),
         ),
         const SizedBox(height: 18),
         Wrap(
@@ -392,8 +483,6 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
 
   Widget _chip(Map<String, dynamic> item) {
     final slug = item['slug']?.toString() ?? '';
-    final label = item['label']?.toString() ?? slug;
-    final emoji = item['emoji']?.toString() ?? '';
     final on = _selected.contains(slug);
     return GestureDetector(
       onTap: () {
@@ -418,22 +507,28 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
           boxShadow: on
               ? [
                   BoxShadow(
-                      color: AppColors.primary.withOpacity(0.18),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4))
+                    color: AppColors.primary.withOpacity(0.20),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
                 ]
               : null,
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (emoji.isNotEmpty) ...[
-            Text(emoji, style: const TextStyle(fontSize: 15)),
-            const SizedBox(width: 7),
-          ],
-          Text(label,
-              style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: on ? Colors.black : AppColors.textPrimary)),
+          Icon(
+            _iconForInterest(slug),
+            size: 16,
+            color: on ? Colors.white : AppColors.textPrimary,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _interestLabel(slug),
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: on ? Colors.white : AppColors.textPrimary,
+            ),
+          ),
         ]),
       ),
     );
@@ -445,19 +540,23 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
       key: const ValueKey('s2'),
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
       children: [
-        Text('How do you usually do events?',
-            style: GoogleFonts.inter(
-                fontSize: 26,
-                height: 1.15,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary)),
+        Text(
+          context.trw('interests_step_role_title'),
+          style: GoogleFonts.inter(
+            fontSize: 26,
+            height: 1.15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
-          'This helps us show the right tools — discovery for attendees, planning surfaces for hosts.',
+          context.trw('interests_step_role_subtitle'),
           style: GoogleFonts.inter(
-              fontSize: 13.5,
-              color: AppColors.textSecondary,
-              height: 1.45),
+            fontSize: 13.5,
+            color: AppColors.textSecondary,
+            height: 1.45,
+          ),
         ),
         const SizedBox(height: 20),
         ..._roles.map(_roleCard),
@@ -467,8 +566,6 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
 
   Widget _roleCard(Map<String, dynamic> r) {
     final slug = r['slug']?.toString() ?? '';
-    final label = r['label']?.toString() ?? slug;
-    final emoji = r['emoji']?.toString() ?? '';
     final on = _role == slug;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -481,43 +578,54 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: on ? AppColors.primary.withOpacity(0.08) : Colors.white,
+            color: on ? AppColors.primarySoft : Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-                color: on ? AppColors.primary : const Color(0xFFEDEDF2),
-                width: on ? 1.5 : 1),
+              color: on ? AppColors.primary : const Color(0xFFEDEDF2),
+              width: on ? 1.5 : 1,
+            ),
           ),
           child: Row(children: [
             Container(
-              width: 44, height: 44,
+              width: 46,
+              height: 46,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFFFBFAF7),
+                color: on ? AppColors.primary : const Color(0xFFFBFAF7),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Text(emoji.isEmpty ? '✨' : emoji,
-                  style: const TextStyle(fontSize: 22)),
+              child: Icon(
+                _iconForRole(slug),
+                size: 22,
+                color: on ? Colors.white : AppColors.textPrimary,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(label,
-                  style: GoogleFonts.inter(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary)),
+              child: Text(
+                _roleLabel(slug),
+                style: GoogleFonts.inter(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
             ),
             AnimatedContainer(
               duration: const Duration(milliseconds: 160),
-              width: 22, height: 22,
+              width: 22,
+              height: 22,
               decoration: BoxDecoration(
                 color: on ? AppColors.primary : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
-                    color: on ? AppColors.primary : const Color(0xFFD8D6CD),
-                    width: 1.5),
+                  color: on ? AppColors.primary : const Color(0xFFD8D6CD),
+                  width: 1.5,
+                ),
               ),
               child: on
-                  ? const Icon(Icons.check_rounded, size: 14, color: Colors.black)
+                  ? const Icon(Icons.check_rounded,
+                      size: 14, color: Colors.white)
                   : null,
             ),
           ]),
@@ -527,7 +635,7 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
   }
 
   // ── Footer ──
-  Widget _footer() {
+  Widget _footer(BuildContext context) {
     return SafeArea(
       top: false,
       child: Padding(
@@ -537,23 +645,29 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
           child: ElevatedButton(
             onPressed: _canPrimary ? _next : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.textPrimary,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               disabledBackgroundColor: const Color(0xFFE5E5EA),
               disabledForegroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28)),
-              textStyle:
-                  GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                borderRadius: BorderRadius.circular(28),
+              ),
+              textStyle: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             child: _saving
                 ? const SizedBox(
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : Text(_primaryCta),
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(_primaryCta(context)),
           ),
         ),
       ),

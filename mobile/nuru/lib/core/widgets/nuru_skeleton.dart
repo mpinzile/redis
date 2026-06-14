@@ -532,7 +532,8 @@ class NuruSkeletonPostList extends StatelessWidget {
   }
 }
 
-/// Image-led moment card placeholder (big square media + caption).
+/// Image-led moment card placeholder mirroring MomentCard layout:
+/// header (avatar + name/time), caption lines, big media block, action row.
 class _MomentSkeletonCard extends StatelessWidget {
   const _MomentSkeletonCard();
   @override
@@ -547,22 +548,45 @@ class _MomentSkeletonCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: avatar + name/time + menu dot
           Row(children: [
-            NuruSkeleton.circle(size: 36),
+            NuruSkeleton.circle(size: 40),
             const SizedBox(width: 10),
-            NuruSkeleton.text(width: 110, height: 11),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                NuruSkeleton.text(width: 130, height: 12),
+                const SizedBox(height: 6),
+                NuruSkeleton.text(width: 70, height: 9),
+              ],
+            )),
+            NuruSkeleton.circle(size: 18),
           ]),
           const SizedBox(height: 12),
-          NuruSkeleton.box(height: 280, radius: 16),
-          const SizedBox(height: 12),
-          NuruSkeleton.text(width: double.infinity, height: 10),
+          // Caption lines
+          NuruSkeleton.text(width: double.infinity, height: 11),
           const SizedBox(height: 6),
-          NuruSkeleton.text(width: 180, height: 10),
+          NuruSkeleton.text(width: 220, height: 11),
+          const SizedBox(height: 12),
+          // Media block
+          NuruSkeleton.box(height: 320, radius: 16),
+          const SizedBox(height: 12),
+          // Action row: glow / comment / share / save
+          Row(children: [
+            NuruSkeleton.box(width: 56, height: 22, radius: 12),
+            const SizedBox(width: 14),
+            NuruSkeleton.box(width: 56, height: 22, radius: 12),
+            const SizedBox(width: 14),
+            NuruSkeleton.box(width: 32, height: 22, radius: 12),
+            const Spacer(),
+            NuruSkeleton.box(width: 32, height: 22, radius: 12),
+          ]),
         ],
       ),
     );
   }
 }
+
 
 /// Event-share card placeholder: cover row + title + meta + CTA.
 class _EventShareSkeletonCard extends StatelessWidget {

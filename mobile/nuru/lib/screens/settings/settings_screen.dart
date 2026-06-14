@@ -27,6 +27,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:local_auth/local_auth.dart';
+import '../../core/utils/password_strength.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Map<String, dynamic>? profile;
@@ -454,10 +455,13 @@ class _EditProfileSectionState extends State<_EditProfileSection> {
                     color: AppColors.primarySoft,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.camera_alt_rounded,
-                    color: AppColors.primary,
-                    size: 22,
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/icons/camera-icon.svg',
+                      width: 20,
+                      height: 20,
+                      colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                    ),
                   ),
                 ),
                 title: Text(
@@ -479,10 +483,13 @@ class _EditProfileSectionState extends State<_EditProfileSection> {
                     color: const Color(0xFFE8F5E9),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.photo_library_rounded,
-                    color: Color(0xFF2E7D32),
-                    size: 22,
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/icons/gallery-icon.svg',
+                      width: 20,
+                      height: 20,
+                      colorFilter: const ColorFilter.mode(Color(0xFF2E7D32), BlendMode.srcIn),
+                    ),
                   ),
                 ),
                 title: Text(
@@ -518,24 +525,31 @@ class _EditProfileSectionState extends State<_EditProfileSection> {
       uiSettings: [
         AndroidUiSettings(
           toolbarTitle: context.tr('crop_profile_photo'),
-          toolbarColor: const Color(0xFF1A1A2E),
-          toolbarWidgetColor: Colors.white,
+          toolbarColor: Colors.white,
+          toolbarWidgetColor: AppColors.textPrimary,
+          statusBarColor: Colors.white,
           activeControlsWidgetColor: AppColors.primary,
-          backgroundColor: const Color(0xFF1A1A2E),
-          dimmedLayerColor: Colors.black54,
+          backgroundColor: const Color(0xFFF7F8FA),
+          dimmedLayerColor: const Color(0xCC0A1C40),
           cropFrameColor: AppColors.primary,
-          cropGridColor: Colors.white30,
+          cropGridColor: const Color(0x40FFFFFF),
+          cropFrameStrokeWidth: 3,
+          cropGridStrokeWidth: 1,
           cropStyle: CropStyle.circle,
           lockAspectRatio: true,
-          hideBottomControls: false,
+          hideBottomControls: true,
           showCropGrid: true,
           initAspectRatio: CropAspectRatioPreset.square,
         ),
         IOSUiSettings(
           title: context.tr('crop_profile_photo'),
+          doneButtonTitle: 'Done',
+          cancelButtonTitle: 'Cancel',
           cropStyle: CropStyle.circle,
           aspectRatioLockEnabled: true,
           resetAspectRatioEnabled: false,
+          rotateButtonsHidden: true,
+          aspectRatioPickerButtonHidden: true,
           minimumAspectRatio: 1.0,
         ),
       ],
@@ -1001,9 +1015,7 @@ class _EditProfileSectionState extends State<_EditProfileSection> {
               hintText: hint,
               hintStyle: appText(size: 13, color: AppColors.textHint),
               filled: true,
-              fillColor: enabled
-                  ? const Color(0xFFF5F7FA)
-                  : const Color(0xFFEEEEEE),
+              fillColor: Colors.white,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
                 vertical: 12,
@@ -1070,8 +1082,9 @@ class _ChangePasswordSectionState extends State<_ChangePasswordSection> {
       AppSnackbar.error(context, context.tr('passwords_dont_match'));
       return;
     }
-    if (_newCtrl.text.length < 8) {
-      AppSnackbar.error(context, context.tr('min_8_chars'));
+    final err = PasswordStrength.firstError(_newCtrl.text);
+    if (err != null) {
+      AppSnackbar.error(context, err);
       return;
     }
     setState(() => _saving = true);

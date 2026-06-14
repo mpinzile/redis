@@ -50,7 +50,7 @@
 
     /* Nuru specific colors - Exact match */
     --nuru-blue: 200 95% 55%;
-    --nuru-yellow: 45 96% 64%;
+    --nuru-yellow: 40 80% 52%; /* #E7A622 - Nuru Amber brand */
     --create-event-bg: 45 96% 64%;
     --sidebar-bg: 0 0% 100%;
     --feed-bg: 220 13% 97%;
@@ -103,7 +103,7 @@
     --input: 217.2 32.6% 22%;
     --ring: 212.7 26.8% 83.9%;
 
-    --nuru-yellow: 45 96% 64%;
+    --nuru-yellow: 40 80% 52%; /* #E7A622 - Nuru Amber brand */
     --sidebar-bg: 222.2 84% 4.9%;
     --feed-bg: 222.2 84% 6%;
 
@@ -204,7 +204,7 @@
     
     /* CTA Elements */
     --cta-primary: 0 0% 9%;
-    --cta-secondary: 51 100% 50%;
+    --cta-secondary: 40 80% 52%; /* #E7A622 - Nuru Amber */
     
     /* Subtle Shadows */
     --shadow-soft: 0 0% 0% / 0.05;
@@ -279,7 +279,7 @@
     
     /* CTA Elements */
     --cta-primary: 220 20% 95%;
-    --cta-secondary: 51 100% 50%;
+    --cta-secondary: 40 80% 52%; /* #E7A622 - Nuru Amber */
     
     /* Subtle Shadows */
     --shadow-soft: 225 50% 3% / 0.4;

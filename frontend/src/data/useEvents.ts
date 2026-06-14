@@ -175,21 +175,38 @@ export const useEventGuests = (eventId: string | null, initialParams?: GuestQuer
           // Hard safety cap so a mis-reported total never hangs the UI.
           if (page > 200) break;
         }
-        _guestsCache.set(eventId, { guests: allGuests, summary: lastSummary, pagination: lastPagination });
-        setGuests(allGuests);
+        // Deduplicate by id (cross-page collisions if records shift between fetches)
+        // and sort alphabetically by name so the list reads naturally.
+        const seen = new Set<string>();
+        const deduped: EventGuest[] = [];
+        for (const g of allGuests) {
+          if (!g || seen.has(g.id)) continue;
+          seen.add(g.id);
+          deduped.push(g);
+        }
+        deduped.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+        _guestsCache.set(eventId, { guests: deduped, summary: lastSummary, pagination: lastPagination });
+        setGuests(deduped);
         setSummary(lastSummary);
         setPagination(lastPagination);
       } else {
         const response = await eventsApi.getGuests(eventId, merged);
         if (response.success) {
-          _guestsCache.set(eventId, { guests: response.data.guests, summary: response.data.summary, pagination: response.data.pagination });
-          setGuests(response.data.guests);
+          const seen = new Set<string>();
+          const deduped = (response.data.guests || []).filter((g: EventGuest) => {
+            if (!g || seen.has(g.id)) return false;
+            seen.add(g.id);
+            return true;
+          }).sort((a: EventGuest, b: EventGuest) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+          _guestsCache.set(eventId, { guests: deduped, summary: response.data.summary, pagination: response.data.pagination });
+          setGuests(deduped);
           setSummary(response.data.summary);
           setPagination(response.data.pagination);
         } else {
           setError(response.message || "Failed to fetch guests");
         }
       }
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -384,14 +401,54 @@ export const useEventContributions = (eventId: string | null, initialParams?: Co
     if (!eventId) return;
     if (!_contributionsCache.has(eventId)) setLoading(true);
     try {
-      const response = await eventsApi.getContributions(eventId, params || initialParams);
-      if (response.success) {
-        _contributionsCache.set(eventId, { contributions: response.data.contributions, summary: response.data.summary, pagination: response.data.pagination });
-        setContributions(response.data.contributions);
-        setSummary(response.data.summary);
-        setPagination(response.data.pagination);
+      const merged = { ...(initialParams || {}), ...(params || {}) } as ContributionQueryParams;
+      // Auto-page when caller hasn't specified pagination, so reports never truncate.
+      if ((merged as any).page == null) {
+        const pageSize = Math.min((merged as any).limit ?? 100, 100);
+        let page = 1;
+        let all: EventContribution[] = [];
+        let lastSummary: any = null;
+        let lastPagination: any = null;
+        while (true) {
+          const res = await eventsApi.getContributions(eventId, { ...merged, page, limit: pageSize } as any);
+          if (!res.success) {
+            setError(res.message || 'Failed to fetch contributions');
+            break;
+          }
+          all = all.concat(res.data.contributions || []);
+          lastSummary = res.data.summary;
+          lastPagination = res.data.pagination;
+          const totalPages = res.data.pagination?.total_pages ?? 1;
+          if (page >= totalPages) break;
+          page++;
+          if (page > 200) break;
+        }
+        const seen = new Set<string>();
+        const deduped = all.filter(c => {
+          if (!c || seen.has(c.id)) return false;
+          seen.add(c.id);
+          return true;
+        }).sort((a, b) => (a.contributor_name || '').localeCompare(b.contributor_name || '', undefined, { sensitivity: 'base' }));
+        _contributionsCache.set(eventId, { contributions: deduped, summary: lastSummary, pagination: lastPagination });
+        setContributions(deduped);
+        setSummary(lastSummary);
+        setPagination(lastPagination);
       } else {
-        setError(response.message || "Failed to fetch contributions");
+        const response = await eventsApi.getContributions(eventId, merged);
+        if (response.success) {
+          const seen = new Set<string>();
+          const deduped = (response.data.contributions || []).filter((c: EventContribution) => {
+            if (!c || seen.has(c.id)) return false;
+            seen.add(c.id);
+            return true;
+          }).sort((a: EventContribution, b: EventContribution) => (a.contributor_name || '').localeCompare(b.contributor_name || '', undefined, { sensitivity: 'base' }));
+          _contributionsCache.set(eventId, { contributions: deduped, summary: response.data.summary, pagination: response.data.pagination });
+          setContributions(deduped);
+          setSummary(response.data.summary);
+          setPagination(response.data.pagination);
+        } else {
+          setError(response.message || "Failed to fetch contributions");
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -399,6 +456,7 @@ export const useEventContributions = (eventId: string | null, initialParams?: Co
       setLoading(false);
     }
   }, [eventId, initialParams]);
+
 
   useEffect(() => {
     if (eventId) fetchContributions();

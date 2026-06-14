@@ -67,7 +67,7 @@ class EmptyStateIllustration extends StatelessWidget {
   // Soft editorial line art tinted with brand orange + ink.
   // Single-color blob behind a thin line illustration for the 5 contexts.
 
-  static const String _kPrimary = '#FF7145';
+  static const String _kPrimary = '#E7A622';
   static const String _kPrimarySoft = '#FFE7DE';
   static const String _kInk = '#0A1C40';
   static const String _kSurface = '#FFFFFF';

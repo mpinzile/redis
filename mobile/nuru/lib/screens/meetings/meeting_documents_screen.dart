@@ -262,7 +262,7 @@ class _MeetingDocumentsScreenState extends State<MeetingDocumentsScreen> with Si
   static const _surfaceTint = PdfColor.fromInt(0xFFF6F7F9);
   static const _borderSoft = PdfColor.fromInt(0xFFE8ECF2);
   static const _borderFaint = PdfColor.fromInt(0xFFF0F2F5);
-  static const _accentOrange = PdfColor.fromInt(0xFFFF7145);
+  static const _accentOrange = PdfColor.fromInt(0xFFE7A622);
   static const _accentGreen = PdfColor.fromInt(0xFF22C55E);
   static const _accentBlue = PdfColor.fromInt(0xFF2471E7);
   static const _accentAmber = PdfColor.fromInt(0xFFF59E0B);

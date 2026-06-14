@@ -277,14 +277,16 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
       <ConfirmDialog />
 
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold">{summary.total}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
           <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-green-600">{summary.confirmed}</p><p className="text-xs text-muted-foreground">Confirmed</p></CardContent></Card>
           <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-yellow-600">{summary.pending}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
+          <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-amber-600">{summary.maybe || 0}</p><p className="text-xs text-muted-foreground">Maybe</p></CardContent></Card>
           <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-red-600">{summary.declined}</p><p className="text-xs text-muted-foreground">Declined</p></CardContent></Card>
           <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-blue-600">{summary.checked_in}</p><p className="text-xs text-muted-foreground">Checked In</p></CardContent></Card>
         </div>
       )}
+
 
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 flex gap-2">

@@ -648,13 +648,14 @@ def my_contributions_insights(
         oid = str(r["event"].organizer_id) if r["event"].organizer_id else None
         if not oid:
             continue
-        org_totals.setdefault(oid, {"organizer_id": oid, "amount": 0.0, "events": 0, "name": None})
+        org_totals.setdefault(oid, {"organizer_id": oid, "amount": 0.0, "events": 0, "name": None, "profile_image": None})
         org_totals[oid]["amount"] += r["paid"]
         org_totals[oid]["events"] += 1
     if org_totals:
         org_users = db.query(User).filter(User.id.in_(list(org_totals.keys()))).all()
         for u in org_users:
             org_totals[str(u.id)]["name"] = f"{u.first_name or ''} {u.last_name or ''}".strip() or "Organiser"
+            org_totals[str(u.id)]["profile_image"] = getattr(u, "profile_picture_url", None)
     top_organisers = sorted(org_totals.values(), key=lambda v: v["amount"], reverse=True)[:5]
 
     pledged_events = [r for r in filtered if r["pledge"] > 0]

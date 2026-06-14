@@ -245,6 +245,14 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
                     ]),
                   ),
                 ],
+                if (_status == 'verified') ...[
+                  const SizedBox(height: 14),
+                  _verifiedSuccessCard(),
+                ],
+                if (_status == 'pending') ...[
+                  const SizedBox(height: 14),
+                  _pendingReviewCard(),
+                ],
                 if (_canEdit) ...[
                   const SizedBox(height: 22),
                   _uploadHeader(),
@@ -538,6 +546,102 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
       ),
     );
   }
+
+  // ── VERIFIED SUCCESS STATE ───────────────────────────────────────────
+  Widget _verifiedSuccessCard() {
+    Widget benefit(String icon, String title, String sub) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 34, height: 34,
+              decoration: BoxDecoration(color: _greenSoft, shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: SvgPicture.asset('assets/icons/$icon.svg', width: 16, height: 16,
+                  colorFilter: const ColorFilter.mode(_green, BlendMode.srcIn)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: _f(size: 13.5, weight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text(sub, style: _f(size: 12, color: _muted, height: 1.4)),
+            ])),
+          ]),
+        );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _cardBorder),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(color: _greenSoft, shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: SvgPicture.asset('assets/icons/check-icon.svg', width: 22, height: 22,
+                colorFilter: const ColorFilter.mode(_green, BlendMode.srcIn)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Identity confirmed', style: _f(size: 15.5, weight: FontWeight.w700)),
+            const SizedBox(height: 2),
+            Text('Your documents passed our checks.',
+                style: _f(size: 12.5, color: _muted)),
+          ])),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: _greenSoft, borderRadius: BorderRadius.circular(999)),
+            child: Text('Verified',
+              style: _f(size: 11, weight: FontWeight.w700, color: _green)),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        Divider(height: 1, color: _cardBorder),
+        const SizedBox(height: 4),
+        benefit('shield-icon', 'Trusted badge',
+            'Your profile now shows a verified mark across the app.'),
+        benefit('wallet-icon', 'Higher limits',
+            'Send and receive larger amounts without extra checks.'),
+        benefit('lock-icon', 'Documents secured',
+            'We keep your ID encrypted and never share it with third parties.'),
+      ]),
+    );
+  }
+
+  Widget _pendingReviewCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _cardBorder),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          width: 44, height: 44,
+          decoration: BoxDecoration(color: _orangeSoft, shape: BoxShape.circle),
+          alignment: Alignment.center,
+          child: SvgPicture.asset('assets/icons/clock-icon.svg', width: 22, height: 22,
+              colorFilter: const ColorFilter.mode(_orange, BlendMode.srcIn)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Awaiting review', style: _f(size: 15, weight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            'Our trust team usually reviews documents within 1-3 business days. We\u2019ll notify you the moment a decision is made.',
+            style: _f(size: 12.5, color: _muted, height: 1.45),
+          ),
+        ])),
+      ]),
+    );
+  }
+
+
 
   String get _heroTitle {
     switch (_status) {

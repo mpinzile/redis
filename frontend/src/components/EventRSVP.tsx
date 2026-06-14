@@ -210,13 +210,15 @@ const EventRSVP = ({ eventId, eventTitle, permissions }: EventRSVPProps) => {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card><CardContent className="p-4 text-center"><div className="text-base font-semibold text-green-600">{stats.attending}</div><p className="text-xs text-muted-foreground">Attending</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><div className="text-base font-semibold text-orange-600">{stats.pending}</div><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><div className="text-base font-semibold text-amber-600">{stats.maybe}</div><p className="text-xs text-muted-foreground">{t('maybe')}</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><div className="text-base font-semibold text-red-600">{stats.declined}</div><p className="text-xs text-muted-foreground">{t('declined')}</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><div className="text-base font-semibold text-blue-600">{stats.checked_in}</div><p className="text-xs text-muted-foreground">{t('checked_in')}</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><div className="text-base font-semibold">{stats.total}</div><p className="text-xs text-muted-foreground">{t('total_invited')}</p></CardContent></Card>
       </div>
+
 
       {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
