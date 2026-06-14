@@ -14,6 +14,8 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/l10n/l10n_helper.dart';
 import '../../../widgets/app_select.dart';
 import '../../../widgets/app_checkbox.dart';
+import 'register_missing_member_form.dart';
+
 
 /// Mirrors web EventCommittee.tsx - user search, role picker, permissions, edit/remove
 class EventCommitteeTab extends StatefulWidget {
@@ -381,8 +383,10 @@ class _EventCommitteeTabState extends State<EventCommitteeTab> with AutomaticKee
     String customRole = '';
     List<String> selectedPerms = [];
     bool sendInvitation = true;
+    bool showRegisterForm = false;
     Timer? debounce;
     bool submitting = false;
+
 
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.white,
@@ -450,7 +454,17 @@ class _EventCommitteeTabState extends State<EventCommitteeTab> with AutomaticKee
                       ),
                     ]),
                   )
-                else ...[
+                else if (showRegisterForm) ...[
+                  RegisterMissingMemberForm(
+                    onCancel: () => setSheetState(() => showRegisterForm = false),
+                    onRegistered: (user) => setSheetState(() {
+                      selectedUser = user;
+                      showRegisterForm = false;
+                      searchQuery = '';
+                      searchResults = [];
+                    }),
+                  ),
+                ] else ...[
                   NuruSearchBar(
                     value: searchQuery,
                     hintText: 'Search by name, email or phone...',
@@ -486,7 +500,32 @@ class _EventCommitteeTabState extends State<EventCommitteeTab> with AutomaticKee
                         },
                       ),
                     ),
+                  const SizedBox(height: 10),
+                  InkWell(
+                    onTap: () => setSheetState(() => showRegisterForm = true),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft.withOpacity(0.35),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+                      ),
+                      child: Row(children: [
+                        const AppIcon('user-add', size: 16, color: AppColors.primary),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text("Can't find them?", style: appText(size: 12, color: AppColors.textTertiary)),
+                            Text('Register missing member', style: appText(size: 13, weight: FontWeight.w700, color: AppColors.primary)),
+                          ]),
+                        ),
+                        const AppIcon('arrow-right', size: 14, color: AppColors.primary),
+                      ]),
+                    ),
+                  ),
                 ],
+
 
                 const SizedBox(height: 18),
 

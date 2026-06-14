@@ -32,18 +32,16 @@ class GlimpsesRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasShare = onShareMomentTap != null;
-    final showEmptyHint = !loading && glimpses.isEmpty;
     return SizedBox(
       height: 96,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: 1 + (hasShare ? 1 : 0) + (showEmptyHint ? 1 : glimpses.length),
+        itemCount: 1 + (hasShare ? 1 : 0) + glimpses.length,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
         itemBuilder: (_, i) {
           if (i == 0) return _yourGlimpse(context);
           if (hasShare && i == 1) return _shareMomentPill();
-          if (showEmptyHint) return _emptyHint();
           final glimpseIndex = i - 1 - (hasShare ? 1 : 0);
           final r = glimpses[glimpseIndex];
           if (r is! Map) return const SizedBox.shrink();
@@ -63,30 +61,6 @@ class GlimpsesRail extends StatelessWidget {
             seenCount: seenCount,
           );
         },
-      ),
-    );
-  }
-
-  Widget _emptyHint() {
-    return Container(
-      width: 240,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('No glimpses from your circle yet',
-              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-          const SizedBox(height: 3),
-          Text('When you or people you follow share a moment, it will appear here.',
-              style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textTertiary, height: 1.3)),
-        ],
       ),
     );
   }

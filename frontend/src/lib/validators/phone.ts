@@ -21,8 +21,25 @@ const RULES: Record<string, { cc: string; localPrefixes: string[]; example: stri
   KE: { cc: "254", localPrefixes: ["1", "7"], example: "0712 345 678" },
 };
 
+/**
+ * Pre-clean a phone value before validation.
+ *
+ * Strips spaces, brackets, dots, hyphens. Preserves a leading '+' only;
+ * any '+' that appears inside the number is removed.
+ */
+export function normalizePhoneNumber(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const keepsLeadingPlus = raw.startsWith("+");
+  const cleaned = raw
+    .replace(/\s+/g, "")
+    .replace(/[().\-]/g, "")
+    .replace(/\+/g, "");
+  return keepsLeadingPlus ? `+${cleaned}` : cleaned;
+}
+
 export function validateMobileMoneyPhone(raw: string, country?: string | null): PhoneCheck {
-  const phone = (raw || "").replace(/[\s\-()]/g, "");
+  const phone = normalizePhoneNumber(raw);
   if (!phone) return { ok: false, message: "Mobile number is required" };
 
   const cc = (country || "").toUpperCase();
@@ -72,7 +89,7 @@ export function validateMobileMoneyPhone(raw: string, country?: string | null): 
  * Returns an E.164 string (with leading "+") when valid.
  */
 export function validateInternationalPhone(raw: string, country?: string | null): PhoneCheck {
-  const cleaned = (raw || "").replace(/[\s\-().]/g, "");
+  const cleaned = normalizePhoneNumber(raw);
   if (!cleaned) return { ok: false, message: "Phone number is required" };
 
   // Reject obvious garbage early.

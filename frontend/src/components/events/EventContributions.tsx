@@ -344,6 +344,38 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
     }
   };
 
+  const [bulkRemoving, setBulkRemoving] = useState(false);
+  const handleBulkRemove = async (all: boolean) => {
+    const ids = all ? filteredContributors.map(ec => ec.id) : [...selectedForGuest];
+    const count = ids.length;
+    if (count === 0) return;
+    const confirmed = await confirm({
+      title: `Remove ${count} contributor${count > 1 ? 's' : ''}`,
+      description: `This removes the selected contributor${count > 1 ? 's' : ''} from this event only. They stay in your contributor address book. This cannot be undone.`,
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    setBulkRemoving(true);
+    // Optimistic: clear selection immediately so the UI feels instant.
+    setSelectedForGuest([]);
+    try {
+      const res = await contributorsApi.bulkRemoveFromEvent(eventId, { ids });
+      if (res.success) {
+        toast.success(`Removed ${res.data?.removed ?? count} contributor(s)`);
+        refetchEC();
+      } else {
+        toast.error(res.message || 'Failed to remove');
+      }
+    } catch (err: any) {
+      showCaughtError(err, 'Failed to remove contributors');
+    } finally {
+      setBulkRemoving(false);
+    }
+  };
+
+
+
   const handleAddAsGuest = async (ecId: string) => {
     setAddingAsGuests(true);
     try {
@@ -912,22 +944,39 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
         </div>
       </div>
 
-      {/* Batch Add as Guest Bar */}
-      {canManage && selectedForGuest.length > 0 && (
+      {/* Batch Action Bar */}
+      {canManage && (selectedForGuest.length > 0 || filteredContributors.length > paginatedContributors.length) && selectedForGuest.length > 0 && (
         <Card className="border-blue-200 bg-blue-50/50">
-          <CardContent className="p-3 flex items-center justify-between">
-            <p className="text-sm font-medium text-blue-800">
-              {selectedForGuest.length} contributor{selectedForGuest.length > 1 ? 's' : ''} selected
-            </p>
-            <div className="flex gap-2">
+          <CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <p className="font-medium text-blue-800">
+                {selectedForGuest.length} contributor{selectedForGuest.length > 1 ? 's' : ''} selected
+              </p>
+              {selectedForGuest.length < filteredContributors.length && (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-blue-700 hover:underline"
+                  onClick={() => setSelectedForGuest(filteredContributors.map(ec => ec.id))}
+                >
+                  Select all {filteredContributors.length} across pages
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setSelectedForGuest([])}>Clear</Button>
               <Button size="sm" onClick={() => setGuestBatchDialogOpen(true)} disabled={addingAsGuests}>
                 <UserCheck className="w-4 h-4 mr-1" />Add as Guest{selectedForGuest.length > 1 ? 's' : ''}
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => handleBulkRemove(false)} disabled={bulkRemoving}>
+                {bulkRemoving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Trash className="w-4 h-4 mr-1" />}
+                Remove {selectedForGuest.length}
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
+
+
 
       {/* Contributors Table */}
       <Card><CardContent className="p-0">
@@ -938,8 +987,13 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
                 {canManage && (
                   <th className="p-4 w-10">
                     <Checkbox
-                      checked={selectedForGuest.length === paginatedContributors.length && paginatedContributors.length > 0}
-                      onCheckedChange={(checked) => setSelectedForGuest(checked ? paginatedContributors.map(ec => ec.id) : [])}
+                      checked={paginatedContributors.length > 0 && paginatedContributors.every(ec => selectedForGuest.includes(ec.id))}
+                      onCheckedChange={(checked) => {
+                        const pageIds = paginatedContributors.map(ec => ec.id);
+                        setSelectedForGuest(prev => checked
+                          ? Array.from(new Set([...prev, ...pageIds]))
+                          : prev.filter(id => !pageIds.includes(id)));
+                      }}
                     />
                   </th>
                 )}

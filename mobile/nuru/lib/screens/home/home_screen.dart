@@ -886,7 +886,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: ListView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-          itemCount: listLen + 4 + (_feedLoadingMore && !isGlimpsesTab ? 1 : 0) + (!_feedLoading && _feedFallbackTried && listLen == 0 ? 1 : 0),
+          itemCount: listLen + 4 + (_feedLoadingMore && !isGlimpsesTab ? 1 : 0) + (!_feedLoading && _feedFallbackTried && listLen == 0 && !isGlimpsesTab ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == 0) {
               return Padding(
@@ -921,33 +921,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               );
             }
             if (index == 3) return _feedTab == 3 ? const TrendingRail() : const SizedBox.shrink();
-            if (index == 4 && (_feedLoading || (_feedPosts.isEmpty && !_feedFallbackTried) || (listLen == 0 && !_feedFallbackTried))) {
-              return NuruSkeletonPostList(
-                itemCount: 4,
-                variant: _feedTab == 1
-                    ? FeedSkeletonVariant.moment
-                    : _feedTab == 2
-                        ? FeedSkeletonVariant.event
-                        : _feedTab == 3
-                            ? FeedSkeletonVariant.glimpse
-                            : FeedSkeletonVariant.post,
-              );
+            if (index == 4) {
+              // Glimpses tab uses its own loading flag and shows an empty
+              // state immediately when nothing's in the user's circle.
+              if (isGlimpsesTab) {
+                if (_glimpsesLoading && listLen == 0) {
+                  return const NuruSkeletonPostList(
+                    itemCount: 4,
+                    variant: FeedSkeletonVariant.glimpse,
+                  );
+                }
+                if (listLen == 0) {
+                  return const EmptyState(
+                    icon: Icons.auto_awesome_rounded,
+                    title: 'No glimpses in your circle yet',
+                    subtitle: 'When you or people you follow share a moment, it will appear here for 24 hours.',
+                  );
+                }
+              } else if (_feedLoading || (_feedPosts.isEmpty && !_feedFallbackTried) || (listLen == 0 && !_feedFallbackTried)) {
+                return NuruSkeletonPostList(
+                  itemCount: 4,
+                  variant: _feedTab == 1
+                      ? FeedSkeletonVariant.moment
+                      : _feedTab == 2
+                          ? FeedSkeletonVariant.event
+                          : FeedSkeletonVariant.post,
+                );
+              } else if (listLen == 0) {
+                return EmptyState(
+                  icon: Icons.dynamic_feed_rounded,
+                  title: _feedTab == 1
+                      ? 'No moments yet'
+                      : _feedTab == 2
+                          ? 'No event posts'
+                          : 'No posts yet',
+                  subtitle: _feedTab == 0
+                      ? 'Be the first to share something with the community!'
+                      : 'Check back soon or follow more people to see updates here.',
+                );
+              }
             }
-            if (index == 4 && listLen == 0) {
-              return EmptyState(
-                icon: _feedTab == 3 ? Icons.auto_awesome_rounded : Icons.dynamic_feed_rounded,
-                title: _feedTab == 1
-                    ? 'No moments yet'
-                    : _feedTab == 2
-                        ? 'No event posts'
-                        : _feedTab == 3
-                            ? 'No glimpses in your circle'
-                            : 'No posts yet',
-                subtitle: _feedTab == 0
-                    ? 'Be the first to share something with the community!'
-                    : 'Check back soon or follow more people to see updates here.',
-              );
-            }
+
             final itemIndex = index - 4;
             if (itemIndex >= listLen) {
               return const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))));

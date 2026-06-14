@@ -265,9 +265,10 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
                   clipper: TicketShapeClipper(
                     notchY: 170,
                     notchRadius: 12,
-                    scallopedBottom: true,
-                    scallopRadius: 7,
+                    scallopedBottom: false,
+                    radius: 22,
                   ),
+
                   child: Container(
                     color: Colors.white,
                     child: Column(
@@ -547,7 +548,7 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
       children: [
         _detailRow('Reference', _txCode, mono: true),
         _detailRow('Date', _formatDate(dateIso?.toString())),
-        if (method.isNotEmpty) _detailRow('Method', method, smallValue: true),
+        if (method.isNotEmpty) _detailRow('Method', method),
         _detailRow('Subtotal',
             formatMoney(_gross - _fee, currency: _currency)),
         if (_fee > 0)
@@ -592,45 +593,42 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
   }
 
   Widget _buildVerifyBlock() {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Text('SCAN TO VERIFY',
+            style: GoogleFonts.inter(
+                fontSize: 9, letterSpacing: 1.2,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textTertiary)),
+        const SizedBox(height: 10),
         Container(
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Colors.white,
             border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: QrImageView(
             data: _verifyUrl,
             version: QrVersions.auto,
-            size: 78,
+            size: 168,
             backgroundColor: Colors.white,
             errorCorrectionLevel: QrErrorCorrectLevel.H,
           ),
         ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('SCAN TO VERIFY',
-                  style: GoogleFonts.inter(
-                      fontSize: 9, letterSpacing: 1.2,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textTertiary)),
-              const SizedBox(height: 4),
-              Text('Confirm this payment is authentic at',
-                  style: GoogleFonts.inter(
-                      fontSize: 11, color: AppColors.textSecondary)),
-              Text(_verifyUrl,
-                  style: GoogleFonts.robotoMono(
-                      fontSize: 10, color: AppColors.textTertiary)),
-            ],
-          ),
-        ),
+        const SizedBox(height: 10),
+        Text('Confirm this payment is authentic at',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+                fontSize: 11, color: AppColors.textSecondary)),
+        const SizedBox(height: 2),
+        Text(_verifyUrl,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.robotoMono(
+                fontSize: 10, color: AppColors.textTertiary)),
       ],
     );
   }
 }
+
