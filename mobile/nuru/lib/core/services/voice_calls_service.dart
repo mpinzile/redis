@@ -87,6 +87,13 @@ class VoiceCallsService {
   static Future<Map<String, dynamic>> retryJob(String jobId) =>
       ApiBase.post('/voice-calls/jobs/$jobId/retry', const {});
 
+  /// POST /voice-calls/jobs/{id}/place-call — actually dial via Twilio.
+  /// Pass [force]=true to bypass the calling-hours guard.
+  static Future<Map<String, dynamic>> placeCall(String jobId, {bool force = false}) {
+    final qs = force ? '?force=true' : '';
+    return ApiBase.post('/voice-calls/jobs/$jobId/place-call$qs', const {});
+  }
+
   // ─── Opt-outs ───
   static Future<Map<String, dynamic>> listOptOuts({
     int page = 1,

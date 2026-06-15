@@ -493,7 +493,19 @@ function CampaignSheet({
   }
 
   async function placeCall(jobId: string) {
-    const res = await voiceCallsApi.placeCall(jobId);
+    let res = await voiceCallsApi.placeCall(jobId);
+    if (!res.success) {
+      const detail: any = (res as any).errors || (res as any).error || res.message;
+      const code = typeof detail === "object" ? detail?.code : null;
+      const reason = typeof detail === "object" ? (detail?.message || detail?.detail) : String(detail || "");
+      if (code === "outside_hours" || /outside.*hours/i.test(reason)) {
+        if (window.confirm(`${reason}\n\nCall anyway?`)) {
+          res = await voiceCallsApi.placeCall(jobId, true);
+        } else {
+          return;
+        }
+      }
+    }
     if (res.success) {
       toast.success("Dialing…");
       if (campaign) await loadJobs(campaign.id);
@@ -922,12 +934,27 @@ function CallOnePersonDialog({
         true,
       );
       if (!added.success) { showApiErrors(added); return; }
-      const job = (added.data?.accepted || [])[0];
+      // Backend returns `jobs` (all persisted) and `accepted` (dialable only).
+      const dialable = (added.data as any)?.accepted || (added.data as any)?.jobs || [];
+      const job = dialable[0];
       if (!job) {
-        toast.error("Recipient was rejected (opt-out, blocked, or invalid).");
+        const rej = ((added.data as any)?.rejected || [])[0];
+        toast.error(rej?.reason || "Recipient was rejected (opt-out, blocked, or invalid).");
         return;
       }
-      const placed = await voiceCallsApi.placeCall(job.id);
+      let placed = await voiceCallsApi.placeCall(job.id);
+      if (!placed.success) {
+        const detail: any = (placed as any).errors || (placed as any).error || placed.message;
+        const code = typeof detail === "object" ? detail?.code : null;
+        const reason = typeof detail === "object" ? (detail?.message || detail?.detail) : String(detail || "");
+        if (code === "outside_hours" || /outside.*hours/i.test(reason)) {
+          if (window.confirm(`${reason}\n\nCall anyway?`)) {
+            placed = await voiceCallsApi.placeCall(job.id, true);
+          } else {
+            return;
+          }
+        }
+      }
       if (placed.success) {
         toast.success("Dialing now");
         onPlaced();

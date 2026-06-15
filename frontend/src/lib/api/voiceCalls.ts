@@ -204,10 +204,28 @@ export const voiceCallsApi = {
   retryJob(jobId: string) {
     return post<VoiceCallJob>(`/voice-calls/jobs/${jobId}/retry`);
   },
-  placeCall(jobId: string) {
+  placeCall(jobId: string, force = false) {
     return post<{ job: VoiceCallJob; log: VoiceCallLog }>(
-      `/voice-calls/jobs/${jobId}/place-call`,
+      `/voice-calls/jobs/${jobId}/place-call${force ? "?force=true" : ""}`,
     );
+  },
+  adminListJobs(params?: {
+    status?: JobStatus;
+    has_error?: boolean;
+    q?: string;
+    page?: number;
+    page_size?: number;
+  }) {
+    type AdminRow = {
+      job: VoiceCallJob;
+      campaign: VoiceCampaign | null;
+      owner: { id: string; name: string | null; phone: string | null; email: string | null } | null;
+      logs: VoiceCallLog[];
+      last_error: { code: string | null; message: string | null; at: string | null } | null;
+    };
+    return get<AdminRow[]>(
+      `/voice-calls/admin/jobs${buildQueryString(params)}`,
+    ) as Promise<Paged<AdminRow>>;
   },
 
   // Logs

@@ -137,6 +137,7 @@ import AdminServiceDetail from "@/pages/admin/AdminServiceDetail";
 import AdminAppeals from "@/pages/admin/AdminAppeals";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminWhatsApp from "@/pages/admin/AdminWhatsApp";
+import AdminVoiceCalls from "@/pages/admin/AdminVoiceCalls";
 import AdminWhatsAppTemplates from "@/pages/admin/AdminWhatsAppTemplates";
 import AdminIssues from "@/pages/admin/AdminIssues";
 import AdminIssueDetail from "@/pages/admin/AdminIssueDetail";
@@ -334,6 +335,7 @@ function InnerRoutes() {
           <Route path="appeals" element={<AdminAppeals />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="whatsapp" element={<AdminWhatsApp />} />
+          <Route path="voice-calls" element={<AdminVoiceCalls />} />
           <Route path="whatsapp/templates" element={<AdminWhatsAppTemplates />} />
           <Route path="whatsapp-logs" element={<WhatsappLogs />} />
           <Route path="issues" element={<AdminIssues />} />
