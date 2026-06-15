@@ -87,6 +87,37 @@ def send_one(self, recipient_id: str):
                        if automation and automation.template else None)
         lang = (automation.language if automation else "en") or "en"
 
+        # Attribute every WA log row this task produces to the event owner so
+        # the rows appear on the user-scoped /whatsapp-logs page (mirrors what
+        # invitations / cards / contributor imports do).
+        try:
+            event_for_ctx = db.query(Event).filter(Event.id == run.event_id).first()
+            owner_id_ctx = None
+            event_name_ctx = None
+            if event_for_ctx is not None:
+                try:
+                    from utils.event_owner import event_owner_id
+                    owner_id_ctx = event_owner_id(event_for_ctx) or str(
+                        getattr(event_for_ctx, "organizer_id", "") or "")
+                except Exception:
+                    owner_id_ctx = str(getattr(event_for_ctx, "organizer_id", "") or "")
+                event_name_ctx = getattr(event_for_ctx, "name", None)
+            from utils.wa_logging import set_wa_log_context
+            set_wa_log_context(
+                user_id=(str(owner_id_ctx) if owner_id_ctx else None),
+                event_id=str(run.event_id) if run.event_id else None,
+                event_name=event_name_ctx,
+                purpose="event_reminder",
+                source_module="reminder_dispatch",
+                recipient_type=("contributor"
+                                if getattr(automation, "automation_type", "") == "pledge_remind"
+                                else "guest"),
+            )
+
+        except Exception as _e:
+            print(f"[reminder] wa_log_context skipped: {_e}")
+
+
         wa_ok = False
         wa_action = None
         wa_params: dict = {}

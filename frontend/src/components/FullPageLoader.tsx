@@ -13,7 +13,11 @@ export default function FullPageLoader() {
       />
 
       {/* Static Logo */}
-      <img src={nuruLogo} alt="Nuru Logo" className="w-24 h-24 relative z-10" />
+      <img
+        src={nuruLogo}
+        alt="Nuru Logo"
+        className="h-24 w-auto max-w-[60vw] object-contain relative z-10"
+      />
 
       {/* Skeleton/Shimmer Loading Bars */}
       <div className="space-y-4 w-80 mt-12">
