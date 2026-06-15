@@ -720,17 +720,6 @@ def _dispatch_campaign_jobs(campaign_id: str) -> None:
                                 job.id, verdict.reason)
                     continue
 
-                # Pre-generate the personalised greeting so the recipient
-                # hears speech the instant they pick up. Best-effort: any
-                # failure is logged but doesn't block the call.
-                try:
-                    from voice.greeting_audio import ensure_for_job as _ensure_greeting
-                    _gen, _gerr = _ensure_greeting(job.id)
-                    if _gerr:
-                        log.info("dispatch: greeting not generated job=%s reason=%s",
-                                 job.id, _gerr)
-                except Exception:  # noqa: BLE001
-                    log.exception("dispatch: pre-greeting hook crashed job=%s", job.id)
 
                 try:
                     result = twilio_client.place_call(
@@ -1038,11 +1027,6 @@ def retry_job(
             detail={"code": verdict.code, "message": verdict.reason},
         )
 
-    try:
-        from voice.greeting_audio import ensure_for_job as _ensure_greeting
-        _ensure_greeting(job.id)
-    except Exception:  # noqa: BLE001
-        pass
     try:
         result = twilio_client.place_call(
             to_phone_e164=job.phone_e164,
@@ -1372,11 +1356,6 @@ def place_call_now(
             detail={"code": verdict.code, "message": verdict.reason},
         )
 
-    try:
-        from voice.greeting_audio import ensure_for_job as _ensure_greeting
-        _ensure_greeting(job.id)
-    except Exception:  # noqa: BLE001
-        pass
     try:
         result = twilio_client.place_call(
             to_phone_e164=job.phone_e164,

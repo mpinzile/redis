@@ -174,22 +174,19 @@ class GeminiLiveBridge(AgentBridge):
         self,
         language: str,
         job: Optional[VoiceCallJob],
-        *,
-        skip_greeting: bool = False,
     ) -> None:
         """Prompt Gemini to speak first as soon as Twilio opens the stream.
 
-        When ``skip_greeting`` is true, the pre-rendered Tanzanian greeting
-        has ALREADY been played to the caller through our Twilio media
-        stream, so Gemini must not re-greet — it picks up the conversation
-        with the reason for the call.
+        The greeting is part of the live conversation — no pre-rendered
+        audio is played before this point. Gemini must open with a single
+        short sentence that names the recipient and states the reason for
+        the call, then WAIT for the recipient to reply before doing
+        anything else.
         """
         if self._ws is None or self._closed:
             return
         is_sw = (language or "sw").lower().startswith("sw")
         raw_name = (getattr(job, "recipient_name", None) or "").strip()
-        # Mirror rsvp_agent's address rules so the title/first-name lands correctly
-        # in the greeting (e.g. "Mr Frank" -> "Bw. Frank"; "David Mwakalinga" -> "David").
         try:
             from voice.agents.rsvp_agent import _address_for  # local import to avoid cycle
             addressed, _ = _address_for(raw_name, is_sw=is_sw)
@@ -201,81 +198,46 @@ class GeminiLiveBridge(AgentBridge):
             event_name = _event_name_for_job(job) or event_name
         except Exception:  # noqa: BLE001
             pass
-        if skip_greeting and is_sw:
+        try:
+            from voice.agents.rsvp_agent import time_of_day_greeting  # local import
+            tod_sw = time_of_day_greeting(is_sw=True)
+            tod_en = time_of_day_greeting(is_sw=False)
+        except Exception:  # noqa: BLE001
+            tod_sw, tod_en = "Habari", "Hello"
+        if is_sw:
             text = (
-                f"MUHIMU: salamu ya kwanza ('{addressed}, habari ya leo. "
-                f"Mambo vipi? Mimi ni Nuru Voice Assistant, napiga kutoka Nuru "
-                f"kuhusu mwaliko wako. Tafadhali subiri kidogo nikuunganishe.') "
-                f"TAYARI imechezwa kwenye simu. USIRUDIE salamu wala kujitambulisha tena. "
-                f"Endelea moja kwa moja kwa Kiswahili cha Tanzania kwa sentensi hii: "
-                f"'Nakupigia kwa niaba ya mratibu wa tukio la {event_name}. "
-                f"Ningependa kuthibitisha kama umepokea mwaliko wako.' "
-                f"FUATA mtiririko wa simu uliopo kwenye system_instruction "
-                f"(uthibitisho wa mwaliko → swali la kuhudhuria → taarifa za "
-                f"tukio → kufunga). Ongea kwa kasi ya kawaida ya simu ya "
-                f"Mtanzania (haraka kidogo, siyo polepole), sauti ya joto na "
-                f"ya kibinadamu. LUGHA: anza Kiswahili, lakini IFUATE lugha "
-                f"ya mteja. Akisema 'speak English' / 'I don't understand', "
-                f"BADILISHA Kiingereza mara moja. Akirudi Kiswahili, rudi "
-                f"Kiswahili. Akisema 'kwaheri' / 'bye', funga: 'Asante sana, "
-                f"kwaheri.' Usitumie 'rafiki' kama jina lipo."
-            )
-        elif skip_greeting:
-            text = (
-                f"IMPORTANT: the opening greeting ('Hello {addressed}, this is "
-                f"the Nuru Voice Assistant calling from Nuru about your invitation. "
-                f"One moment please.') has ALREADY been played to the caller. "
-                f"DO NOT re-greet. Continue directly with: 'I'm calling on behalf "
-                f"of the organiser of {event_name}. I'd like to confirm whether "
-                f"you received your invitation.' Then follow the system_instruction "
-                f"call flow (invitation check → attendance → event facts → closing). "
-                f"Brisk, warm, natural phone pace. Mirror the recipient's "
-                f"language. End on 'bye'/'kwaheri' with 'Thank you, goodbye.'"
+                f"Anza simu SASA kwa KISWAHILI CHA TANZANIA kwa sentensi "
+                f"MOJA TU (jina ni LAZIMA), kisha NYAMAZA na SUBIRI jibu la "
+                f"mteja kabla ya kusema chochote kingine: "
+                f"'{tod_sw} {addressed}, mambo vipi? Mimi ni Msaidizi wa "
+                f"Sauti wa Nuru, napiga kwa niaba ya mratibu wa tukio la "
+                f"{event_name}.' "
+                f"USITAJE tarehe, eneo, muda, wala maelezo mengine YOYOTE "
+                f"ya tukio kwenye sentensi hii ya kwanza. BAADA ya jibu la "
+                f"mteja, fuata system_instruction (uthibitisho wa mwaliko "
+                f"-> swali la kuhudhuria -> taarifa za tukio ZIKIWA "
+                f"AMETHIBITISHA TU -> kufunga). SIKILIZA kwa makini kila "
+                f"jibu la mteja kabla ya kuendelea — usifuate skripti "
+                f"kipofu. Akikataa kuhudhuria, USITAJE tarehe wala eneo, "
+                f"funga kwa heshima. Sauti ya joto, ya kibinadamu, kasi ya "
+                f"kawaida ya simu. Usitumie 'rafiki' kama jina lipo, wala "
+                f"'Shalom'."
             )
         else:
-            # No pre-greeting played — Gemini MUST say the recipient's name
-            # and a time-of-day salutation as the very first words it speaks.
-            try:
-                from voice.agents.rsvp_agent import time_of_day_greeting  # local import
-                tod_sw = time_of_day_greeting(is_sw=True)
-                tod_en = time_of_day_greeting(is_sw=False)
-            except Exception:  # noqa: BLE001
-                tod_sw, tod_en = "Habari", "Hello"
             text = (
-                f"Anza simu SASA kwa KISWAHILI CHA TANZANIA kwa sentensi hii "
-                f"HASA (jina ni LAZIMA): "
-                f"'{tod_sw} {addressed}, mambo vipi? Napiga kutoka Nuru kwa "
-                f"niaba ya mratibu wa tukio la {event_name}. Ningependa "
-                f"kuthibitisha kama utahudhuria.' Kisha uliza kama amepokea "
-                f"mwaliko kupitia WhatsApp au ujumbe wa kawaida. FUATA "
-                f"mtiririko wa simu uliopo kwenye system_instruction "
-                f"(mwanzo → uthibitisho wa mwaliko → swali la kuhudhuria → "
-                f"taarifa za tukio → kufunga). Ongea kwa kasi ya kawaida ya "
-                f"simu ya Mtanzania (haraka kidogo, siyo polepole), sauti ya "
-                f"joto na ya kibinadamu. LUGHA: anza Kiswahili, lakini "
-                f"IFUATE lugha ya mteja. Akisema 'speak English', "
-                f"'sijakuelewa' / 'I don't understand' akiwa kwenye "
-                f"Kiingereza, BADILISHA Kiingereza mara moja na rudia jibu "
-                f"lako. Akirudi Kiswahili, rudi Kiswahili. Akisema "
-                f"'kwaheri' / 'bye' / 'tutaonana', funga mara moja: "
-                f"'Asante sana, kwaheri.' Usitumie 'rafiki' kama jina lipo, "
-                f"wala 'Shalom'."
-                if is_sw else
-                f"Start the call NOW in English with this EXACT opening "
-                f"(the name is REQUIRED): "
-                f"'{tod_en} {addressed}, how are you today? I'm calling "
-                f"from Nuru on behalf of the organiser of {event_name}. "
-                f"I'd like to confirm whether you'll attend.' Then ask if "
-                f"they received the invitation on WhatsApp or SMS. FOLLOW "
-                f"the call flow in the system_instruction (opening → "
-                f"invitation check → attendance → event facts → closing). "
-                f"Use a brisk, natural phone pace, warm human tone. "
-                f"LANGUAGE: start in English but MIRROR the recipient — if "
-                f"they speak a full sentence in Swahili or say 'sijakuelewa' "
-                f"/ 'I don't understand', switch to Swahili immediately and "
-                f"repeat your last sentence. If they return to English, "
-                f"switch back. End on 'bye' / 'kwaheri' with 'Thank you, "
-                f"goodbye.'"
+                f"Start the call NOW in English with EXACTLY ONE short "
+                f"sentence (the name is REQUIRED), then STOP and WAIT for "
+                f"the recipient to reply before saying anything else: "
+                f"'{tod_en} {addressed}, how are you today? I'm the Nuru "
+                f"Voice Assistant calling on behalf of the organiser of "
+                f"{event_name}.' "
+                f"Do NOT mention the date, venue, time or any other event "
+                f"detail in this first sentence. After the recipient "
+                f"replies, follow the system_instruction (invitation check "
+                f"-> attendance question -> event facts ONLY IF they "
+                f"confirm -> closing). LISTEN carefully to every reply "
+                f"before continuing — do NOT follow the script blindly. If "
+                f"they decline, do NOT share date/venue, just close warmly."
             )
         try:
             await self._ws.send(json.dumps({
@@ -285,11 +247,12 @@ class GeminiLiveBridge(AgentBridge):
                 }
             }))
             logger.info(
-                "Gemini Live initial turn sent job=%s skip_greeting=%s",
-                getattr(job, "id", None), skip_greeting,
+                "Gemini Live initial turn sent job=%s",
+                getattr(job, "id", None),
             )
         except Exception:  # noqa: BLE001
             logger.exception("Gemini Live initial turn send failed job=%s", getattr(job, "id", None))
+
 
     # ── AgentBridge contract ───────────────────────────────────
     async def start(
@@ -297,8 +260,6 @@ class GeminiLiveBridge(AgentBridge):
         *,
         job: Optional[VoiceCallJob],
         language: str,
-        skip_greeting: bool = False,
-        initial_turn_delay_s: float = 0.0,
     ) -> None:
         if not gemini_live_available():
             logger.warning("GeminiLiveBridge requested but not available; no-op")
@@ -306,9 +267,6 @@ class GeminiLiveBridge(AgentBridge):
             return
 
         lang = "en-US" if (language or "").strip().lower().startswith("en") else "sw-TZ"
-        # System prompt build hits the DB (event + schedule + venue). Run it
-        # off the event loop so we don't stall the Twilio WS receive while
-        # SQLAlchemy is rebuilding the prompt.
         spec = await asyncio.to_thread(_system_builder, job, lang) or {}
         system_text = (spec.get("system_text") or "").strip()
         tools = spec.get("tools") or []
@@ -316,15 +274,14 @@ class GeminiLiveBridge(AgentBridge):
         model_cfg = config.get_gemini_model_config()
         voice_name = (voice_cfg.get("voice_name") or "Zephyr").strip() or "Zephyr"
 
-        # Backend-controlled config log (no secrets).
         logger.info(
             "Smart RSVP Gemini config: text_model=%s live_model=%s "
             "live_model_fallback=%s tts_model=%s voice=%s language=%s "
-            "style=%s speaking_rate=%s skip_greeting=%s delay_s=%.2f",
+            "style=%s speaking_rate=%s",
             model_cfg["text_model"], model_cfg["live_model"],
             model_cfg["live_model_fallback"], model_cfg["tts_model"],
             voice_name, voice_cfg["language"], voice_cfg["style"],
-            voice_cfg["speaking_rate"], skip_greeting, initial_turn_delay_s,
+            voice_cfg["speaking_rate"],
         )
 
         async with self._connect_lock:
@@ -338,22 +295,14 @@ class GeminiLiveBridge(AgentBridge):
                     logger.info("Gemini Live connected model=%s voice=%s job=%s",
                                 model, voice_name, getattr(job, "id", None))
                     self._reader_task = asyncio.create_task(self._read_loop())
-                    # Hold the first model turn until the pre-greeting has
-                    # finished playing to the caller, otherwise Gemini's
-                    # voice would overlap the recorded greeting.
-                    if initial_turn_delay_s and initial_turn_delay_s > 0:
-                        try:
-                            await asyncio.sleep(initial_turn_delay_s)
-                        except asyncio.CancelledError:
-                            raise
-                    await self._send_initial_turn(lang, job, skip_greeting=skip_greeting)
+                    await self._send_initial_turn(lang, job)
                     return
             logger.error(
-                "Gemini Live: all models failed to connect (tried=%s). "
-                "Check GEMINI_LIVE_MODEL / GEMINI_LIVE_MODEL_FALLBACK env vars.",
+                "Gemini Live: all models failed to connect (tried=%s).",
                 tried,
             )
             await self._events.put(AgentEvent(kind="end"))
+
 
     async def push_audio(self, pcm16: bytes, *, sample_rate: int) -> None:
         # Skip work cheaply if the bridge is closed or the socket is gone.
