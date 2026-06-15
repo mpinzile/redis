@@ -923,7 +923,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: PillTabs(
                   tabs: const ['All', 'Moments', 'Events', 'Glimpses'],
                   selected: _feedTab,
-                  onChanged: (i) => setState(() => _feedTab = i),
+                  onChanged: (i) {
+                    setState(() => _feedTab = i);
+                    // Silently refresh glimpses whenever the user lands on the
+                    // Glimpses tab so newly posted moments appear without a
+                    // manual pull-to-refresh.
+                    if (i == 3) _loadGlimpses(silent: true);
+                  },
                 ),
               );
             }

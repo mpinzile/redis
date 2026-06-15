@@ -165,7 +165,7 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
         if (durSec > 30.0 && mounted) {
           final trimmed = await Navigator.of(context).push<File>(
             MaterialPageRoute(
-              builder: (_) => GlimpseTrimScreen(source: file, maxDurationSeconds: 30),
+              builder: (_) => GlimpseTrimScreen(source: file, maxDurationSeconds: 60),
             ),
           );
           if (trimmed == null) return;

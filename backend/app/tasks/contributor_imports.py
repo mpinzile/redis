@@ -106,7 +106,7 @@ def _find_address_book_contributor_by_phone(db, owner_id, phone: str):
     )
 
 
-def _dispatch_notification(item, *, event, currency, organizer_phone, pay_instr) -> Dict[str, Any]:
+def _dispatch_notification(item, *, event, currency, organizer_phone, pay_instr, user_id=None) -> Dict[str, Any]:
     """Send WhatsApp + SMS for a single notification item.
 
     Returns ``{ok, sent_channels, errors}``. Each channel attempt is isolated
@@ -132,19 +132,25 @@ def _dispatch_notification(item, *, event, currency, organizer_phone, pay_instr)
         return {"ok": False, "sent_channels": 0, "errors": ["no recipient phone"], "recipients": 0}
 
     for ph in recipients:
-        # Refresh per-recipient WA log context so each row carries its own metadata
+        # Refresh per-recipient WA log context so each row carries its own metadata.
+        # IMPORTANT: pass user_id so the resulting wa_message_logs row is attributed
+        # to the event owner — without it the row has no user_id and never shows
+        # up on the user-scoped WhatsApp Logs page (same approach as invitations
+        # / cards which always set user_id on their wa_log_context).
         try:
             from utils.wa_logging import set_wa_log_context
             set_wa_log_context(
+                user_id=(str(user_id) if user_id else None),
                 event_id=str(event.id), event_name=event.name,
                 source_module="contributor_imports",
                 purpose="contribution_target",
                 recipient_type="contributor",
-                recipient_id=str(getattr(ec, "id", "")) or None,
-                recipient_name=item.get("contributor_name"),
+                related_entity_type="event_contributor",
+                related_entity_id=(str(getattr(ec, "id", "")) or None),
             )
         except Exception:
             pass
+
 
         # WhatsApp
         try:
@@ -461,6 +467,7 @@ def process_contributor_import_job(self, job_id: str) -> Dict[str, Any]:
                             notification_item,
                             event=event, currency=currency,
                             organizer_phone=organizer_phone, pay_instr=pay_instr,
+                            user_id=owner_id,
                         )
                         if res.get("ok"):
                             notified_total += 1
@@ -619,6 +626,11 @@ def resend_contributor_notifications(self, job_id: str) -> Dict[str, Any]:
         organizer_phone = (
             format_phone_display(organizer.phone) if organizer and organizer.phone else None
         )
+        from utils.event_owner import event_owner_id
+        try:
+            owner_id = uuid.UUID(event_owner_id(event) or str(event.organizer_id))
+        except Exception:
+            owner_id = event.organizer_id
         from utils.payment_instructions import resolve_payment_instructions
         pay_instr = resolve_payment_instructions(event)
 
@@ -660,6 +672,7 @@ def resend_contributor_notifications(self, job_id: str) -> Dict[str, Any]:
                 res = _dispatch_notification(
                     item, event=event, currency=currency,
                     organizer_phone=organizer_phone, pay_instr=pay_instr,
+                    user_id=owner_id,
                 )
                 if res.get("ok"):
                     sent += 1

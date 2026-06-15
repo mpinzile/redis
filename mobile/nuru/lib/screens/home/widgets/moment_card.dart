@@ -644,6 +644,15 @@ class _MomentCardState extends State<MomentCard> {
 
   Widget _glowButton() {
     final color = _glowed ? AppColors.error : AppColors.textTertiary;
+    // Treat the default heart reaction as a "plain glow" so we render the
+    // tinted SVG heart (always red) instead of the system emoji glyph which
+    // can render as a monochrome black heart on some platforms.
+    final isDefaultHeart = !_glowed ||
+        _glowEmoji.isEmpty ||
+        _glowEmoji == '❤️' ||
+        _glowEmoji == '❤' ||
+        _glowEmoji == '\u2764\uFE0F' ||
+        _glowEmoji == '\u2764';
     return GestureDetector(
       onTap: () => _handleGlow(),
       onLongPress: _pickReaction,
@@ -651,11 +660,13 @@ class _MomentCardState extends State<MomentCard> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_glowed)
+          if (_glowed && !isDefaultHeart)
             EmojiText(_glowEmoji, size: 16)
           else
             SvgPicture.asset(
-              'assets/icons/heart-icon.svg',
+              _glowed
+                  ? 'assets/icons/heart-filled-icon.svg'
+                  : 'assets/icons/heart-icon.svg',
               width: 18,
               height: 18,
               colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
