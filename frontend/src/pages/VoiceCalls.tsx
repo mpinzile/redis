@@ -43,6 +43,7 @@ import {
   type CampaignStatus,
 } from "@/lib/api/voiceCalls";
 import { showApiErrors } from "@/lib/api";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 const STATUS_TONE: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -415,6 +416,7 @@ function CampaignSheet({
   const [paste, setPaste] = useState("");
   const [adding, setAdding] = useState(false);
   const [acting, setActing] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const open = !!campaign;
 
@@ -499,7 +501,13 @@ function CampaignSheet({
       const code = typeof detail === "object" ? detail?.code : null;
       const reason = typeof detail === "object" ? (detail?.message || detail?.detail) : String(detail || "");
       if (code === "outside_hours" || /outside.*hours/i.test(reason)) {
-        if (window.confirm(`${reason}\n\nCall anyway?`)) {
+        const ok = await confirm({
+          title: "Outside calling hours",
+          description: `${reason}\n\nDial this number anyway?`,
+          confirmLabel: "Call anyway",
+          cancelLabel: "Wait for window",
+        });
+        if (ok) {
           res = await voiceCallsApi.placeCall(jobId, true);
         } else {
           return;
@@ -629,6 +637,7 @@ function CampaignSheet({
           </>
         )}
       </SheetContent>
+      <ConfirmDialog />
     </Sheet>
   );
 }
@@ -866,6 +875,7 @@ function CallOnePersonDialog({
   const [purpose, setPurpose] = useState<VoicePurpose>("rsvp");
   const [eventId, setEventId] = useState(defaultEventId || "");
   const [busy, setBusy] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [guests, setGuests] = useState<Array<{ id: string; name: string; phone: string }>>([]);
   const [guestSearch, setGuestSearch] = useState("");
   const [loadingGuests, setLoadingGuests] = useState(false);
@@ -948,7 +958,13 @@ function CallOnePersonDialog({
         const code = typeof detail === "object" ? detail?.code : null;
         const reason = typeof detail === "object" ? (detail?.message || detail?.detail) : String(detail || "");
         if (code === "outside_hours" || /outside.*hours/i.test(reason)) {
-          if (window.confirm(`${reason}\n\nCall anyway?`)) {
+          const ok = await confirm({
+            title: "Outside calling hours",
+            description: `${reason}\n\nDial this number anyway?`,
+            confirmLabel: "Call anyway",
+            cancelLabel: "Wait for window",
+          });
+          if (ok) {
             placed = await voiceCallsApi.placeCall(job.id, true);
           } else {
             return;
@@ -1149,6 +1165,7 @@ function CallOnePersonDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <ConfirmDialog />
     </Dialog>
   );
 }
