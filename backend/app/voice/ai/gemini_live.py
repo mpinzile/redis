@@ -235,7 +235,10 @@ class GeminiLiveBridge(AgentBridge):
             return
 
         lang = "en-US" if (language or "").strip().lower().startswith("en") else "sw-TZ"
-        spec = _system_builder(job, lang) or {}
+        # System prompt build hits the DB (event + schedule + venue). Run it
+        # off the event loop so we don't stall the Twilio WS receive while
+        # SQLAlchemy is rebuilding the prompt.
+        spec = await asyncio.to_thread(_system_builder, job, lang) or {}
         system_text = (spec.get("system_text") or "").strip()
         tools = spec.get("tools") or []
         voice_cfg = config.get_gemini_voice_config()

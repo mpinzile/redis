@@ -327,9 +327,12 @@ async def _pump_agent_events(
                     if session.gemini_connected_at is not None:
                         ms = int((session.first_ai_audio_at - session.gemini_connected_at) * 1000)
                         logger.info("[perf] first_ai_audio_ms=%d job=%s", ms, session.job_id)
+                    if session.ws_accept_at is not None:
+                        pms = int((session.first_ai_audio_at - session.ws_accept_at) * 1000)
+                        logger.info("[perf] pickup_to_first_audio_ms=%d job=%s", pms, session.job_id)
                     if session.last_user_speech_at is not None:
                         rt_ms = int((session.first_ai_audio_at - session.last_user_speech_at) * 1000)
-                        logger.info("[perf] user_speech_to_ai_response_ms=%d job=%s", rt_ms, session.job_id)
+                        logger.info("[perf] user_question_to_answer_ms=%d job=%s", rt_ms, session.job_id)
                 session.assistant_speaking = True
                 payload = pcm16_to_mulaw_b64(evt.audio_pcm16,
                                              source_rate=evt.sample_rate)
@@ -428,11 +431,12 @@ async def handle_twilio_stream(ws: WebSocket) -> None:
     """
     session = StreamSession(websocket=ws)
     session.ws_accept_at = asyncio.get_event_loop().time()
+    logger.info("[perf] websocket_accept_ms=0 (accepted)")
     bridge = _new_bridge()
     stop_event = asyncio.Event()
     pump_task: Optional[asyncio.Task] = None
     started = False
-    max_seconds = max(15, int(config.VOICE_MAX_CALL_SECONDS or 60))
+    max_seconds = max(15, int(config.VOICE_MAX_CALL_SECONDS or 120))
     deadline = asyncio.get_event_loop().time() + max_seconds
 
     # Cheap inbound-energy barge-in state.
@@ -477,14 +481,23 @@ async def handle_twilio_stream(ws: WebSocket) -> None:
                 logger.info("Smart RSVP language selected: %s job=%s",
                             _sel, session.job_id)
                 _t_connect = asyncio.get_event_loop().time()
-                await bridge.start(job=job, language=session.language)  # type: ignore[arg-type]
-                session.gemini_connected_at = asyncio.get_event_loop().time()
-                logger.info(
-                    "[perf] gemini_connect_ms=%d ws_accept_to_start_ms=%d job=%s",
-                    int((session.gemini_connected_at - _t_connect) * 1000),
-                    int((session.gemini_connected_at - (session.ws_accept_at or _t_connect)) * 1000),
-                    session.job_id,
-                )
+
+                async def _kick_off_bridge():
+                    try:
+                        await bridge.start(job=job, language=session.language)  # type: ignore[arg-type]
+                        session.gemini_connected_at = asyncio.get_event_loop().time()
+                        logger.info(
+                            "[perf] gemini_connect_ms=%d ws_accept_to_start_ms=%d job=%s",
+                            int((session.gemini_connected_at - _t_connect) * 1000),
+                            int((session.gemini_connected_at - (session.ws_accept_at or _t_connect)) * 1000),
+                            session.job_id,
+                        )
+                    except Exception:  # noqa: BLE001
+                        logger.exception("Gemini bridge.start crashed job=%s", session.job_id)
+
+                # Run Gemini connect + initial-turn in parallel with media frames
+                # so we don't block the WS receive loop while the live model spins up.
+                asyncio.create_task(_kick_off_bridge())
                 pump_task = asyncio.create_task(
                     _pump_agent_events(session, bridge, stop_event)
                 )

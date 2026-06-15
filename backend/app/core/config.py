@@ -140,7 +140,35 @@ VOICE_FALLBACK_LANGUAGE = os.getenv("VOICE_FALLBACK_LANGUAGE", "en")
 # --- Voice agent behavior ---
 VOICE_AGENT_NAME = os.getenv("VOICE_AGENT_NAME", "Nuru Voice Assistant")
 VOICE_DEFAULT_PURPOSE = os.getenv("VOICE_DEFAULT_PURPOSE", "rsvp")
-VOICE_MAX_CALL_SECONDS = _voice_env_int("VOICE_MAX_CALL_SECONDS", 60)
+VOICE_MAX_CALL_SECONDS = _voice_env_int("VOICE_MAX_CALL_SECONDS", 120)
+
+# --- Tanzanian Swahili voice style (Gemini Live prompt hints) ---
+VOICE_ACCENT = os.getenv("VOICE_ACCENT", "tanzanian_swahili")
+VOICE_DIALECT = os.getenv("VOICE_DIALECT", "sw-TZ")
+VOICE_TONE = os.getenv("VOICE_TONE", "polite,warm,calm,respectful")
+VOICE_SPEAKING_STYLE = os.getenv("VOICE_SPEAKING_STYLE", "natural_conversation")
+VOICE_USE_SHORT_SENTENCES = _voice_env_bool("VOICE_USE_SHORT_SENTENCES", True)
+VOICE_ALLOW_LIGHT_PAUSES = _voice_env_bool("VOICE_ALLOW_LIGHT_PAUSES", True)
+VOICE_AVOID_ROBOTIC_SWAHILI = _voice_env_bool("VOICE_AVOID_ROBOTIC_SWAHILI", True)
+
+# --- Gemini generation tuning ---
+GEMINI_TEMPERATURE = _voice_env_float("GEMINI_TEMPERATURE", 0.6)
+GEMINI_TOP_P = _voice_env_float("GEMINI_TOP_P", 0.9)
+GEMINI_PROACTIVE_AUDIO = _voice_env_bool("GEMINI_PROACTIVE_AUDIO", True)
+GEMINI_AFFECTIVE_DIALOG = _voice_env_bool("GEMINI_AFFECTIVE_DIALOG", True)
+
+
+def get_voice_style_config() -> dict:
+    """Tanzanian Swahili voice style — read in one place."""
+    return {
+        "accent": VOICE_ACCENT,
+        "dialect": VOICE_DIALECT,
+        "tone": VOICE_TONE,
+        "speaking_style": VOICE_SPEAKING_STYLE,
+        "short_sentences": VOICE_USE_SHORT_SENTENCES,
+        "light_pauses": VOICE_ALLOW_LIGHT_PAUSES,
+        "avoid_robotic_swahili": VOICE_AVOID_ROBOTIC_SWAHILI,
+    }
 VOICE_MAX_RETRY_ATTEMPTS = _voice_env_int("VOICE_MAX_RETRY_ATTEMPTS", 1)
 VOICE_MIN_RETRY_DELAY_MINUTES = _voice_env_int("VOICE_MIN_RETRY_DELAY_MINUTES", 240)
 VOICE_RETRY_BACKOFF_SECONDS = _voice_env_int(
