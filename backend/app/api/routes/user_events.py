@@ -4709,7 +4709,7 @@ def vendors_report(
 
     services = db.query(EventService).filter(EventService.event_id == eid).all()
     from utils.batch_loaders import build_event_service_dicts
-    currency = _currency_code(db, event.currency_id)
+    currency = _event_currency_code(db, event) or "TZS"
     rows = build_event_service_dicts(db, services, currency)
 
     # Confirmed vendor = manual with agreed price OR platform with accepted/assigned/in_progress/completed

@@ -10,7 +10,8 @@ This module deliberately keeps the wire protocol minimal:
 * Connect to ``wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage
   .v1beta.GenerativeService.BidiGenerateContent?key=API_KEY``.
 * Send a setup frame describing the model, voice, and tools.
-* Stream user audio with ``{"realtime_input": {"media_chunks": [...]}}``.
+* Stream user audio with ``{"realtime_input": {"audio": {...}}}``
+  (the ``media_chunks`` field was deprecated by Gemini Live in 2025).
 * Read ``serverContent`` frames and translate them into ``AgentEvent``s.
 
 Falls back to ``GEMINI_LIVE_MODEL_FALLBACK`` if the primary model rejects
@@ -237,23 +238,46 @@ class GeminiLiveBridge(AgentBridge):
             await self._events.put(AgentEvent(kind="end"))
 
     async def push_audio(self, pcm16: bytes, *, sample_rate: int) -> None:
+        # Skip work cheaply if the bridge is closed or the socket is gone.
         if self._ws is None or self._closed or not pcm16:
             return
         try:
             payload = base64.b64encode(pcm16).decode("ascii")
+            # Gemini Live v1beta (Sept 2025+) replaced
+            # `realtime_input.media_chunks[...]` with a single
+            # `realtime_input.audio { data, mime_type }` field. Sending the
+            # deprecated shape causes Gemini to close the WebSocket with:
+            #   "realtime_input.media_chunks is deprecated. Use audio,
+            #    video, or text instead."
             frame = {
                 "realtime_input": {
-                    "media_chunks": [
-                        {
-                            "mime_type": f"audio/pcm;rate={sample_rate or GEMINI_INPUT_RATE}",
-                            "data": payload,
-                        }
-                    ]
+                    "audio": {
+                        "mime_type": f"audio/pcm;rate={sample_rate or GEMINI_INPUT_RATE}",
+                        "data": payload,
+                    }
                 }
             }
             await self._ws.send(json.dumps(frame))
+        except ConnectionClosed:
+            # Gemini hung up — stop forwarding audio and surface a single
+            # "ai stream failed" end event instead of spamming the log.
+            if not self._closed:
+                logger.warning("Gemini Live WebSocket closed; stopping audio forwarding")
+                self._closed = True
+                await self._safe_close_ws()
+                await self._events.put(AgentEvent(
+                    kind="transcript", role="system",
+                    text="ai stream failed: gemini websocket closed",
+                ))
+                await self._events.put(AgentEvent(kind="end"))
         except Exception:  # noqa: BLE001
-            logger.exception("Gemini Live push_audio failed")
+            # Mark closed on the first unexpected send failure so we don't
+            # log the same traceback for every subsequent 20ms frame.
+            if not self._closed:
+                logger.exception("Gemini Live push_audio failed; stopping forwarding")
+                self._closed = True
+                await self._safe_close_ws()
+                await self._events.put(AgentEvent(kind="end"))
 
     async def stop(self) -> None:
         if self._closed:
