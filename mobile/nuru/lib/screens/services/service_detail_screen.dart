@@ -1,6 +1,8 @@
 import '../../core/widgets/nuru_refresh_indicator.dart';
 import '../../core/utils/money_format.dart';
 import 'dart:convert';
+import 'package:flutter/services.dart';
+import '../../core/widgets/amount_input.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -931,7 +933,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 const SizedBox(height: 10),
                 _sheetField(descCtrl, 'Description', 'Brief description...', maxLines: 2),
                 const SizedBox(height: 10),
-                _sheetField(priceCtrl, 'Price (TZS)', 'e.g. 150000', keyboardType: TextInputType.number),
+                _sheetField(priceCtrl, 'Price (TZS)', 'e.g. 150,000', keyboardType: TextInputType.number, inputFormatters: amountFormatters),
                 const SizedBox(height: 10),
                 _sheetField(featuresCtrl, 'Features (comma-separated)', 'e.g. 5 hours, 200 photos, Gallery', maxLines: 2),
                 const SizedBox(height: 14),
@@ -950,7 +952,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                           body: jsonEncode({
                             'name': nameCtrl.text.trim(),
                             'description': descCtrl.text.trim(),
-                            'price': num.tryParse(priceCtrl.text.trim()) ?? 0,
+                            'price': parseAmount(priceCtrl.text) ?? 0,
                             'features': featuresCtrl.text.split(',').map((f) => f.trim()).where((f) => f.isNotEmpty).toList(),
                           }),
                         );
@@ -1094,9 +1096,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 _sheetField(descCtrl, 'Description', 'Describe your service...', maxLines: 4),
                 const SizedBox(height: 10),
                 Row(children: [
-                  Expanded(child: _sheetField(minPriceCtrl, 'Min Price (TZS)', 'e.g. 50000', keyboardType: TextInputType.number)),
+                  Expanded(child: _sheetField(minPriceCtrl, 'Min Price (TZS)', 'e.g. 50,000', keyboardType: TextInputType.number, inputFormatters: amountFormatters)),
                   const SizedBox(width: 8),
-                  Expanded(child: _sheetField(maxPriceCtrl, 'Max Price (TZS)', 'e.g. 200000', keyboardType: TextInputType.number)),
+                  Expanded(child: _sheetField(maxPriceCtrl, 'Max Price (TZS)', 'e.g. 200,000', keyboardType: TextInputType.number, inputFormatters: amountFormatters)),
                 ]),
                 const SizedBox(height: 10),
                 _sheetField(locationCtrl, 'Location', 'e.g. Dar es Salaam'),
@@ -1180,11 +1182,12 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     titleCtrl.dispose(); descCtrl.dispose(); minPriceCtrl.dispose(); maxPriceCtrl.dispose(); locationCtrl.dispose();
   }
 
-  Widget _sheetField(TextEditingController ctrl, String label, String hint, {int maxLines = 1, TextInputType keyboardType = TextInputType.text}) {
+  Widget _sheetField(TextEditingController ctrl, String label, String hint, {int maxLines = 1, TextInputType keyboardType = TextInputType.text, List<TextInputFormatter>? inputFormatters}) {
     return TextField(
       controller: ctrl,
       maxLines: maxLines,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: _f(size: 14),
       decoration: InputDecoration(
         labelText: label,

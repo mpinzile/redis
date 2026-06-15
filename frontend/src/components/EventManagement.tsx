@@ -37,7 +37,10 @@ import { EventManagementSkeleton } from '@/components/ui/EventManagementSkeleton
 import { eventsApi, showCaughtError } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { servicesApi } from '@/lib/api/services';
+import { referencesApi } from '@/lib/api/references';
 import { photoLibrariesApi } from '@/lib/api/photoLibraries';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 import { toast } from 'sonner';
 import { useEventPermissions } from '@/hooks/useEventPermissions';
@@ -109,6 +112,10 @@ const EventManagement = () => {
   const [serviceSearch, setServiceSearch] = useState('');
   const [deleteServiceId, setDeleteServiceId] = useState<string | null>(null);
   const [logPaymentFor, setLogPaymentFor] = useState<{ id: string; vendorName: string; serviceTitle: string; agreedPrice?: number | null } | null>(null);
+  const [addMode, setAddMode] = useState<'search' | 'manual'>('search');
+  const [serviceCategories, setServiceCategories] = useState<{ id: string; name: string }[]>([]);
+  const [manualForm, setManualForm] = useState({ name: '', categoryId: '', phone: '', email: '', price: '', notes: '' });
+  const [manualSubmitting, setManualSubmitting] = useState(false);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -231,6 +238,47 @@ const EventManagement = () => {
       }
     } catch (err: any) { showCaughtError(err); }
     finally { setAddingServiceId(null); }
+  };
+
+  // Load service categories the first time the manual-vendor form is opened
+  useEffect(() => {
+    if (addMode === 'manual' && serviceCategories.length === 0) {
+      referencesApi.getServiceCategories()
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setServiceCategories(res.data.map((c: any) => ({ id: c.id, name: c.name })));
+          }
+        })
+        .catch(() => { /* silent */ });
+    }
+  }, [addMode, serviceCategories.length]);
+
+  const handleAddManualVendor = async () => {
+    if (!id) return;
+    const name = manualForm.name.trim();
+    if (!name) { toast.error('Vendor name is required'); return; }
+    setManualSubmitting(true);
+    try {
+      const payload: any = {
+        manual_vendor_name: name,
+        manual_vendor_category_id: manualForm.categoryId || undefined,
+        manual_vendor_phone: manualForm.phone.trim() || undefined,
+        manual_vendor_email: manualForm.email.trim() || undefined,
+        manual_vendor_notes: manualForm.notes.trim() || undefined,
+        quoted_price: manualForm.price ? Number(manualForm.price) : undefined,
+      };
+      const res = await eventsApi.addManualVendor(id, payload);
+      if (res.success) {
+        toast.success(`${name} added as off-platform vendor`);
+        loadEventServices();
+        setShowAddServiceDialog(false);
+        setManualForm({ name: '', categoryId: '', phone: '', email: '', price: '', notes: '' });
+        setAddMode('search');
+      } else {
+        showCaughtError(res);
+      }
+    } catch (err: any) { showCaughtError(err); }
+    finally { setManualSubmitting(false); }
   };
 
   if (eventLoading || permsLoading) return <EventManagementSkeleton />;
@@ -484,16 +532,42 @@ const EventManagement = () => {
         </TabsContent>
 
         <TabsContent value="services" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
-              <h2 className="text-lg font-bold">Service Providers</h2>
-              <p className="text-xs text-muted-foreground">{eventServices.length} service{eventServices.length !== 1 ? 's' : ''} - {completedServices} completed</p>
+              <h2 className="text-lg font-bold">Vendors</h2>
+              <p className="text-xs text-muted-foreground">{eventServices.length} vendor{eventServices.length !== 1 ? 's' : ''} - {completedServices} completed</p>
             </div>
-            {(permissions.can_manage_vendors || permissions.is_creator) && (
-              <Button size="sm" onClick={() => setShowAddServiceDialog(true)}>
-                <Plus className="w-4 h-4 mr-1.5" />Add Service
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const blob = await eventsApi.downloadVendorsReport(id!, 'pdf');
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `vendors-${id}.pdf`; a.click();
+                    URL.revokeObjectURL(url);
+                  } catch { toast.error('Failed to download report'); }
+                }}
+              >PDF</Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const blob = await eventsApi.downloadVendorsReport(id!, 'xlsx');
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `vendors-${id}.xlsx`; a.click();
+                    URL.revokeObjectURL(url);
+                  } catch { toast.error('Failed to download report'); }
+                }}
+              >Excel</Button>
+              {(permissions.can_manage_vendors || permissions.is_creator) && (
+                <Button size="sm" onClick={() => setShowAddServiceDialog(true)}>
+                  <Plus className="w-4 h-4 mr-1.5" />Add Vendor
+                </Button>
+              )}
+            </div>
           </div>
 
           {servicesLoading ? (
@@ -513,11 +587,11 @@ const EventManagement = () => {
               <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Plus className="w-8 h-8 text-primary opacity-60" />
               </div>
-              <h3 className="font-bold text-lg mb-1">No Services Yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">Add service providers to make your event a success.</p>
+              <h3 className="font-bold text-lg mb-1">No Vendors Yet</h3>
+              <p className="text-sm text-muted-foreground mb-4">Add vendors to keep their bookings and payments in one place.</p>
               {(permissions.can_manage_vendors || permissions.is_creator) && (
                 <Button onClick={() => setShowAddServiceDialog(true)}>
-                  <Plus className="w-4 h-4 mr-1.5" />Add First Service
+                  <Plus className="w-4 h-4 mr-1.5" />Add First Vendor
                 </Button>
               )}
             </div>
@@ -572,17 +646,29 @@ const EventManagement = () => {
                     <div className="relative aspect-[4/3] bg-muted overflow-hidden">
                       {serviceImage ? (
                         <img src={serviceImage} alt={service.service?.title} className="w-full h-full object-cover" />
+                      ) : service.is_manual ? (
+                        <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-primary/5 to-primary/15">
+                          <span className="text-2xl font-bold text-primary/70">
+                            {(service.service?.title || 'V').slice(0, 2).toUpperCase()}
+                          </span>
+                          <span className="text-[10px] font-medium text-muted-foreground mt-1 uppercase tracking-wide">Off-platform</span>
+                        </div>
                       ) : (
                         <div className="flex items-center justify-center h-full">
                           <Users className="w-10 h-10 text-muted-foreground/20" />
                         </div>
                       )}
 
-                      {/* Status badge */}
-                      <div className="absolute top-3 left-3">
+                      {/* Status + Off-platform badges */}
+                      <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
                         <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${statusStyle[service.status] || 'bg-muted text-muted-foreground'}`}>
                           {service.status}
                         </span>
+                        {service.is_manual && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 dark:bg-black/70 text-foreground border border-border backdrop-blur-sm">
+                            Off-platform
+                          </span>
+                        )}
                       </div>
 
                       {/* Price */}
@@ -591,9 +677,6 @@ const EventManagement = () => {
                           {formatPrice(service.quoted_price)}
                         </div>
                       )}
-
-                      {/* Status is system-driven (booking accepted → assigned, OTP confirmed → completed,
-                          booking cancelled → cancelled). It cannot be changed manually. */}
                     </div>
 
                     {/* Body */}
@@ -658,7 +741,7 @@ const EventManagement = () => {
                       )}
 
                       {/* Log offline payment CTA */}
-                      {(permissions.can_manage_vendors || permissions.is_creator) && service.status === 'assigned' && (
+                      {(permissions.can_manage_vendors || permissions.is_creator) && (service.status === 'assigned' || (service.is_manual && service.status !== 'cancelled')) && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -744,53 +827,130 @@ const EventManagement = () => {
       </Tabs>
 
       {/* Add Service Dialog */}
-      <Dialog open={showAddServiceDialog} onOpenChange={setShowAddServiceDialog}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader><DialogTitle>Add Service Provider</DialogTitle><DialogDescription>Search for a service provider to assign to your event</DialogDescription></DialogHeader>
-          <div className="space-y-4 flex-1 min-h-0 flex flex-col">
-            <div className="relative flex-shrink-0">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search by name, category..." value={serviceSearch} onChange={(e) => handleServiceSearch(e.target.value)} className="pl-9" autoComplete="off" />
-            </div>
-            <ScrollArea className="flex-1 min-h-0 max-h-[50vh] pr-4">
-              <div className="space-y-2">
-                {searchLoading && (
-                  <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-                )}
-                {!searchLoading && searchResults.map((service: any) => (
-                  <button
-                    key={service.id}
-                    onClick={() => handleAddService(service)}
-                    disabled={addingServiceId === service.id}
-                    className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center gap-3"
-                  >
-                    <Avatar className="w-10 h-10 flex-shrink-0">
-                      <AvatarImage src={service.primary_image || service.images?.[0]?.url} />
-                      <AvatarFallback>{service.title?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium truncate">{service.title}</span>
+      <Dialog open={showAddServiceDialog} onOpenChange={(v) => { setShowAddServiceDialog(v); if (!v) setAddMode('search'); }}>
+        <DialogContent className="sm:max-w-[520px] max-h-[88vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Add Vendor</DialogTitle>
+            <DialogDescription>
+              {addMode === 'search'
+                ? 'Find a verified vendor on Nuru or add one manually if they are not yet on Nuru.'
+                : 'Record an off-platform vendor so you can track payments here.'}
+            </DialogDescription>
+          </DialogHeader>
 
+          {/* Mode toggle */}
+          <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-xl flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setAddMode('search')}
+              className={`text-xs font-semibold py-2 rounded-lg transition-colors ${addMode === 'search' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              From Nuru
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddMode('manual')}
+              className={`text-xs font-semibold py-2 rounded-lg transition-colors ${addMode === 'manual' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Not on Nuru
+            </button>
+          </div>
+
+          {addMode === 'search' ? (
+            <div className="space-y-4 flex-1 min-h-0 flex flex-col">
+              <div className="relative flex-shrink-0">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search by name, category..." value={serviceSearch} onChange={(e) => handleServiceSearch(e.target.value)} className="pl-9" autoComplete="off" />
+              </div>
+              <ScrollArea className="flex-1 min-h-0 max-h-[50vh] pr-4">
+                <div className="space-y-2">
+                  {searchLoading && (
+                    <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+                  )}
+                  {!searchLoading && searchResults.map((service: any) => (
+                    <button
+                      key={service.id}
+                      onClick={() => handleAddService(service)}
+                      disabled={addingServiceId === service.id}
+                      className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center gap-3"
+                    >
+                      <Avatar className="w-10 h-10 flex-shrink-0">
+                        <AvatarImage src={service.primary_image || service.images?.[0]?.url} />
+                        <AvatarFallback>{service.title?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium truncate">{service.title}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
+                          <span className="truncate">{service.category_name || service.category || service.service_type_name}</span>
+                          {service.provider?.name && <><span>•</span><span className="truncate">{service.provider.name}</span></>}
+                          {service.min_price && <><span>•</span><span className="whitespace-nowrap">From TZS {formatPrice(service.min_price)}</span></>}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
-                        <span className="truncate">{service.category_name || service.category || service.service_type_name}</span>
-                        {service.provider?.name && <><span>•</span><span className="truncate">{service.provider.name}</span></>}
-                        {service.min_price && <><span>•</span><span className="whitespace-nowrap">From TZS {formatPrice(service.min_price)}</span></>}
-                      </div>
+                      {addingServiceId === service.id && <Loader2 className="w-4 h-4 animate-spin" />}
+                    </button>
+                  ))}
+                  {!searchLoading && serviceSearch.length >= 2 && searchResults.length === 0 && (
+                    <div className="text-center py-8 space-y-3">
+                      <p className="text-sm text-muted-foreground">No vendors found on Nuru</p>
+                      <Button variant="outline" size="sm" onClick={() => { setManualForm((f) => ({ ...f, name: serviceSearch })); setAddMode('manual'); }}>
+                        <Plus className="w-3.5 h-3.5 mr-1.5" />Add "{serviceSearch}" manually
+                      </Button>
                     </div>
-                    {addingServiceId === service.id && <Loader2 className="w-4 h-4 animate-spin" />}
-                  </button>
-                ))}
-                {!searchLoading && serviceSearch.length >= 2 && searchResults.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">No service providers found</div>
-                )}
-                {!searchLoading && serviceSearch.length < 2 && (
-                  <div className="text-center py-8 text-muted-foreground">Type at least 2 characters to search</div>
-                )}
+                  )}
+                  {!searchLoading && serviceSearch.length < 2 && (
+                    <div className="text-center py-8 text-muted-foreground text-sm">Type at least 2 characters to search</div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          ) : (
+            <ScrollArea className="flex-1 min-h-0 max-h-[60vh] pr-3">
+              <div className="space-y-3 py-1">
+                <div className="space-y-1.5">
+                  <Label htmlFor="mv-name" className="text-xs font-medium">Vendor name <span className="text-destructive">*</span></Label>
+                  <Input id="mv-name" placeholder="e.g. Asili Catering" value={manualForm.name} onChange={(e) => setManualForm({ ...manualForm, name: e.target.value })} autoComplete="off" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Category</Label>
+                  <Select value={manualForm.categoryId || undefined} onValueChange={(v) => setManualForm({ ...manualForm, categoryId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {serviceCategories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mv-phone" className="text-xs font-medium">Phone</Label>
+                    <Input id="mv-phone" placeholder="0712 345 678" value={manualForm.phone} onChange={(e) => setManualForm({ ...manualForm, phone: e.target.value })} autoComplete="off" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mv-email" className="text-xs font-medium">Email</Label>
+                    <Input id="mv-email" type="email" placeholder="vendor@example.com" value={manualForm.email} onChange={(e) => setManualForm({ ...manualForm, email: e.target.value })} autoComplete="off" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mv-price" className="text-xs font-medium">Agreed price (TZS)</Label>
+                  <Input id="mv-price" type="number" inputMode="numeric" placeholder="0" value={manualForm.price} onChange={(e) => setManualForm({ ...manualForm, price: e.target.value })} autoComplete="off" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mv-notes" className="text-xs font-medium">Notes</Label>
+                  <Textarea id="mv-notes" rows={3} placeholder="Anything you want to remember about this vendor..." value={manualForm.notes} onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })} />
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button variant="ghost" onClick={() => setShowAddServiceDialog(false)} disabled={manualSubmitting}>Cancel</Button>
+                  <Button onClick={handleAddManualVendor} disabled={manualSubmitting || !manualForm.name.trim()}>
+                    {manualSubmitting && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
+                    Save vendor
+                  </Button>
+                </div>
               </div>
             </ScrollArea>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 

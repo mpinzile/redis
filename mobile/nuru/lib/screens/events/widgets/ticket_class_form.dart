@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../core/widgets/amount_input.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/money_format.dart';
@@ -68,7 +70,7 @@ class _TicketClassFormSheetState extends State<TicketClassFormSheet> {
       final d = widget.editData!;
       _nameCtrl.text = d.name;
       _descCtrl.text = d.description;
-      _priceCtrl.text = d.price > 0 ? d.price.toStringAsFixed(0) : '';
+      _priceCtrl.text = d.price > 0 ? AmountInputFormatter().formatEditUpdate(const TextEditingValue(), TextEditingValue(text: d.price.toStringAsFixed(0))).text : '';
       _qtyCtrl.text = d.quantity > 0 ? d.quantity.toString() : '';
     }
     _nameCtrl.addListener(() => setState(() {}));
@@ -181,7 +183,7 @@ class _TicketClassFormSheetState extends State<TicketClassFormSheet> {
               Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   _label('Price (${getActiveCurrency()})'),
-                  _textField(_priceCtrl, '50,000', keyboard: TextInputType.number),
+                  _textField(_priceCtrl, '50,000', keyboard: TextInputType.number, inputFormatters: amountFormatters),
                 ])),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -233,11 +235,12 @@ class _TicketClassFormSheetState extends State<TicketClassFormSheet> {
     child: Text(text, style: appText(size: 12.5, weight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 0.2)),
   );
 
-  Widget _textField(TextEditingController ctrl, String hint, {int maxLines = 1, TextInputType? keyboard}) {
+  Widget _textField(TextEditingController ctrl, String hint, {int maxLines = 1, TextInputType? keyboard, List<TextInputFormatter>? inputFormatters}) {
     return TextFormField(
       controller: ctrl,
       maxLines: maxLines,
       keyboardType: keyboard,
+      inputFormatters: inputFormatters,
       autocorrect: false,
       style: appText(size: 14.5),
       decoration: InputDecoration(

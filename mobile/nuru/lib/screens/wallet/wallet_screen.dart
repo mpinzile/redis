@@ -6,6 +6,8 @@ import '../../core/utils/money_format.dart';
 import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/nuru_subpage_app_bar.dart';
 import '../../core/widgets/nuru_skeleton.dart';
+import '../../core/widgets/nuru_scrollable_tabs.dart';
+
 import '../../providers/wallet_provider.dart';
 import '../bookings/bookings_screen.dart';
 import 'make_payment_screen.dart';
@@ -475,48 +477,14 @@ class _ActivityTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (_, __) => Row(
-          children: List.generate(_labels.length, (i) {
-            final active = controller.index == i;
-            return Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => controller.animateTo(i),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: active ? AppColors.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    _labels[i],
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ).copyWith(
-                      color: active ? Colors.white : AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
+    return NuruPillTabBar(
+      controller: controller,
+      labels: _labels,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
     );
   }
 }
+
 
 // ─── Purpose icon resolver ────────────────────────────────────────────────────
 /// Picks an SVG icon name that matches the *purpose* of a wallet entry,

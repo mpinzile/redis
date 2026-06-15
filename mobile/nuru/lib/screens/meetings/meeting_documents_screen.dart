@@ -1,4 +1,6 @@
 import '../../core/widgets/nuru_refresh_indicator.dart';
+import '../../core/widgets/nuru_scrollable_tabs.dart';
+
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -485,23 +487,14 @@ class _MeetingDocumentsScreenState extends State<MeetingDocumentsScreen> with Si
       ),
       body: Column(
         children: [
-          // Custom tab bar
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey[200],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                _tabButton(0, Icons.list_alt_rounded, _t('agenda'), theme),
-                const SizedBox(width: 4),
-                _tabButton(1, Icons.description_rounded, _t('minutes'), theme),
-              ],
-            ),
+          // Pill-style tab bar (YouTube-style).
+          NuruPillTabBar(
+            controller: _tabCtrl,
+            labels: [_t('agenda'), _t('minutes')],
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           ),
           const SizedBox(height: 4),
+
           // Tab content
           Expanded(
             child: TabBarView(

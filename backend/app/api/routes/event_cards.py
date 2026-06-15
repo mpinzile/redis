@@ -816,8 +816,9 @@ def preview_event_card_svg(
             ec = db.query(EventContributor).options(joinedload(EventContributor.contributor)).filter(
                 EventContributor.id == uuid.UUID(contributor_id), EventContributor.event_id == event.id
             ).first()
-            if ec and ec.contributor:
-                name = ec.contributor.name
+            if ec:
+                ev_name = (getattr(ec, "display_name", None) or "").strip()
+                name = ev_name or (ec.contributor.name if ec.contributor else None)
         except Exception:
             pass
     svg, _ec, _tpl = _render_event_card_svg(db, event, category, contributor_name=name)
@@ -840,8 +841,9 @@ def preview_event_card_png(
             ec = db.query(EventContributor).options(joinedload(EventContributor.contributor)).filter(
                 EventContributor.id == uuid.UUID(contributor_id), EventContributor.event_id == event.id
             ).first()
-            if ec and ec.contributor:
-                name = ec.contributor.name
+            if ec:
+                ev_name = (getattr(ec, "display_name", None) or "").strip()
+                name = ev_name or (ec.contributor.name if ec.contributor else None)
         except Exception:
             pass
     svg, _ec, tpl = _render_event_card_svg(db, event, category, contributor_name=name)
@@ -1070,11 +1072,12 @@ def send_pledge_thank_you_cards(
         for ec in contributors:
             if not ec.contributor:
                 continue
-            # Display name — prefer the organiser-supplied common_name
-            # ("Mr & Mrs Mpinzile") for cards, fall back to the canonical
-            # contributor name. Mirrors the guest branch above.
+            # Display name priority: per-event override on EventContributor →
+            # organiser-supplied common_name ("Mr & Mrs Mpinzile") → canonical
+            # global contributor name → "Friend" fallback.
+            ev_display = (getattr(ec, "display_name", None) or "").strip()
             contrib_common = (getattr(ec.contributor, "common_name", None) or "").strip()
-            contrib_display = contrib_common or (ec.contributor.name or "Friend")
+            contrib_display = ev_display or contrib_common or (ec.contributor.name or "Friend")
             existing = None
             if prepare_only:
                 existing = (

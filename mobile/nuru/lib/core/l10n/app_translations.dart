@@ -180,7 +180,7 @@ class AppTranslations {
     'vendors': {'en': 'Vendors', 'sw': 'Watoa Huduma'},
     'all': {'en': 'All', 'sw': 'Zote'},
     'people': {'en': 'People', 'sw': 'Watu'},
-    'services': {'en': 'Services', 'sw': 'Huduma'},
+    'services': {'en': 'Vendors', 'sw': 'Wachuuzi'},
     'my_services': {'en': 'My Services', 'sw': 'Huduma Zangu'},
     'find_services': {'en': 'Find Vendors', 'sw': 'Tafuta Watoa Huduma'},
     'book_service': {'en': 'Book Vendor', 'sw': 'Weka Oda ya Huduma'},

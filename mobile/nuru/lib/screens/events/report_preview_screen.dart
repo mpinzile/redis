@@ -34,6 +34,8 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
   bool _saved = false;
   bool _sharing = false;
 
+  static const MethodChannel _mediaStoreChannel = MethodChannel('tz.nuru.app/media_store');
+
   Future<String> _ensureFile() async {
     if (widget.filePath != null && File(widget.filePath!).existsSync()) {
       return widget.filePath!;
@@ -42,6 +44,43 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
     final file = File('${dir.path}/${widget.title.replaceAll(' ', '_').toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}.pdf');
     await file.writeAsBytes(widget.pdfBytes);
     return file.path;
+  }
+
+  /// Persist the report to a user-visible location.
+  /// On Android we push it through the MediaStore so it lands in
+  /// Downloads/Nuru/Reports and shows up in the Files app immediately.
+  /// On iOS we drop it into the app's Documents directory which is
+  /// reachable from the Files app when file sharing is enabled.
+  Future<String?> _saveReportToDevice() async {
+    final sourcePath = await _ensureFile();
+    final safeTitle = widget.title.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final fileName = '${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+    if (Platform.isAndroid) {
+      try {
+        final uri = await _mediaStoreChannel.invokeMethod<String>('saveToDownloads', {
+          'sourcePath': sourcePath,
+          'fileName': fileName,
+          'folderName': 'Reports',
+          'mimeType': 'application/pdf',
+        });
+        return uri ?? sourcePath;
+      } catch (_) {
+        // Fall back to a copy in app documents so the action never silently no-ops.
+        return await _copyToDocuments(sourcePath, fileName);
+      }
+    }
+    return await _copyToDocuments(sourcePath, fileName);
+  }
+
+  Future<String?> _copyToDocuments(String sourcePath, String fileName) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final out = File('${dir.path}/$fileName');
+      await out.writeAsBytes(await File(sourcePath).readAsBytes());
+      return out.path;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -203,10 +242,18 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
                         duration: const Duration(milliseconds: 250),
                         child: ElevatedButton.icon(
                           onPressed: _saved ? null : () async {
-                            await _ensureFile();
-                            setState(() => _saved = true);
-                            HapticFeedback.mediumImpact();
-                            if (mounted) AppSnackbar.success(context, 'Report saved to device');
+                            final savedPath = await _saveReportToDevice();
+                            if (!mounted) return;
+                            if (savedPath != null) {
+                              setState(() => _saved = true);
+                              HapticFeedback.mediumImpact();
+                              AppSnackbar.success(context,
+                                Platform.isAndroid
+                                  ? 'Saved to Downloads/Nuru/Reports'
+                                  : 'Saved to Files · On My iPhone › Nuru');
+                            } else {
+                              AppSnackbar.error(context, "Couldn't save the report");
+                            }
                           },
                           icon: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 300),

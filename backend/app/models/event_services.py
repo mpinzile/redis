@@ -15,7 +15,7 @@ class EventService(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     event_id = Column(UUID(as_uuid=True), ForeignKey('events.id', ondelete='CASCADE'), nullable=False)
-    service_id = Column(UUID(as_uuid=True), ForeignKey('service_types.id', ondelete='CASCADE'), nullable=False)
+    service_id = Column(UUID(as_uuid=True), ForeignKey('service_types.id', ondelete='CASCADE'), nullable=True)
     provider_user_service_id = Column(UUID(as_uuid=True), ForeignKey('user_services.id', ondelete='SET NULL'))
     provider_user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'))
     agreed_price = Column(Numeric)
@@ -23,6 +23,15 @@ class EventService(Base):
     service_status = Column(Enum(EventServiceStatusEnum, name="event_service_status_enum"), default=EventServiceStatusEnum.pending, nullable=False)
     notes = Column(Text)
     assigned_at = Column(DateTime)
+    # Manual (off-platform) vendor support — used when planners record a vendor
+    # that is not yet on Nuru. For manual rows, provider_user_service_id /
+    # provider_user_id stay NULL and the manual_vendor_* fields describe the vendor.
+    is_manual = Column(Boolean, default=False, nullable=False)
+    manual_vendor_name = Column(Text)
+    manual_vendor_phone = Column(Text)
+    manual_vendor_email = Column(Text)
+    manual_vendor_category_id = Column(UUID(as_uuid=True), ForeignKey('service_categories.id', ondelete='SET NULL'))
+    manual_vendor_notes = Column(Text)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 

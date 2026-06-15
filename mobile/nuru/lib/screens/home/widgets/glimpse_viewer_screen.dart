@@ -93,6 +93,13 @@ class _GlimpseViewerScreenState extends State<GlimpseViewerScreen>
     final id = _moment['id']?.toString();
     if (id != null) {
       MomentsService.markSeen(id);
+      // Optimistically mark this moment as seen locally so the rail ring and
+      // viewer's next-unseen logic reflect it immediately, even before the
+      // next /moments fetch returns. Cross-device freshness still comes from
+      // the server's has_seen flag on the next refresh.
+      if (_moment['has_seen'] != true) {
+        _moment['has_seen'] = true;
+      }
       _loadViewers(id);
     }
 

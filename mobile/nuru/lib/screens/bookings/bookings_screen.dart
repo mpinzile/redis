@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../core/widgets/amount_input.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -857,12 +858,14 @@ class _BookingCard extends StatelessWidget {
                   TextField(
                     controller: priceCtrl,
                     keyboardType: TextInputType.number,
+                    inputFormatters: amountFormatters,
                     decoration: const InputDecoration(labelText: 'Quoted price'),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: depositCtrl,
                     keyboardType: TextInputType.number,
+                    inputFormatters: amountFormatters,
                     decoration: const InputDecoration(labelText: 'Deposit required'),
                   ),
                   const SizedBox(height: 8),
@@ -897,8 +900,8 @@ class _BookingCard extends StatelessWidget {
                         id,
                         status: status,
                         message: messageCtrl.text.trim(),
-                        quotedPrice: double.tryParse(priceCtrl.text.trim()),
-                        depositRequired: double.tryParse(depositCtrl.text.trim()),
+                        quotedPrice: parseAmount(priceCtrl.text),
+                        depositRequired: parseAmount(depositCtrl.text),
                         reason: reasonCtrl.text.trim(),
                       );
                       setS(() => submitting = false);

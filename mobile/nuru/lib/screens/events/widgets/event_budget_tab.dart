@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../core/widgets/amount_input.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../../core/widgets/nuru_refresh_indicator.dart';
 import '../../../core/widgets/app_icon.dart';
@@ -1279,7 +1281,8 @@ class _EventBudgetTabState extends State<EventBudgetTab>
                             children: [
                           _label('Estimated cost'),
                           _input(estCtrl, '${getActiveCurrency()} 0',
-                              keyboard: TextInputType.number),
+                              keyboard: TextInputType.number,
+                              inputFormatters: amountFormatters),
                         ])),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1288,7 +1291,8 @@ class _EventBudgetTabState extends State<EventBudgetTab>
                             children: [
                           _label('Actual cost'),
                           _input(actCtrl, '${getActiveCurrency()} 0',
-                              keyboard: TextInputType.number),
+                              keyboard: TextInputType.number,
+                              inputFormatters: amountFormatters),
                         ])),
                   ]),
                   const SizedBox(height: 14),
@@ -1316,10 +1320,8 @@ class _EventBudgetTabState extends State<EventBudgetTab>
                             widget.eventId, {
                           'category': selectedCategory,
                           'description': descCtrl.text.trim(),
-                          'estimated_cost':
-                              double.tryParse(estCtrl.text.trim()) ?? 0,
-                          'actual_cost':
-                              double.tryParse(actCtrl.text.trim()) ?? 0,
+                          'estimated_cost': parseAmount(estCtrl.text) ?? 0,
+                          'actual_cost': parseAmount(actCtrl.text) ?? 0,
                           'vendor_name': vendorCtrl.text.trim().isEmpty
                               ? null
                               : vendorCtrl.text.trim(),
@@ -1361,11 +1363,13 @@ class _EventBudgetTabState extends State<EventBudgetTab>
       );
 
   Widget _input(TextEditingController c, String hint,
-      {TextInputType keyboard = TextInputType.text, int maxLines = 1}) {
+      {TextInputType keyboard = TextInputType.text, int maxLines = 1,
+      List<TextInputFormatter>? inputFormatters}) {
     return TextField(
       controller: c,
       keyboardType: keyboard,
       maxLines: maxLines,
+      inputFormatters: inputFormatters,
       style: appText(size: 14),
       decoration: InputDecoration(
         hintText: hint,

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/nuru_scrollable_tabs.dart';
+
 import '../../core/services/event_groups_service.dart';
 import '../../core/widgets/app_snackbar.dart';
 import 'widgets/chat_panel.dart';
@@ -147,36 +149,8 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
     return parts.take(2).map((s) => s.isEmpty ? '' : s[0].toUpperCase()).join();
   }
 
-  // ─── Tab pill (label only, no icons) ───
-  Widget _pillTab(String label, int index) {
-    final ctrl = _tabs;
-    if (ctrl == null) return const SizedBox.shrink();
-    return AnimatedBuilder(
-      animation: ctrl,
-      builder: (_, __) {
-        final active = ctrl.index == index;
-        final fg = active ? Colors.white : AppColors.primary;
-        return GestureDetector(
-          onTap: () => ctrl.animateTo(index),
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            decoration: BoxDecoration(
-              color: active ? AppColors.primary : Colors.white,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: AppColors.primary.withOpacity(active ? 0 : 0.55), width: 1.2),
-              boxShadow: active
-                  ? [BoxShadow(color: AppColors.primary.withOpacity(0.30), blurRadius: 12, offset: const Offset(0, 4))]
-                  : null,
-            ),
-            child: Text(label,
-                style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w700, fontSize: 13, color: fg, letterSpacing: -0.1)),
-          ),
-        );
-      },
-    );
-  }
+
+
 
 
   // ─── Header right-side icon button (no circle border per mockup) ───
@@ -454,17 +428,13 @@ class _EventGroupWorkspaceScreenState extends State<EventGroupWorkspaceScreen>
                 // Non-organisers only ever see the chat workspace - the
                 // Contributors scoreboard and Analytics panel hold sensitive
                 // financial data. The same rule is enforced server-side.
-                if (isAdmin)
-                  Padding(
+                if (isAdmin && _tabs != null)
+                  NuruPillTabBar(
+                    controller: _tabs!,
+                    labels: const ['Chat', 'Contributors', 'Analytics'],
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                    child: Row(children: [
-                      _pillTab('Chat', 0),
-                      const SizedBox(width: 8),
-                      _pillTab('Contributors', 1),
-                      const SizedBox(width: 8),
-                      _pillTab('Analytics', 2),
-                    ]),
                   ),
+
 
                 // ─── Body ───
                 Expanded(

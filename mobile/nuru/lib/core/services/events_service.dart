@@ -694,6 +694,16 @@ class EventsService {
     String eventId,
     Map<String, dynamic> data,
   ) => EventExtrasService.addEventService(eventId, data);
+  static Future<Map<String, dynamic>> addManualVendor(
+    String eventId,
+    Map<String, dynamic> data,
+  ) => EventExtrasService.addManualVendor(eventId, data);
+  static Future<Map<String, dynamic>> downloadVendorsReport(
+    String eventId, {
+    String format = 'pdf',
+  }) => EventExtrasService.downloadVendorsReport(eventId, format: format);
+  static Future<Map<String, dynamic>> getServiceCategories() =>
+      EventExtrasService.getServiceCategories();
   static Future<Map<String, dynamic>> removeEventService(
     String eventId,
     String serviceId,
@@ -716,8 +726,6 @@ class EventsService {
     category: category,
     search: search,
   );
-  static Future<Map<String, dynamic>> getServiceCategories() =>
-      EventExtrasService.getServiceCategories();
   static Future<Map<String, dynamic>> getEventTypes() =>
       EventExtrasService.getEventTypes();
   static Future<Map<String, dynamic>> downloadReport(

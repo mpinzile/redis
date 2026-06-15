@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/nuru_subpage_app_bar.dart';
 import '../../core/widgets/nuru_refresh_indicator.dart';
+import '../../core/widgets/nuru_scrollable_tabs.dart';
+
 import '../../core/widgets/nuru_skeleton.dart';
 import '../../core/services/social_service.dart';
 import '../../core/services/events_service.dart';
@@ -341,63 +343,21 @@ class _CircleScreenState extends State<CircleScreen> {
   // ─── Underline tabs ───────────────────────────────────────────────────────
 
   Widget _underlineTabs() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(children: [
-        for (int i = 0; i < _tabs.length; i++) ...[
-          _tabPill(i),
-          if (i < _tabs.length - 1) const SizedBox(width: 24),
-        ],
-      ]),
+    final labels = <String>[];
+    for (int i = 0; i < _tabs.length; i++) {
+      int? badge;
+      if (i == 1 && _requests.isNotEmpty) badge = _requests.length;
+      if (i == 2 && _invitations.isNotEmpty) badge = _invitations.length;
+      labels.add(badge != null ? '${_tabs[i]} ($badge)' : _tabs[i]);
+    }
+    return NuruScrollableTabs(
+      labels: labels,
+      activeIndex: _activeTab,
+      onChanged: (i) => setState(() => _activeTab = i),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     );
   }
 
-  Widget _tabPill(int i) {
-    final active = _activeTab == i;
-    final label = _tabs[i];
-    int? badge;
-    if (i == 1 && _requests.isNotEmpty) badge = _requests.length;
-    if (i == 2 && _invitations.isNotEmpty) badge = _invitations.length;
-
-    return GestureDetector(
-      onTap: () => setState(() => _activeTab = i),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: IntrinsicWidth(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(label,
-                  style: GoogleFonts.inter(
-                    fontSize: 13.5,
-                    fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                    color: active ? AppColors.textPrimary : AppColors.textTertiary,
-                  )),
-              if (badge != null) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('$badge',
-                      style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: Colors.white)),
-                ),
-              ],
-            ]),
-            const SizedBox(height: 6),
-            Container(
-              height: 2.5,
-              decoration: BoxDecoration(
-                color: active ? AppColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ]),
-        ),
-      ),
-    );
-  }
 
   // ─── Tab content ──────────────────────────────────────────────────────────
 

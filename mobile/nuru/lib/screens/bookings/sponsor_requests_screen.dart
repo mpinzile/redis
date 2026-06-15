@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../core/widgets/amount_input.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/user_services_service.dart';
@@ -498,7 +499,8 @@ Future<void> _showRespond(BuildContext context, Map<String, dynamic> req,
                 TextField(
                   controller: amountCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: _fieldDecor('e.g., 500000'),
+                  inputFormatters: amountFormatters,
+                  decoration: _fieldDecor('e.g., 500,000'),
                   style: GoogleFonts.inter(
                       fontSize: 14,
                       color: AppColors.textPrimary,
@@ -552,7 +554,7 @@ Future<void> _showRespond(BuildContext context, Map<String, dynamic> req,
                               setSt(() => submitting = true);
                               final amt = action == 'accept' &&
                                       amountCtrl.text.trim().isNotEmpty
-                                  ? double.tryParse(amountCtrl.text.trim())
+                                  ? parseAmount(amountCtrl.text)
                                   : null;
                               final res =
                                   await UserServicesService.respondToSponsorRequest(

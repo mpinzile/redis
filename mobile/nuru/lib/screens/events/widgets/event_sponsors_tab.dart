@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../core/widgets/amount_input.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
@@ -519,7 +521,7 @@ class _InviteSheetState extends State<_InviteSheet> {
   Future<void> _invite(Map<String, dynamic> svc) async {
     final id = svc['id'].toString();
     setState(() => _sendingId = id);
-    final amt = double.tryParse(_amountCtrl.text.trim());
+    final amt = parseAmount(_amountCtrl.text);
     final res = await EventsService.inviteSponsor(widget.eventId, {
       'user_service_id': svc['id'],
       if (amt != null) 'contribution_amount': amt,
@@ -571,7 +573,8 @@ class _InviteSheetState extends State<_InviteSheet> {
                 controller: _amountCtrl,
                 hint: 'Suggested amount (optional)',
                 icon: 'money',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: TextInputType.number,
+                inputFormatters: amountFormatters,
               ),
               const SizedBox(height: 14),
               Flexible(child: _resultsArea()),
@@ -588,11 +591,13 @@ class _InviteSheetState extends State<_InviteSheet> {
     required String icon,
     void Function(String)? onChanged,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: controller,
       onChanged: onChanged,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       autocorrect: false,
       style: appText(size: 14),
       decoration: InputDecoration(

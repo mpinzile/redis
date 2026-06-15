@@ -103,6 +103,43 @@ class EventExtrasService {
     return ApiBase.postRaw('/user-events/$eventId/services', data);
   }
 
+  /// Add an off-platform (manual) vendor to the event.
+  static Future<Map<String, dynamic>> addManualVendor(String eventId, Map<String, dynamic> data) {
+    final payload = {...data, 'is_manual': true};
+    return ApiBase.postRaw('/user-events/$eventId/services', payload);
+  }
+
+  /// Download the confirmed-vendors report (pdf/xlsx) and open it.
+  static Future<Map<String, dynamic>> downloadVendorsReport(String eventId, {String format = 'pdf'}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/user-events/$eventId/vendors/report').replace(
+        queryParameters: {'format': format},
+      );
+      final headers = await _headers();
+      headers.remove('Content-Type');
+      final res = await http.get(uri, headers: headers);
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final dir = await getApplicationDocumentsDirectory();
+        final ext = format == 'xlsx' ? 'xlsx' : 'pdf';
+        final fileName = 'vendors_${eventId}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(res.bodyBytes);
+        final r = await OpenFilex.open(file.path);
+        if (r.type == ResultType.done) return {'success': true, 'message': 'Report opened'};
+        return {'success': true, 'message': 'Report saved to ${file.path}'};
+      }
+      try {
+        final json = jsonDecode(res.body);
+        return {'success': false, 'message': json['message'] ?? 'Failed (${res.statusCode})'};
+      } catch (_) {
+        return {'success': false, 'message': 'Failed (${res.statusCode})'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Unable to download report'};
+    }
+  }
+
+
   static Future<Map<String, dynamic>> removeEventService(String eventId, String serviceId) {
     return ApiBase.deleteRaw('/user-events/$eventId/services/$serviceId');
   }

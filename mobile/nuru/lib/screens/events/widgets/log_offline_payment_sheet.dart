@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/amount_input.dart';
 
 const _methods = [
   {'value': 'cash', 'label': 'Cash', 'icon': Icons.payments_rounded},
@@ -64,7 +65,7 @@ class _LogOfflinePaymentSheetState extends State<LogOfflinePaymentSheet> {
   }
 
   Future<void> _submit() async {
-    final amt = double.tryParse(_amountCtrl.text.trim());
+    final amt = parseAmount(_amountCtrl.text);
     if (amt == null || amt <= 0) {
       AppSnackbar.error(context, 'Enter a valid amount');
       return;
@@ -129,8 +130,8 @@ class _LogOfflinePaymentSheetState extends State<LogOfflinePaymentSheet> {
             _label('Amount'),
             TextField(
               controller: _amountCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+              keyboardType: TextInputType.number,
+              inputFormatters: amountFormatters,
               decoration: _decoration('0'),
             ),
             const SizedBox(height: 12),

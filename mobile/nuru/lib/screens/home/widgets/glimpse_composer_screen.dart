@@ -156,13 +156,14 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
     File file = File(picked.path);
 
     if (_mode == _Mode.video) {
-      // Probe duration; if > 30s, push the WhatsApp-style trim screen.
+      // Always offer the trim screen so users can edit start/end even for
+      // short clips. Cap the max at 60s; the user can still trim down.
       final probe = VideoPlayerController.file(file);
       try {
         await probe.initialize();
         final durSec = probe.value.duration.inMilliseconds / 1000.0;
         await probe.dispose();
-        if (durSec > 30.0 && mounted) {
+        if (mounted && durSec > 1.0) {
           final trimmed = await Navigator.of(context).push<File>(
             MaterialPageRoute(
               builder: (_) => GlimpseTrimScreen(source: file, maxDurationSeconds: 60),
@@ -174,6 +175,7 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
       } catch (_) {
         await probe.dispose();
       }
+
 
       setState(() => _media = file);
       final ok = await _prepareVideoPreview(file);
@@ -308,24 +310,25 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
               left: 12,
               right: 12,
               bottom: _editingCaption
-                  ? mq.viewInsets.bottom + mq.padding.bottom + 10
+                  ? mq.viewInsets.bottom + 76
                   : mq.padding.bottom + 78,
               child: _captionField(),
             ),
 
           // ── BOTTOM CONTROLS ─────────────────────────────────
           // Text mode: keep tools accessible but allow collapse so they
-          // don't overlap the typing area. Media mode: caption owns the
-          // bottom while editing.
-          if (_mode == _Mode.text || (!_editingText && !_editingCaption))
+          // don't overlap the typing area. Media mode: keep the tab bar
+          // visible even while the caption is being typed.
+          if (_mode == _Mode.text || !_editingText)
             Positioned(
               left: 0, right: 0,
               bottom: _editingText
                   ? mq.viewInsets.bottom + 8
-                  : 0,
+                  : (_editingCaption ? mq.viewInsets.bottom : 0),
               child: SafeArea(
                 top: false,
-                bottom: !_editingText,
+                bottom: !_editingText && !_editingCaption,
+
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 180),
                   switchInCurve: Curves.easeOut,
@@ -1007,30 +1010,28 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
       clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 22, maxHeight: 86),
+              constraints: const BoxConstraints(minHeight: 36, maxHeight: 92),
               child: Stack(
+                alignment: Alignment.centerLeft,
                 children: [
                   if (_captionCtrl.text.isEmpty)
                     IgnorePointer(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Text(
-                          'Add a caption',
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withOpacity(0.58),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            height: 1.35,
-                          ),
+                      child: Text(
+                        'Add a caption',
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withOpacity(0.58),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          height: 1.35,
                         ),
                       ),
                     ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     child: EditableText(
                       controller: _captionCtrl,
                       focusNode: _captionFocus,
@@ -1059,6 +1060,7 @@ class _GlimpseComposerScreenState extends State<GlimpseComposerScreen> {
               ),
             ),
           ),
+
           const SizedBox(width: 6),
           GestureDetector(
             behavior: HitTestBehavior.opaque,

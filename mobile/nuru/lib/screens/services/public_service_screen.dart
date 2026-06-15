@@ -13,6 +13,7 @@ import '../../core/services/api_service.dart';
 import '../../core/services/messages_service.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../providers/wallet_provider.dart';
+import '../../core/widgets/nuru_skeleton.dart';
 
 import '../messages/messages_screen.dart';
 import '../../core/l10n/l10n_helper.dart';
@@ -455,9 +456,7 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: _plainAppBar(),
-        body: const Center(
-          child: CircularProgressIndicator(color: _gold),
-        ),
+        body: _detailSkeleton(),
       );
     }
 
@@ -652,6 +651,176 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
         ),
       ),
       bottomNavigationBar: _bottomBar(),
+    );
+  }
+
+  /// Full-page skeleton that mirrors the final layout: hero gallery, title +
+  /// price row, vendor row, highlight chips, about block, packages, calendar,
+  /// reviews, sticky bottom bar. Keeps the perceived load fast and on-brand.
+  Widget _detailSkeleton() {
+    return NuruSkeletonGroup(
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                // Hero
+                NuruSkeleton.box(height: 260, radius: 0),
+                const SizedBox(height: 18),
+                // Title + price
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            NuruSkeleton.text(width: 220, height: 18),
+                            const SizedBox(height: 10),
+                            NuruSkeleton.text(width: 140, height: 12),
+                          ],
+                        ),
+                      ),
+                      NuruSkeleton.box(width: 90, height: 22, radius: 6),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Vendor row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      NuruSkeleton.circle(size: 44),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            NuruSkeleton.text(width: 160, height: 14),
+                            const SizedBox(height: 6),
+                            NuruSkeleton.text(width: 110, height: 10),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                // Highlight chips
+                SizedBox(
+                  height: 32,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: 4,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (_, __) =>
+                        NuruSkeleton.box(width: 92, height: 32, radius: 16),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                // About
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      NuruSkeleton.text(width: 160, height: 16),
+                      const SizedBox(height: 12),
+                      NuruSkeleton.text(width: double.infinity, height: 10),
+                      const SizedBox(height: 8),
+                      NuruSkeleton.text(width: double.infinity, height: 10),
+                      const SizedBox(height: 8),
+                      NuruSkeleton.text(width: 220, height: 10),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                // What's included
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      NuruSkeleton.text(width: 170, height: 16),
+                      const SizedBox(height: 12),
+                      for (int i = 0; i < 3; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(children: [
+                            NuruSkeleton.circle(size: 16),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: NuruSkeleton.text(
+                                  width: double.infinity, height: 10),
+                            ),
+                          ]),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                // Packages
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      for (int i = 0; i < 2; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: NuruSkeleton.box(height: 96, radius: 16),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Calendar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: NuruSkeleton.box(height: 220, radius: 18),
+                ),
+                const SizedBox(height: 22),
+                // Reviews
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      NuruSkeleton.text(width: 150, height: 16),
+                      const SizedBox(height: 12),
+                      for (int i = 0; i < 2; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: NuruSkeleton.box(height: 78, radius: 14),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+          // Sticky bottom bar mirror
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: _hairline, width: 1)),
+            ),
+            child: Row(
+              children: [
+                Expanded(child: NuruSkeleton.box(height: 50, radius: 14)),
+                const SizedBox(width: 10),
+                Expanded(child: NuruSkeleton.box(height: 50, radius: 14)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1703,8 +1872,11 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
                           width: 14, height: 14,
                           child: CircularProgressIndicator(strokeWidth: 2, color: _ink),
                         )
-                      : const Icon(Icons.chat_bubble_outline_rounded,
-                          size: 16, color: _ink),
+                      : SvgPicture.asset(
+                          'assets/icons/chat-icon.svg',
+                          width: 16, height: 16,
+                          colorFilter: const ColorFilter.mode(_ink, BlendMode.srcIn),
+                        ),
                   label: Text(_startingChat ? 'Opening…' : 'Chat with Vendor',
                       style: _f(
                           size: 13.5,
