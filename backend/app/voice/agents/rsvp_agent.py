@@ -45,30 +45,38 @@ _ALLOWED_RSVP = {"confirmed", "declined", "maybe", "call_later",
 # System prompt + tool schema for Gemini Live
 # ──────────────────────────────────────────────────────────────────
 
-def _event_brief(event: Optional[Event]) -> str:
+def _event_brief(event: Optional[Event], *, is_sw: bool = True) -> str:
     if event is None:
-        return "an upcoming event"
-    name = (getattr(event, "name", None) or "the event").strip()
+        return "tukio lijalo" if is_sw else "an upcoming event"
+    name = (getattr(event, "name", None) or "").strip()
+    if not name:
+        return "tukio lijalo" if is_sw else "an upcoming event"
     starts = getattr(event, "event_date", None) or getattr(event, "start_date", None)
     when_part = ""
     if starts:
         try:
-            when_part = f" on {starts.strftime('%A, %d %B %Y')}"
+            when_part = (
+                f" tarehe {starts.strftime('%d/%m/%Y')}" if is_sw
+                else f" on {starts.strftime('%A, %d %B %Y')}"
+            )
         except Exception:  # noqa: BLE001
             when_part = ""
     location = (getattr(event, "location", None) or "").strip()
-    where_part = f" at {location}" if location else ""
+    where_part = ""
+    if location:
+        where_part = f" {'eneo la' if is_sw else 'at'} {location}"
     return f"{name}{when_part}{where_part}".strip()
 
 
 def build_rsvp_spec(job: Optional[VoiceCallJob], language: str) -> dict:
     """Return ``{system_text, tools}`` for the Gemini Live setup frame."""
     lang = (language or "sw").lower()
-    is_sw = lang.startswith("sw")
+    is_sw = not lang.startswith("en")  # default to Swahili unless explicitly English
     recipient = (getattr(job, "recipient_name", None) or "").strip() or (
         "rafiki" if is_sw else "there"
     )
-    event_text = "the event"
+    event_text = "tukio lijalo" if is_sw else "an upcoming event"
+    event_name_only = "tukio lijalo" if is_sw else "the event"
     if job is not None and job.campaign_id:
         db = SessionLocal()
         try:
@@ -78,40 +86,75 @@ def build_rsvp_spec(job: Optional[VoiceCallJob], language: str) -> dict:
             ).first()
             if camp and camp.event_id:
                 ev = db.query(Event).filter(Event.id == camp.event_id).first()
-                event_text = _event_brief(ev)
+                event_text = _event_brief(ev, is_sw=is_sw)
+                if ev is not None and (getattr(ev, "name", None) or "").strip():
+                    event_name_only = ev.name.strip()
         except Exception:  # noqa: BLE001
             logger.exception("Failed to load event context for job=%s", job.id)
         finally:
             db.close()
 
     if is_sw:
+        opening = (
+            f"Habari, napiga kutoka Nuru kwa niaba ya mratibu wa tukio la "
+            f"{event_name_only}. Ningependa kuthibitisha kama utahudhuria."
+        )
         system_text = (
-            "Wewe ni Msaidizi wa Sauti wa Nuru. Unampigia "
-            f"{recipient} kuhusu mwaliko wa {event_text}. "
-            "Sema Kiswahili rahisi, kifupi na cha heshima. "
-            "Lengo: thibitisha kama atahudhuria (ndiyo, hapana, labda). "
-            "Ukijibiwa wazi, tumia tool save_rsvp na uthibitishe kwa upole. "
-            "Akiomba usimpigie tena, tumia mark_opt_out. "
-            "Akiomba apigiwe baadaye au yu busy, tumia request_callback. "
-            "Akiomba WhatsApp au mtandao mbovu/kelele, tumia "
-            "request_whatsapp_followup. Jibu likiwa halieleweki baada ya "
-            "swali moja la uthibitisho, tumia mark_human_follow_up. "
-            "Mwishoni mwa simu tumia log_conversation_quality. "
-            "Usitoe taarifa za malipo, usidai pesa, usichukue muda mrefu.\n\n"
+            "LAZIMA uzungumze KISWAHILI CHA TANZANIA tu, wakati wote wa simu. "
+            "Fikiri na jibu moja kwa moja kwa Kiswahili (usitafsiri kutoka Kiingereza). "
+            "Usitumie Kiingereza hata neno moja, isipokuwa kama mteja AMEKUOMBA WAZI "
+            "kuendelea kwa Kiingereza. Tumia Kiswahili rahisi, kifupi, cha kibinadamu — "
+            "epuka Kiswahili cha kirobo, cha kutafsiriwa, au cha kimaandishi.\n\n"
+            f"Wewe ni Msaidizi wa Sauti wa Nuru (Nuru Voice Assistant). KAMWE usidai "
+            f"wewe ni mtu wa kweli. Unampigia {recipient} kuhusu mwaliko wa "
+            f"{event_text}.\n\n"
+            f"UJUMBE WA KUFUNGUA (tumia mara moja tu baada ya kupokea simu): "
+            f"\"{opening}\"\n\n"
+            "Sheria kuu:\n"
+            "- Uliza swali MOJA tu kwa wakati. Simu iwe fupi.\n"
+            "- Lengo: thibitisha kama atahudhuria.\n"
+            "- Hifadhi save_rsvp PEKEE wakati uhakika (confidence) uko juu na jibu liko wazi.\n"
+            "- Likiwa halieleweki, uliza swali moja la uthibitisho: "
+            f"\"Ili nihifadhi vizuri, unamaanisha utahudhuria tukio la {event_name_only}?\" "
+            "Likibaki halieleweki, tumia mark_human_follow_up.\n"
+            "- Akiuliza wewe ni nani / umempataje, jibu: \"Mimi ni Nuru Voice Assistant. "
+            f"Napiga kwa niaba ya mratibu wa tukio la {event_name_only}. Namba yako ipo "
+            "kwenye orodha ya wageni walioalikwa.\"\n"
+            "- Akisema 'sikusikii' / 'rudia' / 'unasema?', omba radhi kisha rudia kwa "
+            f"kifupi: \"Samahani. Narudia kwa kifupi. Napiga kutoka Nuru kuhusu mwaliko "
+            f"wako wa tukio la {event_name_only}. Je, utahudhuria?\" Akishindwa kusikia "
+            "tena, tumia request_whatsapp_followup.\n"
+            "- Akiwa busy/kelele/mtandao mbovu, tumia request_callback au "
+            "request_whatsapp_followup.\n"
+            "- Akiomba usimpigie tena, tumia mark_opt_out kwa heshima.\n"
+            "- Akionekana amekasirika: \"Samahani kwa usumbufu. Ningependa tu kuthibitisha "
+            "kama utahudhuria, kisha sitakuchukulia muda zaidi.\"\n"
+            "- Akionyesha urafiki na atahudhuria: \"Asante sana. Tumefurahi kusikia "
+            "utahudhuria. Karibu sana.\"\n"
+            "- Mwishoni mwa simu LAZIMA tumia log_conversation_quality.\n"
+            "- Usitoe taarifa za malipo, usidai pesa, usichukue muda mrefu.\n\n"
             + NATURAL_CONVERSATION_RULES_SW
         )
     else:
+        opening = (
+            f"Hello, I'm calling from Nuru on behalf of the organiser of "
+            f"{event_name_only}. I'd like to confirm whether you'll attend."
+        )
         system_text = (
-            "You are the Nuru Voice Assistant. You're calling "
-            f"{recipient} about their invitation to {event_text}. "
+            "You are the Nuru Voice Assistant. Never claim to be a real person. "
+            f"You're calling {recipient} about their invitation to {event_text}.\n\n"
+            f"OPENING LINE (use once on pickup): \"{opening}\"\n\n"
             "Speak simple, short, warm English. "
+            "Ask one question at a time. Keep the call short. "
             "Goal: confirm whether they will attend (yes, no, maybe). "
             "When clearly answered, call save_rsvp and confirm politely. "
+            "Only save_rsvp when confidence is high; if unclear ask one short "
+            f"clarifier: \"Just to confirm — you mean you'll attend {event_name_only}?\" "
+            "If still unclear, call mark_human_follow_up. "
             "If they ask not to be called again, call mark_opt_out. "
             "If they're busy or ask for a later call, call request_callback. "
             "If they ask for WhatsApp or there's bad signal/noise, call "
-            "request_whatsapp_followup. If still unclear after one short "
-            "confirmation question, call mark_human_follow_up. "
+            "request_whatsapp_followup. "
             "At the end of every call, call log_conversation_quality. "
             "Never request payment details or extend the conversation.\n\n"
             + NATURAL_CONVERSATION_RULES_EN

@@ -92,15 +92,29 @@ class GeminiLiveBridge(AgentBridge):
 
     # ── helpers ────────────────────────────────────────────────
     @staticmethod
-    def _setup_frame(model: str, voice: str, system_text: str, tools: list) -> dict:
+    def _setup_frame(
+        model: str,
+        voice: str,
+        system_text: str,
+        tools: list,
+        language: str = "sw",
+    ) -> dict:
+        lang = (language or "sw").lower()
+        if lang.startswith("sw"):
+            language_code = "sw-TZ"
+        elif lang.startswith("en"):
+            language_code = "en-US"
+        else:
+            language_code = lang
         frame: dict[str, Any] = {
             "setup": {
                 "model": f"models/{model}",
                 "generation_config": {
                     "response_modalities": ["AUDIO"],
                     "speech_config": {
+                        "language_code": language_code,
                         "voice_config": {
-                            "prebuilt_voice_config": {"voice_name": voice or "Aoede"},
+                            "prebuilt_voice_config": {"voice_name": voice or "Zephyr"},
                         },
                     },
                 },
@@ -117,9 +131,17 @@ class GeminiLiveBridge(AgentBridge):
     async def _connect(self, model: str, setup: dict) -> bool:
         url = f"{GEMINI_LIVE_BASE}?key={config.GEMINI_API_KEY}"
         try:
-            self._ws = await websockets.connect(  # type: ignore[union-attr]
-                url, max_size=4 * 1024 * 1024, ping_interval=20, ping_timeout=20,
+            self._ws = await asyncio.wait_for(
+                websockets.connect(  # type: ignore[union-attr]
+                    url, max_size=4 * 1024 * 1024,
+                    ping_interval=20, ping_timeout=20,
+                    open_timeout=5,
+                ),
+                timeout=5.0,
             )
+        except asyncio.TimeoutError:
+            logger.error("Gemini Live connect timed out (>5s) model=%s", model)
+            return False
         except Exception:  # noqa: BLE001
             logger.exception("Gemini Live connect failed model=%s", model)
             return False
@@ -141,6 +163,33 @@ class GeminiLiveBridge(AgentBridge):
         except Exception:  # noqa: BLE001
             pass
 
+    async def _send_initial_turn(self, language: str, job: Optional[VoiceCallJob]) -> None:
+        """Prompt Gemini to speak first as soon as Twilio opens the stream."""
+        if self._ws is None or self._closed:
+            return
+        is_sw = (language or "sw").lower().startswith("sw")
+        name = (getattr(job, "recipient_name", None) or "").strip()
+        text = (
+            f"LAZIMA uzungumze KISWAHILI tu kuanzia sasa hadi mwisho wa simu. "
+            f"Usitumie Kiingereza hata kidogo. Anza simu sasa: msalimie "
+            f"{name or 'mgeni'} kwa sentensi moja fupi kwa Kiswahili, "
+            "jitambulishe kama Msaidizi wa Sauti wa Nuru, kisha uliza kama atahudhuria."
+            if is_sw else
+            f"Speak ENGLISH only for the entire call. Start the call now. "
+            f"Greet {name or 'the guest'} in one short English sentence, "
+            "introduce yourself as the Nuru Voice Assistant, then ask if they will attend."
+        )
+        try:
+            await self._ws.send(json.dumps({
+                "clientContent": {
+                    "turns": [{"role": "user", "parts": [{"text": text}]}],
+                    "turnComplete": True,
+                }
+            }))
+            logger.info("Gemini Live initial turn sent job=%s", getattr(job, "id", None))
+        except Exception:  # noqa: BLE001
+            logger.exception("Gemini Live initial turn send failed job=%s", getattr(job, "id", None))
+
     # ── AgentBridge contract ───────────────────────────────────
     async def start(self, *, job: Optional[VoiceCallJob], language: str) -> None:
         if not gemini_live_available():
@@ -152,19 +201,39 @@ class GeminiLiveBridge(AgentBridge):
         spec = _system_builder(job, lang) or {}
         system_text = (spec.get("system_text") or "").strip()
         tools = spec.get("tools") or []
-        voice_name = (config.GEMINI_VOICE_NAME or "Aoede").strip() or "Aoede"
+        voice_cfg = config.get_gemini_voice_config()
+        model_cfg = config.get_gemini_model_config()
+        voice_name = (voice_cfg.get("voice_name") or "Zephyr").strip() or "Zephyr"
+
+        # Backend-controlled config log (no secrets).
+        logger.info(
+            "Smart RSVP Gemini config: text_model=%s live_model=%s "
+            "live_model_fallback=%s tts_model=%s voice=%s language=%s "
+            "style=%s speaking_rate=%s",
+            model_cfg["text_model"], model_cfg["live_model"],
+            model_cfg["live_model_fallback"], model_cfg["tts_model"],
+            voice_name, voice_cfg["language"], voice_cfg["style"],
+            voice_cfg["speaking_rate"],
+        )
 
         async with self._connect_lock:
-            primary = (config.GEMINI_LIVE_MODEL or "").strip()
-            fallback = (config.GEMINI_LIVE_MODEL_FALLBACK or "").strip()
+            primary = (model_cfg["live_model"] or "").strip()
+            fallback = (model_cfg["live_model_fallback"] or "").strip()
+            tried: list[str] = []
             for model in [m for m in (primary, fallback) if m]:
-                setup = self._setup_frame(model, voice_name, system_text, tools)
+                tried.append(model)
+                setup = self._setup_frame(model, voice_name, system_text, tools, lang)
                 if await self._connect(model, setup):
-                    logger.info("Gemini Live connected model=%s job=%s",
-                                model, getattr(job, "id", None))
+                    logger.info("Gemini Live connected model=%s voice=%s job=%s",
+                                model, voice_name, getattr(job, "id", None))
                     self._reader_task = asyncio.create_task(self._read_loop())
+                    await self._send_initial_turn(lang, job)
                     return
-            logger.error("Gemini Live: all models failed to connect")
+            logger.error(
+                "Gemini Live: all models failed to connect (tried=%s). "
+                "Check GEMINI_LIVE_MODEL / GEMINI_LIVE_MODEL_FALLBACK env vars.",
+                tried,
+            )
             await self._events.put(AgentEvent(kind="end"))
 
     async def push_audio(self, pcm16: bytes, *, sample_rate: int) -> None:

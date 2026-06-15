@@ -419,12 +419,58 @@ def start_campaign(campaign_id: str,
                    current_user: User = Depends(get_current_user)):
     result = _set_campaign_status(
         db, campaign_id, current_user, "running", "Campaign started — dialing now",
-        allowed_from={"draft", "queued", "paused"},
+        allowed_from={"draft", "queued", "paused", "completed"},
     )
     # Kick off the dispatcher in the background so the HTTP response
     # returns immediately while Twilio is being called.
     background_tasks.add_task(_dispatch_campaign_jobs, campaign_id)
     return result
+
+
+_DISPATCHABLE_STATUSES = ("pending", "failed", "no_answer", "busy", "queued", "in_progress")
+
+
+def _active_stale_after_seconds() -> int:
+    # If Twilio status callbacks are not reaching us, jobs can remain queued
+    # forever even after the recipient's phone call has ended. Treat an active
+    # job as stale after the normal call window so Resume / Call again can redial.
+    return max(20, min(90, int(config.VOICE_MAX_CALL_SECONDS or 60)))
+
+
+def _active_attempt_is_stale(job: VoiceCallJob, now: datetime) -> bool:
+    if job.status not in {"queued", "in_progress"}:
+        return False
+    last = job.last_called_at or job.created_at
+    if last is None:
+        return True
+    return (now - last).total_seconds() >= _active_stale_after_seconds()
+
+
+def _job_due_for_dispatch(job: VoiceCallJob, now: datetime) -> bool:
+    status = (job.status or "pending").lower()
+    if status == "pending":
+        scheduled_ok = job.scheduled_at is None or job.scheduled_at <= now
+        retry_ok = job.next_retry_at is None or job.next_retry_at <= now
+        return scheduled_ok and retry_ok
+    if status in {"failed", "no_answer", "busy"}:
+        has_attempt_left = (job.attempt or 0) < (job.max_attempts or 1)
+        retry_ok = job.next_retry_at is None or job.next_retry_at <= now
+        return has_attempt_left and retry_ok
+    return _active_attempt_is_stale(job, now)
+
+
+def _mark_active_attempt_superseded(db: Session, job: VoiceCallJob, reason: str) -> None:
+    log = (
+        db.query(VoiceCallLog)
+        .filter(VoiceCallLog.job_id == job.id,
+                VoiceCallLog.status.in_(("queued", "initiated", "ringing", "in-progress")))
+        .order_by(VoiceCallLog.created_at.desc())
+        .first()
+    )
+    if log is not None:
+        log.status = "superseded"
+        log.end_reason = reason[:200]
+        log.ended_at = datetime.utcnow()
 
 
 def _dispatch_campaign_jobs(campaign_id: str) -> None:
@@ -453,17 +499,25 @@ def _dispatch_campaign_jobs(campaign_id: str) -> None:
             log.info("dispatch: campaign %s is %s — skipping", campaign_id, c.status)
             return
 
-        pending = (
+        now = datetime.utcnow()
+        candidates = (
             db.query(VoiceCallJob)
             .filter(VoiceCallJob.campaign_id == cid,
-                    VoiceCallJob.status == "pending")
+                    VoiceCallJob.status.in_(_DISPATCHABLE_STATUSES))
             .order_by(VoiceCallJob.created_at.asc())
             .all()
         )
-        log.info("dispatch: campaign=%s dialing %d pending job(s)",
-                 campaign_id, len(pending))
+        pending = [job for job in candidates if _job_due_for_dispatch(job, now)]
+        log.info("dispatch: campaign=%s dialing %d due job(s) from %d candidate(s)",
+                 campaign_id, len(pending), len(candidates))
         for job in pending:
             try:
+                if _active_attempt_is_stale(job, datetime.utcnow()):
+                    _mark_active_attempt_superseded(db, job, "redialled after stale active status")
+                    job.status = "pending"
+                    job.block_reason = None
+                    job.next_retry_at = None
+                    db.flush()
                 opted_out = _opt_out_set(db, [job.phone_e164])
                 verdict = check_can_call(
                     job.phone_e164,
@@ -749,11 +803,11 @@ def retry_job(
         raise HTTPException(404, detail="Job not found")
     _get_owned_campaign(db, str(job.campaign_id), current_user)
 
-    if job.status in {"queued", "in_progress"}:
-        raise HTTPException(400, detail="Job is already active")
     if job.status in {"blocked", "opted_out"}:
         raise HTTPException(400, detail=f"Job is {job.status}; cannot retry")
 
+    if job.status in {"queued", "in_progress"}:
+        _mark_active_attempt_superseded(db, job, "manual retry requested")
     if job.attempt >= job.max_attempts:
         job.max_attempts = job.attempt + 1
     job.status = "pending"
@@ -1056,12 +1110,11 @@ def _job_or_404(db: Session, job_id: str) -> VoiceCallJob:
 
 
 def _schedule_retry(job: VoiceCallJob, reason: str) -> None:
-    """Bump attempt counter and schedule next_retry_at if retries remain.
+    """Schedule next_retry_at if retries remain.
 
     Pure helper — caller commits the session.
     """
-    job.attempt = (job.attempt or 0) + 1
-    if job.attempt < (job.max_attempts or 1):
+    if (job.attempt or 0) < (job.max_attempts or 1):
         backoff = int(config.VOICE_RETRY_BACKOFF_SECONDS or 60)
         job.next_retry_at = datetime.utcnow() + timedelta(seconds=backoff)
         job.status = "pending"
@@ -1160,10 +1213,14 @@ def place_call_now(
 @router.api_route("/twilio/webhook", methods=["GET", "POST"])
 async def twilio_webhook(
     request: Request,
+    background_tasks: BackgroundTasks,
     job_id: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
-    # Twilio posts form data; fall back to query string if missing.
+    """Return TwiML as fast as possible. Heavy DB writes are deferred."""
+    import time as _time
+    _t0 = _time.perf_counter()
+
     form = {}
     try:
         form = dict(await request.form())
@@ -1173,49 +1230,57 @@ async def twilio_webhook(
     resolved_job_id = job_id or form.get("job_id")
     call_sid = form.get("CallSid") or request.query_params.get("CallSid")
 
-    greeting = None
-    language = "sw-KE"
+    from voice.language import get_voice_language, to_bcp47
+
+    # Resolve language cheaply. Default Swahili; load job only if id present.
+    short_lang = "sw"
     job = None
     if resolved_job_id:
         try:
             jid = uuid.UUID(str(resolved_job_id))
             job = db.query(VoiceCallJob).filter(VoiceCallJob.id == jid).first()
+            short_lang = get_voice_language(job=job, request=request)
         except (TypeError, ValueError):
             job = None
+    language = to_bcp47(short_lang)
 
-    if job is not None:
-        # Link the CallSid to the most recent log entry for this job.
-        if call_sid:
-            log = (
-                db.query(VoiceCallLog)
-                .filter(VoiceCallLog.job_id == job.id)
-                .order_by(VoiceCallLog.created_at.desc())
-                .first()
-            )
-            if log is not None and not log.provider_call_sid:
-                log.provider_call_sid = call_sid
-                if not log.answered_at:
-                    log.answered_at = datetime.utcnow()
-                db.commit()
-        # Language preference: per-job > campaign default.
-        lang = (job.language or "").lower()
-        if lang.startswith("en"):
-            language = "en-US"
-        elif lang.startswith("sw"):
-            language = "sw-KE"
-        # Lightweight greeting (full agent dialogue handled by Gemini Live).
-        greeting = (
-            "Habari. Hii ni Msaidizi wa Sauti wa Nuru. "
-            f"Tunakupigia kuhusu mwaliko wako. Tafadhali tuambie kama utahudhuria."
-            if language == "sw-KE"
-            else "Hello, this is the Nuru Voice Assistant. "
-                 "We are calling about your invitation. Please tell us if you will attend."
-        )
+    # Defer non-critical DB writes so webhook returns TwiML immediately.
+    if job is not None and call_sid:
+        _job_id_val = job.id
 
+        def _link_call_sid() -> None:
+            from core.database import SessionLocal as _SL
+            _db = _SL()
+            try:
+                _log = (
+                    _db.query(VoiceCallLog)
+                    .filter(VoiceCallLog.job_id == _job_id_val)
+                    .order_by(VoiceCallLog.created_at.desc())
+                    .first()
+                )
+                if _log is not None and not _log.provider_call_sid:
+                    _log.provider_call_sid = call_sid
+                    if not _log.answered_at:
+                        _log.answered_at = datetime.utcnow()
+                    _db.commit()
+            except Exception:
+                _db.rollback()
+            finally:
+                _db.close()
+
+        background_tasks.add_task(_link_call_sid)
+
+    # Gemini speaks first via the stream — skip Twilio <Say> preroll to
+    # avoid overlap and shave ~1s off perceived latency.
     xml = twilio_client.build_twiml(
         job_id=str(resolved_job_id or ""),
-        greeting=greeting,
+        greeting=None,
         language=language,
+    )
+    _elapsed_ms = int((_time.perf_counter() - _t0) * 1000)
+    _TWILIO_LOG.info(
+        "Twilio webhook job=%s call_sid=%s twiml_ms=%d has_stream=%s",
+        resolved_job_id, call_sid, _elapsed_ms, "<Stream" in xml,
     )
     return Response(content=xml, media_type="application/xml")
 
