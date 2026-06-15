@@ -67,7 +67,14 @@ class AgentBridge:
     Phase 7 attaches the RSVP system prompt + tool executor.
     """
 
-    async def start(self, *, job: VoiceCallJob, language: str) -> None:  # pragma: no cover
+    async def start(
+        self,
+        *,
+        job: VoiceCallJob,
+        language: str,
+        skip_greeting: bool = False,
+        initial_turn_delay_s: float = 0.0,
+    ) -> None:  # pragma: no cover
         raise NotImplementedError
 
     async def push_audio(self, pcm16: bytes, *, sample_rate: int) -> None:  # pragma: no cover
@@ -95,9 +102,17 @@ class SilentAgentBridge(AgentBridge):
         self._queue: asyncio.Queue[Optional[AgentEvent]] = asyncio.Queue()
         self._started = False
 
-    async def start(self, *, job: VoiceCallJob, language: str) -> None:
+    async def start(
+        self,
+        *,
+        job: VoiceCallJob,
+        language: str,
+        skip_greeting: bool = False,
+        initial_turn_delay_s: float = 0.0,
+    ) -> None:
         self._started = True
-        logger.info("SilentAgentBridge started for job=%s lang=%s", job.id, language)
+        logger.info("SilentAgentBridge started for job=%s lang=%s skip=%s delay=%.2f",
+                    job.id, language, skip_greeting, initial_turn_delay_s)
 
     async def push_audio(self, pcm16: bytes, *, sample_rate: int) -> None:
         # Silently drop inbound audio. A real bridge forwards to Gemini.
@@ -144,7 +159,11 @@ class StreamSession:
     job_id: Optional[str] = None
     stream_sid: Optional[str] = None
     call_sid: Optional[str] = None
-    language: str = "sw-TZ"
+    language: str = field(default_factory=lambda: (
+        getattr(config, "GEMINI_VOICE_LANGUAGE", None)
+        or getattr(config, "VOICE_DIALECT", None)
+        or "sw-TZ"
+    ))
     started_at: datetime = field(default_factory=datetime.utcnow)
     transcript_user: list[str] = field(default_factory=list)
     transcript_assistant: list[str] = field(default_factory=list)
@@ -199,7 +218,14 @@ class StreamSession:
                         "Smart RSVP language switched: %s -> %s reason=%s job=%s",
                         cur, req, reason, self.job_id,
                     )
-                    self.language = "en-US" if req == "en" else "sw-TZ"
+                    if req == "en":
+                        self.language = "en-US"
+                    else:
+                        self.language = (
+                            getattr(config, "GEMINI_VOICE_LANGUAGE", None)
+                            or getattr(config, "VOICE_DIALECT", None)
+                            or "sw-TZ"
+                        )
         except Exception:  # noqa: BLE001
             pass
 
@@ -253,6 +279,55 @@ async def _send_clear(ws: WebSocket, stream_sid: str) -> None:
         }))
     except Exception:  # noqa: BLE001
         pass
+
+
+def _parse_pcm_rate(mime: str) -> int:
+    """Extract sample-rate from a mime string like ``audio/pcm;rate=24000``."""
+    try:
+        for tok in (mime or "").split(";"):
+            tok = tok.strip().lower()
+            if tok.startswith("rate="):
+                return int(tok[5:])
+    except Exception:  # noqa: BLE001
+        pass
+    return 24_000
+
+
+async def _stream_pre_greeting(
+    session: "StreamSession", pcm: bytes, sample_rate: int,
+) -> None:
+    """Push a pre-rendered PCM16 greeting through the Twilio media stream.
+
+    Chunks into ~100 ms slices so Twilio can start playback the moment the
+    first frame lands instead of buffering the whole clip. Aborts cleanly
+    if the user starts speaking (barge-in clears ``assistant_speaking``).
+    """
+    if not pcm or session.stream_sid is None:
+        return
+    try:
+        # 100 ms of PCM16 mono = 0.1 * rate * 2 bytes
+        chunk_bytes = max(320, int(sample_rate * 0.1) * 2)
+        for offset in range(0, len(pcm), chunk_bytes):
+            if not session.assistant_speaking:
+                logger.info("[perf] pre_greeting interrupted by barge-in job=%s",
+                            session.job_id)
+                return
+            piece = pcm[offset:offset + chunk_bytes]
+            try:
+                payload = pcm16_to_mulaw_b64(piece, source_rate=sample_rate)
+            except Exception:  # noqa: BLE001
+                logger.exception("pre_greeting: encode failed")
+                return
+            await _send_media(session.websocket, session.stream_sid or "", payload)
+            # Light pacing so Twilio's jitter buffer stays healthy; one
+            # 100 ms chunk every ~80 ms keeps the pipe full without
+            # racing ahead of real-time playback.
+            await asyncio.sleep(0.08)
+        logger.info("[perf] pre_greeting playback complete job=%s", session.job_id)
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # noqa: BLE001
+        logger.exception("pre_greeting: stream failed job=%s", session.job_id)
 
 
 async def _persist_session(session: StreamSession) -> None:
@@ -482,9 +557,56 @@ async def handle_twilio_stream(ws: WebSocket) -> None:
                             _sel, session.job_id)
                 _t_connect = asyncio.get_event_loop().time()
 
+                # ── Pre-greeting playback ──────────────────────────
+                # If the dispatcher pre-rendered a personalised greeting
+                # for this job, stream it to Twilio immediately so the
+                # caller hears speech the instant they pick up. Gemini's
+                # first turn is held back until the greeting finishes to
+                # avoid voice overlap.
+                pre_audio: Optional[bytes] = None
+                pre_mime: str = ""
+                if job is not None:
+                    pre_audio = getattr(job, "greeting_audio", None) or None
+                    pre_mime = (getattr(job, "greeting_audio_mime", None) or "").strip()
+                pre_rate = _parse_pcm_rate(pre_mime) if pre_mime else 24_000
+                pre_duration_s = 0.0
+                if pre_audio:
+                    # 16-bit mono PCM → seconds = bytes / (rate * 2)
+                    pre_duration_s = max(0.0, len(pre_audio) / float(pre_rate * 2))
+                    logger.info(
+                        "[perf] pre_greeting bytes=%d rate=%d est_seconds=%.2f job=%s",
+                        len(pre_audio), pre_rate, pre_duration_s, session.job_id,
+                    )
+                    session.assistant_speaking = True
+                    session.first_ai_audio_at = asyncio.get_event_loop().time()
+                    if session.ws_accept_at is not None:
+                        pms = int((session.first_ai_audio_at - session.ws_accept_at) * 1000)
+                        logger.info(
+                            "[perf] pickup_to_first_audible_speech_ms=%d job=%s",
+                            pms, session.job_id,
+                        )
+                    asyncio.create_task(_stream_pre_greeting(
+                        session, pre_audio, pre_rate,
+                    ))
+                else:
+                    logger.info(
+                        "[perf] pre_greeting_missing job=%s (Gemini will speak first)",
+                        session.job_id,
+                    )
+
+                # Hold Gemini's first turn back so it doesn't overlap our
+                # greeting. Leave a tiny tail so the recipient hears a
+                # natural pause (~250 ms) before the agent picks up.
+                _initial_delay = max(0.0, pre_duration_s - 0.5) if pre_audio else 0.0
+
                 async def _kick_off_bridge():
                     try:
-                        await bridge.start(job=job, language=session.language)  # type: ignore[arg-type]
+                        await bridge.start(
+                            job=job,
+                            language=session.language,
+                            skip_greeting=bool(pre_audio),
+                            initial_turn_delay_s=_initial_delay,
+                        )  # type: ignore[arg-type]
                         session.gemini_connected_at = asyncio.get_event_loop().time()
                         logger.info(
                             "[perf] gemini_connect_ms=%d ws_accept_to_start_ms=%d job=%s",

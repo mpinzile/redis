@@ -66,6 +66,11 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
   // Truth-from-DB counters (do not derive from local jobs alone).
   int _pendingTotal = 0;
   int _confirmedTotal = 0;
+  // Admin-controlled on/off switch — when false we render a polite
+  // "temporarily unavailable" card instead of the call UI.
+  bool _featureEnabled = true;
+  String _featureMsgEn = '';
+  String _featureMsgSw = '';
   Timer? _poll;
 
   @override
@@ -80,7 +85,28 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
     super.dispose();
   }
 
+  Future<void> _loadFeatureStatus() async {
+    try {
+      final res = await VoiceCallsService.getFeatureStatus();
+      if (res['success'] == true && res['data'] is Map) {
+        final data = res['data'] as Map;
+        _featureEnabled = data['enabled'] == true;
+        _featureMsgEn = (data['disabled_message_en'] ?? '').toString();
+        _featureMsgSw = (data['disabled_message_sw'] ?? '').toString();
+      }
+    } catch (_) {
+      // Soft-fail: assume enabled so we don't lock users out on a
+      // transient network error.
+      _featureEnabled = true;
+    }
+  }
+
   Future<void> _bootstrap() async {
+    await _loadFeatureStatus();
+    if (!_featureEnabled) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     await Future.wait([
       _loadCampaign(),
       _loadPendingGuests(),
@@ -281,6 +307,96 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
     if (mounted) setState(() => _busy = false);
   }
 
+  /// Polite "feature paused by Nuru administrators" panel shown when the
+  /// backend flag is off. Mirrors the same copy the web client renders.
+  Widget _featureDisabledView() {
+    final locale = context.read<LocaleProvider>().languageCode;
+    final isSw = locale.toLowerCase().startsWith('sw');
+    final primary = isSw
+        ? (_featureMsgSw.isNotEmpty
+            ? _featureMsgSw
+            : 'Huduma ya Simu Mahiri za RSVP imesimamishwa kwa muda.')
+        : (_featureMsgEn.isNotEmpty
+            ? _featureMsgEn
+            : 'Smart RSVP Calls are temporarily unavailable.');
+    final secondary = isSw
+        ? (_featureMsgEn.isNotEmpty ? _featureMsgEn : null)
+        : (_featureMsgSw.isNotEmpty ? _featureMsgSw : null);
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _bootstrap,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E6),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFFE3A6)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFE3A6),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.phone_disabled_rounded,
+                          color: Color(0xFF8A5A00), size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        isSw
+                            ? 'Simu Mahiri zimesimamishwa kwa muda'
+                            : 'Smart RSVP Calls are paused',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF6B4500),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  primary,
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    height: 1.5,
+                    color: const Color(0xFF6B4500),
+                  ),
+                ),
+                if (secondary != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    secondary,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      height: 1.5,
+                      color: const Color(0xFF8A5A00),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     context.watch<LocaleProvider>(); // rebuild when locale flips
@@ -289,7 +405,9 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
       appBar: NuruSubPageAppBar(title: _vt(context, 'voice_screen_title')),
       body: _loading
           ? const _RsvpCallsSkeleton()
-          : RefreshIndicator(
+          : !_featureEnabled
+              ? _featureDisabledView()
+              : RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _bootstrap,
               child: ListView(

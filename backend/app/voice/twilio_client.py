@@ -90,7 +90,7 @@ def place_call(
         "StatusCallback": f"{status_cb}?job_id={quote_plus(str(job_id))}",
         "StatusCallbackMethod": "POST",
         "StatusCallbackEvent": "initiated ringing answered completed",
-        "Timeout": str(max(5, int(config.VOICE_MAX_CALL_SECONDS or 60))),
+        "Timeout": str(max(5, int(config.VOICE_MAX_CALL_SECONDS or 120))),
         "Record": "true" if record_calls else "false",
         "MachineDetection": "Enable",
     }

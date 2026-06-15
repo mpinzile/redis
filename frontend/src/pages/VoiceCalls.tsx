@@ -41,9 +41,11 @@ import {
   type VoiceOptOut,
   type VoicePurpose,
   type CampaignStatus,
+  type VoiceFeatureStatus,
 } from "@/lib/api/voiceCalls";
 import { showApiErrors } from "@/lib/api";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { PhoneOff } from "lucide-react";
 
 const STATUS_TONE: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -97,6 +99,8 @@ export default function VoiceCalls() {
     logs: VoiceCallLog[];
   } | null>(null);
 
+  const [feature, setFeature] = useState<VoiceFeatureStatus | null>(null);
+
   async function loadCampaigns() {
     setLoading(true);
     const res = await voiceCallsApi.listCampaigns({
@@ -109,10 +113,18 @@ export default function VoiceCalls() {
     setLoading(false);
   }
 
+  async function loadFeature() {
+    const res = await voiceCallsApi.getFeatureStatus();
+    if (res.success && res.data) setFeature(res.data);
+  }
+
   useEffect(() => {
     loadCampaigns();
+    loadFeature();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scopedEventId]);
+
+  const featureDisabled = feature ? !feature.enabled : false;
 
   return (
     <div className="bg-white min-h-screen">
@@ -136,7 +148,7 @@ export default function VoiceCalls() {
               </p>
             )}
           </div>
-          {tab === "campaigns" && (
+          {tab === "campaigns" && !featureDisabled && (
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setCallOneOpen(true)}>
                 <PhoneCall className="h-4 w-4 mr-2" />
@@ -146,6 +158,27 @@ export default function VoiceCalls() {
             </div>
           )}
         </header>
+
+        {featureDisabled && feature && (
+          <Card className="border-amber-200 bg-amber-50/60 dark:bg-amber-500/10 dark:border-amber-500/30 p-6 rounded-2xl">
+            <div className="flex gap-4 items-start">
+              <div className="h-11 w-11 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center shrink-0">
+                <PhoneOff className="h-5 w-5 text-amber-700 dark:text-amber-300" />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-base font-semibold text-amber-900 dark:text-amber-100">
+                  Smart RSVP Calls are temporarily paused
+                </p>
+                <p className="text-sm text-amber-900/80 dark:text-amber-100/80 leading-relaxed">
+                  {feature.disabled_message_en}
+                </p>
+                <p className="text-xs text-amber-900/70 dark:text-amber-100/70 italic leading-relaxed pt-1">
+                  {feature.disabled_message_sw}
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList>

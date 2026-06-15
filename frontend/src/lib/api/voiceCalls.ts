@@ -252,4 +252,24 @@ export const voiceCallsApi = {
       "/voice-calls/twilio/health",
     );
   },
+
+  // Admin-controlled feature flag (on/off switch surfaced to web + mobile)
+  getFeatureStatus() {
+    return get<VoiceFeatureStatus>("/voice-calls/feature-status");
+  },
+  updateFeatureStatus(payload: {
+    enabled?: boolean;
+    disabled_message_en?: string;
+    disabled_message_sw?: string;
+  }) {
+    return patch<VoiceFeatureStatus>("/voice-calls/admin/feature-status", payload);
+  },
 };
+
+export interface VoiceFeatureStatus {
+  enabled: boolean;
+  disabled_message_en: string;
+  disabled_message_sw: string;
+  updated_by_user_id: string | null;
+  updated_at: string | null;
+}
