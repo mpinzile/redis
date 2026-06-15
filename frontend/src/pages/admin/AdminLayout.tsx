@@ -7,7 +7,7 @@ import {
   Package, Briefcase, Newspaper, Sparkles, Users2,
   BookOpen, CreditCard, Tag, UserCog, BadgeCheck, AlertTriangle,
   BarChart3, MessageCircle, PanelLeftClose, PanelLeft, FileCheck,
-  Ticket, Flag, Activity, Banknote, Inbox, Trash2,
+  Ticket, Flag, Activity, Banknote, Inbox, Trash2, PhoneCall,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,7 @@ const navItems = [
   { label: "WhatsApp", icon: MessageCircle, to: "/admin/whatsapp" },
   { label: "WhatsApp Templates", icon: MessageCircle, to: "/admin/whatsapp/templates" },
   { label: "WhatsApp Logs", icon: MessageSquare, to: "/admin/whatsapp-logs" },
+  { label: "Voice Calls", icon: PhoneCall, to: "/admin/voice-calls" },
   { label: "Support Tickets", icon: HeadphonesIcon, to: "/admin/tickets" },
   { label: "FAQs", icon: HelpCircle, to: "/admin/faqs" },
   { label: "Notifications", icon: Bell, to: "/admin/notifications" },

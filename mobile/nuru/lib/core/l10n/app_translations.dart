@@ -1792,6 +1792,16 @@ class AppTranslations {
     },
     'voice_call_one_dialing': {'en': 'Dialing now…', 'sw': 'Inapiga simu sasa…'},
     'voice_call_one_queued': {'en': 'Queued.', 'sw': 'Imepangwa.'},
+    'voice_outside_hours_title': {
+      'en': 'Outside calling hours',
+      'sw': 'Nje ya saa za kupiga simu',
+    },
+    'voice_outside_hours_body': {
+      'en': 'This number is outside the recommended calling hours. Do you still want to dial now?',
+      'sw': 'Namba hii iko nje ya saa zinazopendekezwa za kupiga simu. Bado unataka kupiga sasa?',
+    },
+    'voice_outside_hours_call': {'en': 'Call anyway', 'sw': 'Piga tu'},
+    'voice_outside_hours_cancel': {'en': 'Not now', 'sw': 'Si sasa'},
   };
 
   static String tr(String key, String locale) {

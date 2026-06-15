@@ -22,6 +22,18 @@ String _vt(BuildContext c, String key, [Map<String, String>? vars]) {
   return s;
 }
 
+/// Backend paginated responses wrap payloads as
+/// `data: { items: [...], pagination: {...} }`. Older shapes returned a
+/// bare list, so accept both.
+List<dynamic> _itemsOfTopLevel(dynamic data) {
+  if (data is List) return data;
+  if (data is Map) {
+    final items = data['items'] ?? data['results'] ?? data['data'];
+    if (items is List) return items;
+  }
+  return const [];
+}
+
 /// Smart RSVP Calls — Phase 9 of Nuru Voice Assistant.
 ///
 /// Organiser-facing screen that lets the event owner kick off an AI voice
@@ -99,17 +111,9 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
     if (mounted) setState(() {});
   }
 
-  /// Backend paginated responses wrap payloads as
-  /// `data: { items: [...], pagination: {...} }`. Older shapes returned a
-  /// bare list, so accept both.
-  List<dynamic> _itemsOf(dynamic data) {
-    if (data is List) return data;
-    if (data is Map) {
-      final items = data['items'] ?? data['results'] ?? data['data'];
-      if (items is List) return items;
-    }
-    return const [];
-  }
+  /// Delegates to the top-level [_itemsOf] for both list and paginated shapes.
+  List<dynamic> _itemsOf(dynamic data) => _itemsOfTopLevel(data);
+
 
   Future<void> _loadCampaign() async {
     final res = await VoiceCallsService.listCampaigns(
@@ -226,8 +230,21 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
       };
     }).toList();
 
-    await VoiceCallsService.addJobs(cid, recipients, enforceHours: true);
+    final added = await VoiceCallsService.addJobs(cid, recipients, enforceHours: true);
     await VoiceCallsService.startCampaign(cid);
+    // Backend has no auto-dialer worker yet — fan out place-call per job
+    // so the campaign actually rings, not just gets queued.
+    final data = added['data'];
+    final dialable = _itemsOfTopLevel(
+      (data is Map ? (data['accepted'] ?? data['jobs']) : null),
+    );
+    for (final j in dialable) {
+      if (j is Map && j['id'] != null) {
+        // Fire-and-forget so the UI isn't blocked by Twilio round-trips.
+        // ignore: unawaited_futures
+        VoiceCallsService.placeCall(j['id'].toString());
+      }
+    }
     await _loadCampaign();
     if (mounted) {
       setState(() => _busy = false);
@@ -1099,8 +1116,15 @@ class _CallOneSheetState extends State<_CallOneSheet> {
   }
 
   void _pickGuest(Map<String, dynamic> g) {
-    _nameCtrl.text = (g['name'] ?? g['full_name'] ?? '').toString();
-    _phoneCtrl.text = (g['phone'] ?? g['phone_number'] ?? '').toString();
+    final phone = (g['phone'] ?? g['phone_number'] ?? '').toString();
+    // Toggle: tapping the already-selected guest clears the selection.
+    if (_phoneCtrl.text.trim() == phone.trim() && phone.trim().isNotEmpty) {
+      _nameCtrl.clear();
+      _phoneCtrl.clear();
+    } else {
+      _nameCtrl.text = (g['name'] ?? g['full_name'] ?? '').toString();
+      _phoneCtrl.text = phone;
+    }
     setState(() {});
   }
 
@@ -1137,30 +1161,77 @@ class _CallOneSheetState extends State<_CallOneSheet> {
         'language': lang,
       },
     ], enforceHours: true);
-    final accepted = ((added['data'] as Map?)?['accepted'] as List?) ?? const [];
-    if (accepted.isEmpty) {
+    final data = added['data'];
+    final dialable = _itemsOfTopLevel(
+      (data is Map ? (data['accepted'] ?? data['jobs']) : null),
+    );
+    if (dialable.isEmpty) {
       if (mounted) {
         setState(() => _busy = false);
-        AppSnackbar.error(context, _vt(context, 'voice_call_one_blocked'));
+        final rej = _itemsOfTopLevel(data is Map ? data['rejected'] : null);
+        final reason = rej.isNotEmpty && rej.first is Map
+            ? (rej.first as Map)['reason']?.toString()
+            : null;
+        AppSnackbar.error(context, reason ?? _vt(context, 'voice_call_one_blocked'));
       }
       return;
     }
-    final jobId = (accepted.first as Map)['id'].toString();
-    final placed = await VoiceCallsService.startCampaign(cid);
-    await VoiceCallsService.retryJob(jobId);
+    final jobId = (dialable.first as Map)['id'].toString();
+    var placed = await VoiceCallsService.placeCall(jobId);
+    // Outside-hours: don't block — ask the organiser if they want to dial anyway.
+    if (placed['success'] != true) {
+      final detail = placed['detail'] ?? placed['error'] ?? placed['message'];
+      final code = (detail is Map) ? detail['code']?.toString() : null;
+      final reason = (detail is Map)
+          ? (detail['message'] ?? detail['detail'] ?? '').toString()
+          : (detail?.toString() ?? '');
+      final outside = code == 'outside_hours' ||
+          reason.toLowerCase().contains('outside') && reason.toLowerCase().contains('hours');
+      if (outside && mounted) {
+        final go = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(_vt(context, 'voice_outside_hours_title')),
+            content: Text(reason.isEmpty
+                ? _vt(context, 'voice_outside_hours_body')
+                : reason),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(_vt(context, 'voice_outside_hours_cancel'))),
+              TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(_vt(context, 'voice_outside_hours_call'))),
+            ],
+          ),
+        );
+        if (go == true) {
+          placed = await VoiceCallsService.placeCall(jobId, force: true);
+        } else {
+          if (mounted) setState(() => _busy = false);
+          return;
+        }
+      }
+    }
     await widget.onPlaced();
     if (mounted) {
       Navigator.pop(context);
       AppSnackbar.success(context,
           placed['success'] == true
               ? _vt(context, 'voice_call_one_dialing')
-              : _vt(context, 'voice_call_one_queued'));
+              : (placed['message']?.toString() ?? _vt(context, 'voice_call_one_queued')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final h = MediaQuery.of(context).size.height * 0.9;
+    final media = MediaQuery.of(context);
+    // Shrink with the keyboard so the guest list / search results stay
+    // visible while typing — the previous fixed 0.9 * screen height hid
+    // them behind the IME on phones.
+    final keyboard = media.viewInsets.bottom;
+    final maxH = media.size.height * 0.9;
+    final h = (maxH - keyboard).clamp(280.0, maxH);
     final q = _search.trim().toLowerCase();
     final guests = q.isEmpty
         ? widget.guests
@@ -1169,7 +1240,11 @@ class _CallOneSheetState extends State<_CallOneSheet> {
             final phone = (g['phone'] ?? g['phone_number'] ?? '').toString().toLowerCase();
             return name.contains(q) || phone.contains(q);
           }).toList();
-    return Container(
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: Container(
       height: h,
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1337,6 +1412,7 @@ class _CallOneSheetState extends State<_CallOneSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

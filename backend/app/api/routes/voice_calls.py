@@ -546,11 +546,17 @@ def add_jobs(
     for j in accepted:
         db.refresh(j)
 
+    serialized_jobs = [_serialize_job(j) for j in accepted]
+    accepted_jobs = [s for s in serialized_jobs
+                     if s["status"] in {"pending", "queued"}]
     return standard_response(
         True,
         f"Added {len(accepted)} job(s)",
         {
-            "jobs": [_serialize_job(j) for j in accepted],
+            "jobs": serialized_jobs,
+            # Alias kept for backward-compatible mobile/web clients that read
+            # `data.accepted` — only contains jobs that are actually dialable.
+            "accepted": accepted_jobs,
             "rejected": rejected,
             "counts": _job_counts(db, c.id),
         },
@@ -653,6 +659,100 @@ def list_logs(
         .all()
     )
     return standard_response(True, "ok", [_serialize_log(l) for l in rows])
+
+
+# ──────────────────────────────────────────────────────────────────
+# Admin: cross-account visibility for support / debugging
+# ──────────────────────────────────────────────────────────────────
+
+@router.get("/admin/jobs")
+def admin_list_jobs(
+    status: Optional[str] = Query(None),
+    has_error: Optional[bool] = Query(None),
+    q: Optional[str] = Query(None, description="Search by phone or recipient name"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Admin view: every voice job across every campaign + owner/campaign metadata.
+
+    Used by /admin/voice-calls to triage failed dials, opt-outs, blocked
+    numbers, and surface AI/Twilio error messages without bouncing through
+    each campaign owner.
+    """
+    if not _is_admin(current_user):
+        raise HTTPException(403, detail="Admin only")
+
+    query = db.query(VoiceCallJob)
+    if status:
+        query = query.filter(VoiceCallJob.status == status)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(
+            VoiceCallJob.phone_e164.ilike(like),
+            VoiceCallJob.recipient_name.ilike(like),
+        ))
+
+    total = query.count()
+    rows = (
+        query.order_by(VoiceCallJob.created_at.desc())
+        .offset((page - 1) * page_size).limit(page_size).all()
+    )
+
+    job_ids = [r.id for r in rows]
+    logs_by_job: dict = {}
+    if job_ids:
+        logs = (
+            db.query(VoiceCallLog)
+            .filter(VoiceCallLog.job_id.in_(job_ids))
+            .order_by(VoiceCallLog.created_at.desc())
+            .all()
+        )
+        for l in logs:
+            logs_by_job.setdefault(l.job_id, []).append(l)
+
+    # Campaign + owner enrichment in one round-trip.
+    cids = {r.campaign_id for r in rows}
+    campaigns = {c.id: c for c in db.query(VoiceCampaign)
+                 .filter(VoiceCampaign.id.in_(cids)).all()} if cids else {}
+    owner_ids = {c.owner_id for c in campaigns.values() if c.owner_id}
+    owners = {u.id: u for u in db.query(User)
+              .filter(User.id.in_(owner_ids)).all()} if owner_ids else {}
+
+    items = []
+    for j in rows:
+        c = campaigns.get(j.campaign_id)
+        owner = owners.get(c.owner_id) if c else None
+        job_logs = logs_by_job.get(j.id, [])
+        last_err = next((l for l in job_logs if l.error_message), None)
+        if has_error is True and not last_err and not j.block_reason:
+            continue
+        items.append({
+            "job": _serialize_job(j),
+            "campaign": _serialize_campaign(c) if c else None,
+            "owner": {
+                "id": str(owner.id),
+                "name": getattr(owner, "full_name", None) or getattr(owner, "name", None),
+                "phone": getattr(owner, "phone_number", None) or getattr(owner, "phone", None),
+                "email": getattr(owner, "email", None),
+            } if owner else None,
+            "logs": [_serialize_log(l) for l in job_logs[:5]],
+            "last_error": {
+                "code": last_err.error_code,
+                "message": last_err.error_message,
+                "at": last_err.created_at.isoformat() if last_err.created_at else None,
+            } if last_err else None,
+        })
+
+    pagination = {
+        "page": page, "page_size": page_size, "total_items": total,
+        "total_pages": math.ceil(total / page_size) if total else 0,
+    }
+    return standard_response(True, "ok", items, pagination=pagination)
+
+
+
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -779,6 +879,7 @@ def _schedule_retry(job: VoiceCallJob, reason: str) -> None:
 @router.post("/jobs/{job_id}/place-call")
 def place_call_now(
     job_id: str,
+    force: bool = Query(False, description="Skip the calling-hours guard when true"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -801,7 +902,7 @@ def place_call_now(
         job.phone_e164,
         recipient_tz=job.timezone,
         is_opted_out=lambda p: p in opted_out_phones,
-        enforce_hours=True,
+        enforce_hours=not force,
     )
     if not verdict.allowed:
         job.status = "blocked" if verdict.code != "outside_hours" else "pending"
@@ -811,7 +912,11 @@ def place_call_now(
                 seconds=int(config.VOICE_RETRY_BACKOFF_SECONDS or 60),
             )
         db.commit()
-        raise HTTPException(409, detail=verdict.reason)
+        # Surface a structured 409 so the client can offer "Call anyway".
+        raise HTTPException(
+            409,
+            detail={"code": verdict.code, "message": verdict.reason},
+        )
 
     try:
         result = twilio_client.place_call(
