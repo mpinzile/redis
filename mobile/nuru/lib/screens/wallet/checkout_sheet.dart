@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/widgets/amount_input.dart';
 import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../core/services/wallet_service.dart';
@@ -379,7 +380,8 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                         ),
                         child: TextField(
                           controller: _amountCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: amountFormatters,
                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                           decoration: InputDecoration(
                             prefixText: '$_currency ',

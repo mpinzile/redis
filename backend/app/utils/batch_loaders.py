@@ -552,7 +552,7 @@ def batch_load_event_context(db: Session, event_ids: List[UUID]) -> Dict[str, Di
         "contribution_target": 0.0, "contribution_target_obj": None,
         "guest_counts": {"guest_count": 0, "confirmed_guest_count": 0,
                           "pending_guest_count": 0, "declined_guest_count": 0,
-                          "checked_in_count": 0},
+                          "maybe_guest_count": 0, "checked_in_count": 0},
         "contribution_summary": {"contribution_total": 0.0, "contribution_count": 0},
         "tickets_sold": 0, "tickets_capacity": 0,
         "invitations_sent": 0, "invitations_total": 0,
@@ -627,6 +627,8 @@ def batch_load_event_context(db: Session, event_ids: List[UUID]) -> Dict[str, Di
             gc["pending_guest_count"] = cnt
         elif key == "declined":
             gc["declined_guest_count"] = cnt
+        elif key == "maybe":
+            gc["maybe_guest_count"] = cnt
 
     # Checked in
     for eid, cnt in db.query(
@@ -1530,9 +1532,10 @@ def build_event_service_dicts(
     svc_type_ids = {s.service_id for s in services if s.service_id}
     provider_svc_ids = {s.provider_user_service_id for s in services if s.provider_user_service_id}
     provider_user_ids = {s.provider_user_id for s in services if s.provider_user_id}
+    manual_cat_ids = {getattr(s, "manual_vendor_category_id", None) for s in services if getattr(s, "manual_vendor_category_id", None)}
 
     svc_types = {t.id: t for t in db.query(ServiceType).filter(ServiceType.id.in_(list(svc_type_ids))).all()} if svc_type_ids else {}
-    cat_ids = {t.category_id for t in svc_types.values() if getattr(t, "category_id", None)}
+    cat_ids = {t.category_id for t in svc_types.values() if getattr(t, "category_id", None)} | manual_cat_ids
     cat_map = {c.id: c for c in db.query(ServiceCategory).filter(ServiceCategory.id.in_(list(cat_ids))).all()} if cat_ids else {}
 
     provider_svcs = {s.id: s for s in db.query(UserService).filter(UserService.id.in_(list(provider_svc_ids))).all()} if provider_svc_ids else {}
@@ -1555,6 +1558,21 @@ def build_event_service_dicts(
         provider_svc = provider_svcs.get(es.provider_user_service_id) if es.provider_user_service_id else None
         provider_user = provider_users.get(es.provider_user_id) if es.provider_user_id else None
         cat = cat_map.get(getattr(svc_type, "category_id", None)) if svc_type else None
+        manual_cat = cat_map.get(getattr(es, "manual_vendor_category_id", None)) if getattr(es, "manual_vendor_category_id", None) else None
+        is_manual = bool(getattr(es, "is_manual", False))
+
+        title = (
+            es.manual_vendor_name if is_manual else
+            (provider_svc.title if provider_svc else (svc_type.name if svc_type else None))
+        )
+        category_name = (
+            (manual_cat.name if manual_cat else None) if is_manual else
+            (cat.name if cat else None)
+        )
+        provider_name = (
+            es.manual_vendor_name if is_manual else
+            (f"{provider_user.first_name} {provider_user.last_name}" if provider_user else None)
+        )
 
         out.append({
             "id": str(es.id),
@@ -1562,10 +1580,16 @@ def build_event_service_dicts(
             "service_id": str(es.service_id) if es.service_id else None,
             "provider_user_id": str(es.provider_user_id) if es.provider_user_id else None,
             "provider_user_service_id": str(es.provider_user_service_id) if es.provider_user_service_id else None,
+            "is_manual": is_manual,
+            "manual_vendor_name": getattr(es, "manual_vendor_name", None),
+            "manual_vendor_phone": getattr(es, "manual_vendor_phone", None),
+            "manual_vendor_email": getattr(es, "manual_vendor_email", None),
+            "manual_vendor_category_id": str(es.manual_vendor_category_id) if getattr(es, "manual_vendor_category_id", None) else None,
+            "manual_vendor_notes": getattr(es, "manual_vendor_notes", None),
             "service": {
-                "title": provider_svc.title if provider_svc else (svc_type.name if svc_type else None),
-                "category": cat.name if cat else None,
-                "provider_name": f"{provider_user.first_name} {provider_user.last_name}" if provider_user else None,
+                "title": title,
+                "category": category_name,
+                "provider_name": provider_name,
                 "image": images_map.get(es.provider_user_service_id) if es.provider_user_service_id else None,
                 "verification_status": (provider_svc.verification_status.value if provider_svc and hasattr(provider_svc.verification_status, "value") else (str(provider_svc.verification_status) if provider_svc and provider_svc.verification_status else "unverified")),
                 "verified": provider_svc.is_verified if provider_svc else False,
@@ -1635,9 +1659,13 @@ def build_pending_contribution_dicts(
         recorder = user_map.get(c.recorded_by) if c.recorded_by else None
         reviewer = user_map.get(c.claim_reviewed_by) if getattr(c, "claim_reviewed_by", None) else None
 
+        # Prefer per-event display name override when set so the same global
+        # contributor can show as different names on different events.
+        event_display = (getattr(ec, "display_name", None) or "").strip() if ec else None
+        resolved_name = event_display or (contributor.name if contributor else c.contributor_name)
         item = {
             "id": str(c.id),
-            "contributor_name": contributor.name if contributor else c.contributor_name,
+            "contributor_name": resolved_name,
             "contributor_phone": contributor.phone if contributor else None,
             "amount": float(c.amount) if c.amount is not None else 0.0,
             "payment_method": c.payment_method.value if c.payment_method else None,

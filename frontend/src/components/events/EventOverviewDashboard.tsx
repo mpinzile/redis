@@ -58,11 +58,14 @@ export default function EventOverviewDashboard({ eventId, refreshKey }: Props) {
   const donutSlices: { label: string; value: number; color: string }[] = is_ticketed
     ? ticket_sales.classes.map((c, i) => ({ label: c.name, value: c.sold, color: SLICE_COLORS[i % SLICE_COLORS.length] }))
     : [
-        { label: "Paid", value: contribution_status.paid_count, color: SLICE_COLORS[0] },
-        { label: "Outstanding", value: contribution_status.outstanding_count, color: SLICE_COLORS[1] },
+        { label: "Paid", value: (contribution_status as any).fully_paid_count ?? contribution_status.paid_count, color: "#16A34A" },
+        { label: "In Progress", value: (contribution_status as any).in_progress_count ?? 0, color: "#E7A622" },
+        { label: "Outstanding", value: contribution_status.outstanding_count, color: "#DC2626" },
       ];
   const donutTotal = donutSlices.reduce((a, b) => a + b.value, 0);
-  const centerNumber = is_ticketed ? ticket_sales.total_sold : contribution_status.paid_count + contribution_status.outstanding_count;
+  const centerNumber = is_ticketed
+    ? ticket_sales.total_sold
+    : donutSlices.reduce((a, b) => a + b.value, 0);
   const centerLabel = is_ticketed ? "Total Sold" : "Contributions";
 
   return (

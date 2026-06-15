@@ -1,6 +1,8 @@
 import '../../../core/widgets/nuru_refresh_indicator.dart';
 import '../../../core/utils/money_format.dart';
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
+import '../../../core/widgets/amount_input.dart';
 import 'package:flutter/material.dart';
 
 import 'package:open_filex/open_filex.dart';
@@ -13,6 +15,7 @@ import '../../../core/widgets/nuru_date_time_picker.dart';
 import '../report_preview_screen.dart';
 import '../../../core/widgets/deleting_overlay.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/widgets/self_scrolling_pills.dart';
 
 
 /// Full redesign - Expenses tab.
@@ -513,45 +516,40 @@ class _EventExpensesTabState extends State<EventExpensesTab>
               _input(descCtrl, 'e.g. Catering deposit', autofocus: true),
               const SizedBox(height: 16),
               _label('Amount'),
-              _input(amtCtrl, '0', keyboard: TextInputType.number),
+              _input(amtCtrl, '0', keyboard: TextInputType.number, inputFormatters: amountFormatters),
               const SizedBox(height: 18),
               _label('Category'),
-              SizedBox(
+              SelfScrollingPills(
+                activeIndex: category.isEmpty ? 0 : _categories.indexOf(category).clamp(0, _categories.length - 1),
                 height: 36,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _categories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) {
-                    final c = _categories[i];
-                    final active = category == c;
-                    return GestureDetector(
-                      onTap: () => setSheet(
-                          () => category = active ? '' : c),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: active
-                              ? AppColors.primarySoft
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                              color: active
-                                  ? AppColors.primary.withOpacity(0.4)
-                                  : AppColors.borderLight),
-                        ),
-                        child: Text(c,
-                            style: appText(
-                                size: 12,
-                                weight: FontWeight.w700,
-                                color: active
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary)),
+                children: List.generate(_categories.length, (i) {
+                  final c = _categories[i];
+                  final active = category == c;
+                  return GestureDetector(
+                    onTap: () => setSheet(() => category = active ? '' : c),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? AppColors.primarySoft
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                            color: active
+                                ? AppColors.primary.withOpacity(0.4)
+                                : AppColors.borderLight),
                       ),
-                    );
-                  },
-                ),
+                      child: Text(c,
+                          style: appText(
+                              size: 12,
+                              weight: FontWeight.w700,
+                              color: active
+                                  ? AppColors.primary
+                                  : AppColors.textSecondary)),
+                    ),
+                  );
+                }),
               ),
               const SizedBox(height: 18),
               _label('Date'),
@@ -623,9 +621,7 @@ class _EventExpensesTabState extends State<EventExpensesTab>
                                 context, 'Description is required');
                             return;
                           }
-                          final amt = double.tryParse(
-                                  amtCtrl.text.trim()) ??
-                              0;
+                          final amt = parseAmount(amtCtrl.text) ?? 0;
                           if (amt <= 0) {
                             AppSnackbar.error(context, 'Enter an amount');
                             return;
@@ -688,12 +684,14 @@ class _EventExpensesTabState extends State<EventExpensesTab>
   Widget _input(TextEditingController c, String hint,
       {int maxLines = 1,
       bool autofocus = false,
-      TextInputType keyboard = TextInputType.text}) {
+      TextInputType keyboard = TextInputType.text,
+      List<TextInputFormatter>? inputFormatters}) {
     return TextField(
       controller: c,
       maxLines: maxLines,
       autofocus: autofocus,
       keyboardType: keyboard,
+      inputFormatters: inputFormatters,
       style: appText(size: 14),
       decoration: InputDecoration(
         hintText: hint,

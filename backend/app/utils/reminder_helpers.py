@@ -294,10 +294,13 @@ def resolve_recipients(db: Session, automation, event) -> list[dict]:
             phone = (uc.phone or "").strip() or None
             if not phone:
                 continue
+            # Per-event override wins: same global contributor can appear under
+            # different display names on different events of the same organiser.
+            event_name = (getattr(ec, "display_name", None) or "").strip() or uc.name
             rows.append({
                 "recipient_type": "contributor",
                 "recipient_id": ec.id,
-                "name": uc.name,
+                "name": event_name,
                 "phone": phone,
             })
 

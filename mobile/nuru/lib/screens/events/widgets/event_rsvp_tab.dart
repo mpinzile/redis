@@ -104,7 +104,7 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
         children: [
           _responseCard(),
           const SizedBox(height: 14),
-          _checkInRow(),
+          _statsAndReportRow(),
           const SizedBox(height: 14),
           _searchField(),
           const SizedBox(height: 12),
@@ -114,20 +114,24 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
             _emptyState()
           else
             ..._guests.map((g) => _guestTile(g as Map<String, dynamic>)),
-          const SizedBox(height: 14),
-          _reportButton(),
         ],
       ),
     );
   }
 
   // ─── headline response card ───────────────────────────────────
+  // Counts come straight from `_allGuests` so 'maybe' shows up even when
+  // the backend summary payload omits it.
   Widget _responseCard() {
-    final confirmed = (_summary['confirmed'] ?? 0) as int;
-    final pending = (_summary['pending'] ?? 0) as int;
-    final declined = (_summary['declined'] ?? 0) as int;
-    final maybe = (_summary['maybe'] ?? 0) as int;
-    final total = (_summary['total'] ?? (confirmed + pending + declined + maybe)) as int;
+    int countWhere(bool Function(String) test) =>
+        _allGuests.whereType<Map>().where((g) => test((g['rsvp_status'] ?? 'pending').toString())).length;
+    final confirmed = countWhere((s) => s == 'confirmed' || s == 'attending');
+    final pending = countWhere((s) => s == 'pending' || s.isEmpty);
+    final declined = countWhere((s) => s == 'declined');
+    final maybe = countWhere((s) => s == 'maybe');
+    final total = _allGuests.isNotEmpty
+        ? _allGuests.length
+        : ((_summary['total'] ?? (confirmed + pending + declined + maybe)) as int);
     final responded = confirmed + declined + maybe;
     final responseRate = total > 0 ? responded / total : 0.0;
 
@@ -205,15 +209,55 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
     );
   }
 
-  Widget _checkInRow() {
+  /// Horizontal scrollable row: Checked in, Invitations sent, RSVP Report.
+  /// The report entry sits inline so all three feel like peer actions.
+  Widget _statsAndReportRow() {
     final checkedIn = (_summary['checked_in'] ?? 0) as int;
     final invitationsSent = (_summary['invitations_sent'] ?? 0) as int;
-    return Row(children: [
-      Expanded(child: _miniStat('check-in-reception', 'Checked in', '$checkedIn', tint: false)),
-      const SizedBox(width: 10),
-      Expanded(child: _miniStat('send', 'Invitations sent', '$invitationsSent')),
-    ]);
+    return SizedBox(
+      height: 64,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        children: [
+          SizedBox(width: 220, child: _miniStat('check-in-reception', 'Checked in', '$checkedIn', tint: false)),
+          const SizedBox(width: 10),
+          SizedBox(width: 220, child: _miniStat('send', 'Invitations sent', '$invitationsSent')),
+          const SizedBox(width: 10),
+          SizedBox(width: 240, child: _reportInlineCard()),
+        ],
+      ),
+    );
   }
+
+  Widget _reportInlineCard() => GestureDetector(
+    onTap: _generating ? null : _showReportOptions,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(children: [
+        Container(
+          width: 32, height: 32,
+          decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(10)),
+          child: const Center(child: AppIcon('document-text', size: 16, color: AppColors.primary)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text('RSVP Report', style: appText(size: 12, color: AppColors.textTertiary)),
+          const SizedBox(height: 2),
+          Text('PDF · Excel', style: appText(size: 13, weight: FontWeight.w800)),
+        ])),
+        if (_generating)
+          const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+        else
+          const AppIcon('chevron-right', size: 14, color: AppColors.textTertiary),
+      ]),
+    ),
+  );
 
   Widget _miniStat(String icon, String label, String value, {bool tint = true}) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -424,36 +468,6 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
     ]),
   );
 
-  Widget _reportButton() => GestureDetector(
-    onTap: _generating ? null : _showReportOptions,
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Row(children: [
-        Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(10)),
-          child: const Center(child: AppIcon('document-text', size: 18)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text('RSVP report', style: appText(size: 13, weight: FontWeight.w700)),
-          const SizedBox(height: 2),
-          Text('Download as PDF or Excel for sharing',
-              style: appText(size: 11, color: AppColors.textTertiary)),
-        ])),
-        if (_generating)
-          const SizedBox(width: 16, height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-        else
-          const AppIcon('chevron-right', size: 16, color: AppColors.textTertiary),
-      ]),
-    ),
-  );
 
   // ─── skeleton ──────────────────────────────────────────────────
   Widget _skeleton() {

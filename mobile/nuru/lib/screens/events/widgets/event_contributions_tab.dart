@@ -15,7 +15,8 @@ import '../../../core/services/events_service.dart';
 import '../../../core/services/event_contributors_service.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/utils/share_helpers.dart';
-import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:flutter/services.dart' show Clipboard, ClipboardData, TextInputFormatter;
+import '../../../core/widgets/amount_input.dart';
 import '../../../core/services/report_generator.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../report_preview_screen.dart';
@@ -3212,7 +3213,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
                     ? null
                     : emailCtrl.text.trim(),
                 'phone': phoneCtrl.text.trim(),
-                'pledge_amount': double.tryParse(pledgeCtrl.text.trim()) ?? 0,
+                'pledge_amount': parseAmount(pledgeCtrl.text) ?? 0,
                 'notes': notesCtrl.text.trim().isEmpty
                     ? null
                     : notesCtrl.text.trim(),
@@ -3339,6 +3340,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
                       pledgeCtrl,
                       'e.g. 20,000',
                       keyboard: TextInputType.number,
+                      inputFormatters: amountFormatters,
                     ),
                     const SizedBox(height: 12),
                     _label('Notes'),
@@ -3464,6 +3466,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
                         existPledgeCtrl,
                         'e.g. 20,000',
                         keyboard: TextInputType.number,
+                        inputFormatters: amountFormatters,
                       ),
                     ],
                   ],
@@ -3599,7 +3602,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _label('Amount (TZS) *'),
-                        _input(amtCtrl, '0', keyboard: TextInputType.number),
+                        _input(amtCtrl, '0', keyboard: TextInputType.number, inputFormatters: amountFormatters),
                       ],
                     ),
                   ),
@@ -3645,7 +3648,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
                 child: ElevatedButton(
                   onPressed: () async {
                     if (amtCtrl.text.trim().isEmpty ||
-                        (double.tryParse(amtCtrl.text.trim()) ?? 0) <= 0) {
+                        (parseAmount(amtCtrl.text) ?? 0) <= 0) {
                       AppSnackbar.error(ctx, 'Enter a valid amount');
                       return;
                     }
@@ -3655,7 +3658,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
                       widget.eventId,
                       ec['id'].toString(),
                       {
-                        'amount': double.tryParse(amtCtrl.text.trim()) ?? 0,
+                        'amount': parseAmount(amtCtrl.text) ?? 0,
                         'payment_method': method,
                         if (refCtrl.text.trim().isNotEmpty)
                           'payment_reference': refCtrl.text.trim(),
@@ -3746,7 +3749,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
             ),
             const SizedBox(height: 18),
             _label('Pledge Amount (TZS)'),
-            _input(pledgeCtrl, '0', keyboard: TextInputType.number),
+            _input(pledgeCtrl, '0', keyboard: TextInputType.number, inputFormatters: amountFormatters),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -3759,8 +3762,7 @@ class _EventContributionsTabState extends State<EventContributionsTab>
                     widget.eventId,
                     ec['id'].toString(),
                     {
-                      'pledge_amount':
-                          double.tryParse(pledgeCtrl.text.trim()) ?? 0,
+                      'pledge_amount': parseAmount(pledgeCtrl.text) ?? 0,
                     },
                   );
                   if (mounted) {
@@ -3947,12 +3949,14 @@ class _EventContributionsTabState extends State<EventContributionsTab>
     TextInputType keyboard = TextInputType.text,
     int maxLines = 1,
     ValueChanged<String>? onChanged,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: ctrl,
       keyboardType: keyboard,
       maxLines: maxLines,
       onChanged: onChanged,
+      inputFormatters: inputFormatters,
       style: appText(size: 14),
       decoration: InputDecoration(
         hintText: hint,

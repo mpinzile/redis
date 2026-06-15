@@ -148,6 +148,57 @@ def get_public_trending_moments(limit: int = 12, db: Session = Depends(get_db)):
     return standard_response(True, "Trending moments", [_moment_dict(db, m) for m in moments])
 
 
+# Authenticated trending: same ranking as public/trending but restricted to
+# authors the viewer follows OR has in their accepted circle (plus self). The
+# mobile app uses this so users never see glimpses from strangers.
+@router.get("/trending")
+def get_trending_moments(
+    limit: int = 12,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy import func, desc
+    limit = max(1, min(limit, 50))
+    now = datetime.now(EAT)
+
+    following_ids = {
+        r.following_id for r in db.query(UserFollower.following_id).filter(
+            UserFollower.follower_id == current_user.id
+        ).all()
+    }
+    circle_ids = {
+        r.circle_member_id for r in db.query(UserCircle.circle_member_id).filter(
+            UserCircle.user_id == current_user.id,
+            UserCircle.status == 'accepted',
+        ).all()
+    }
+    allowed_author_ids = following_ids | circle_ids | {current_user.id}
+    if not allowed_author_ids:
+        return standard_response(True, "Trending moments", [])
+
+    view_count = func.count(UserMomentViewer.id).label("vc")
+    rows = (
+        db.query(UserMoment, view_count)
+        .outerjoin(UserMomentViewer, UserMomentViewer.moment_id == UserMoment.id)
+        .filter(
+            UserMoment.is_active == True,
+            UserMoment.expires_at > now,
+            UserMoment.user_id.in_(allowed_author_ids),
+        )
+        .group_by(UserMoment.id)
+        .order_by(desc("vc"), UserMoment.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    moments = [r[0] for r in rows]
+    return standard_response(
+        True,
+        "Trending moments",
+        [_moment_dict(db, m, current_user.id) for m in moments],
+    )
+
+
+
 @router.get("/")
 def get_moments_feed(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Returns active moments grouped by author.

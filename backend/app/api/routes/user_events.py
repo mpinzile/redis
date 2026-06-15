@@ -13,6 +13,7 @@ from typing import List, Optional
 import httpx
 import pytz
 from fastapi import APIRouter, Depends, File, Form, UploadFile, Body, Query
+from fastapi.responses import Response
 from sqlalchemy import func as sa_func, or_
 from sqlalchemy.orm import Session
 
@@ -26,7 +27,7 @@ from models import (
     EventInvitation, EventAttendee, EventGuestPlusOne,
     EventService, EventServicePayment, EventScheduleItem, EventBudgetItem,
     EventExpense, EventTicket, EventTicketClass,
-    Currency, User, UserProfile, UserSocialAccount, ServiceType, UserService,
+    Currency, User, UserProfile, UserSocialAccount, ServiceType, ServiceCategory, UserService,
     EventServiceStatusEnum, EventStatusEnum, PaymentMethodEnum, RSVPStatusEnum,
     GuestTypeEnum, EventTypeService, ServicePackage, TicketOrderStatusEnum,
     EventSponsor,
@@ -323,7 +324,7 @@ def _guest_counts(db: Session, event_id) -> dict:
         counts[key] = cnt
         total += cnt
     checked_in = db.query(sa_func.count(EventAttendee.id)).filter(EventAttendee.event_id == event_id, EventAttendee.checked_in == True).scalar() or 0
-    return {"guest_count": total, "confirmed_guest_count": counts.get("confirmed", 0), "pending_guest_count": counts.get("pending", 0), "declined_guest_count": counts.get("declined", 0), "checked_in_count": checked_in}
+    return {"guest_count": total, "confirmed_guest_count": counts.get("confirmed", 0), "pending_guest_count": counts.get("pending", 0), "declined_guest_count": counts.get("declined", 0), "maybe_guest_count": counts.get("maybe", 0), "checked_in_count": checked_in}
 
 
 def _contribution_summary(db: Session, event_id) -> dict:
@@ -597,6 +598,49 @@ def get_management_overview(
         EventContributor.event_id == eid,
     ).scalar() or 0)
 
+    # ── Per-contributor pledge state buckets
+    # Compute total confirmed paid per contributor and bucket against the
+    # contributor's pledge_amount so the donut shows:
+    #   • fully_paid     — pledge > 0 AND total_paid >= pledge
+    #   • in_progress    — 0 < total_paid < pledge
+    #   • outstanding    — pledge > 0 AND total_paid == 0
+    # Anonymous one-off contributions (no event_contributor row) count as
+    # fully_paid since the giver completed their gift in one shot.
+    paid_per_contributor = dict(
+        db.query(
+            EventContribution.event_contributor_id,
+            sa_func.coalesce(sa_func.sum(EventContribution.amount), 0),
+        )
+        .filter(
+            EventContribution.event_id == eid,
+            EventContribution.confirmation_status == "confirmed",
+            EventContribution.event_contributor_id.isnot(None),
+        )
+        .group_by(EventContribution.event_contributor_id)
+        .all()
+    )
+    contributor_rows = db.query(
+        EventContributor.id, EventContributor.pledge_amount
+    ).filter(EventContributor.event_id == eid).all()
+    fully_paid_count = 0
+    in_progress_count = 0
+    outstanding_count = 0
+    for cid, pledge in contributor_rows:
+        pledge_f = float(pledge or 0)
+        paid_f = float(paid_per_contributor.get(cid, 0) or 0)
+        if pledge_f <= 0:
+            # Contributor with no pledge yet — only count as fully paid if
+            # they have actually given something, otherwise skip from chart.
+            if paid_f > 0:
+                fully_paid_count += 1
+            continue
+        if paid_f >= pledge_f:
+            fully_paid_count += 1
+        elif paid_f > 0:
+            in_progress_count += 1
+        else:
+            outstanding_count += 1
+
     # ── Sponsors
     sponsors = db.query(EventSponsor).filter(EventSponsor.event_id == eid).all()
     sponsor_revenue = sum(float(s.contribution_amount or 0) for s in sponsors if s.status == "accepted")
@@ -657,9 +701,13 @@ def get_management_overview(
             "classes": ticket_classes_payload,
         },
         "contribution_status": {
-            "paid_count": paid_count,
+            # Legacy field kept for older clients — represents contributors
+            # who fully settled their pledge.
+            "paid_count": fully_paid_count,
+            "fully_paid_count": fully_paid_count,
+            "in_progress_count": in_progress_count,
+            "outstanding_count": outstanding_count,
             "pledged_count": pledged_count,
-            "outstanding_count": max(0, pledged_count - paid_count),
             "paid_total": paid_total,
             "pledged_total": pledged_total,
         },
@@ -4287,9 +4335,13 @@ def delete_budget_item(event_id: str, item_id: str, db: Session = Depends(get_db
 
 def _service_booking_dict(db: Session, es: EventService, currency_id) -> dict:
     from models import UserServiceImage
-    svc_type = db.query(ServiceType).filter(ServiceType.id == es.service_id).first()
+    svc_type = db.query(ServiceType).filter(ServiceType.id == es.service_id).first() if es.service_id else None
     provider_svc = db.query(UserService).filter(UserService.id == es.provider_user_service_id).first() if es.provider_user_service_id else None
     provider_user = db.query(User).filter(User.id == es.provider_user_id).first() if es.provider_user_id else None
+    manual_cat = (
+        db.query(ServiceCategory).filter(ServiceCategory.id == es.manual_vendor_category_id).first()
+        if getattr(es, "manual_vendor_category_id", None) else None
+    )
 
     # Get service image
     service_image = None
@@ -4303,14 +4355,35 @@ def _service_booking_dict(db: Session, es: EventService, currency_id) -> dict:
         elif provider_svc.images:
             service_image = provider_svc.images[0].image_url if provider_svc.images else None
 
+    is_manual = bool(getattr(es, "is_manual", False))
+    title = (
+        es.manual_vendor_name if is_manual else
+        (provider_svc.title if provider_svc else (svc_type.name if svc_type else None))
+    )
+    category = (
+        (manual_cat.name if manual_cat else None) if is_manual else
+        (svc_type.category.name if svc_type and hasattr(svc_type, "category") and svc_type.category else None)
+    )
+    provider_name = (
+        es.manual_vendor_name if is_manual else
+        (f"{provider_user.first_name} {provider_user.last_name}" if provider_user else None)
+    )
+
     return {
-        "id": str(es.id), "event_id": str(es.event_id), "service_id": str(es.service_id),
+        "id": str(es.id), "event_id": str(es.event_id),
+        "service_id": str(es.service_id) if es.service_id else None,
         "provider_user_id": str(es.provider_user_id) if es.provider_user_id else None,
         "provider_user_service_id": str(es.provider_user_service_id) if es.provider_user_service_id else None,
+        "is_manual": is_manual,
+        "manual_vendor_name": es.manual_vendor_name,
+        "manual_vendor_phone": es.manual_vendor_phone,
+        "manual_vendor_email": es.manual_vendor_email,
+        "manual_vendor_category_id": str(es.manual_vendor_category_id) if es.manual_vendor_category_id else None,
+        "manual_vendor_notes": es.manual_vendor_notes,
         "service": {
-            "title": provider_svc.title if provider_svc else (svc_type.name if svc_type else None),
-            "category": svc_type.category.name if svc_type and hasattr(svc_type, "category") and svc_type.category else None,
-            "provider_name": f"{provider_user.first_name} {provider_user.last_name}" if provider_user else None,
+            "title": title,
+            "category": category,
+            "provider_name": provider_name,
             "image": service_image,
             "verification_status": provider_svc.verification_status.value if provider_svc and hasattr(provider_svc.verification_status, "value") else (str(provider_svc.verification_status) if provider_svc and provider_svc.verification_status else "unverified"),
             "verified": provider_svc.is_verified if provider_svc else False,
@@ -4352,6 +4425,47 @@ def add_event_service(event_id: str, body: dict = Body(...), db: Session = Depen
 
     now = datetime.now(EAT)
 
+    # ── Manual (off-platform) vendor branch ───────────────────────────
+    if body.get("is_manual") or body.get("manual"):
+        name = (body.get("manual_vendor_name") or body.get("vendor_name") or "").strip()
+        if not name:
+            return standard_response(False, "Vendor name is required.")
+        cat_id_raw = body.get("manual_vendor_category_id") or body.get("category_id")
+        cat_uuid = None
+        if cat_id_raw:
+            try:
+                cat_uuid = uuid.UUID(str(cat_id_raw))
+            except (ValueError, TypeError):
+                return standard_response(False, "Invalid category id.")
+        # Duplicate guard: same event + manual name + category
+        existing = db.query(EventService).filter(
+            EventService.event_id == eid,
+            EventService.is_manual == True,
+            EventService.manual_vendor_name == name,
+        ).first()
+        if existing:
+            return standard_response(True, "Vendor already added to this event", _service_booking_dict(db, existing, event.currency_id))
+        es = EventService(
+            id=uuid.uuid4(), event_id=eid,
+            service_id=None,
+            provider_user_service_id=None,
+            provider_user_id=None,
+            agreed_price=body.get("quoted_price") or body.get("agreed_price"),
+            service_status=EventServiceStatusEnum.assigned,
+            notes=body.get("notes"),
+            is_manual=True,
+            manual_vendor_name=name,
+            manual_vendor_phone=(body.get("manual_vendor_phone") or body.get("phone") or "").strip() or None,
+            manual_vendor_email=(body.get("manual_vendor_email") or body.get("email") or "").strip() or None,
+            manual_vendor_category_id=cat_uuid,
+            manual_vendor_notes=(body.get("manual_vendor_notes") or "").strip() or None,
+            created_at=now, updated_at=now,
+        )
+        db.add(es)
+        db.commit()
+        return standard_response(True, "Vendor added to event successfully", _service_booking_dict(db, es, event.currency_id))
+
+    # ── Existing Nuru-vendor branch ───────────────────────────────────
     # Resolve service_id from the provider's user service
     service_id_val = None
     if body.get("service_id"):
@@ -4458,11 +4572,27 @@ def update_event_service(event_id: str, service_id: str, body: dict = Body(...),
     # Service status is system-driven (booking acceptance, delivery OTP, cancellation).
     # Organisers/vendors cannot change it directly here — silently ignore any attempts.
     if "quoted_price" in body: es.agreed_price = body["quoted_price"]
+    if "agreed_price" in body: es.agreed_price = body["agreed_price"]
     if "notes" in body: es.notes = body["notes"]
+    # Manual-vendor editable fields (no-ops for platform vendors)
+    if es.is_manual:
+        if "manual_vendor_name" in body and body["manual_vendor_name"]:
+            es.manual_vendor_name = str(body["manual_vendor_name"]).strip()
+        if "manual_vendor_phone" in body:
+            es.manual_vendor_phone = (body.get("manual_vendor_phone") or "").strip() or None
+        if "manual_vendor_email" in body:
+            es.manual_vendor_email = (body.get("manual_vendor_email") or "").strip() or None
+        if "manual_vendor_category_id" in body and body["manual_vendor_category_id"]:
+            try:
+                es.manual_vendor_category_id = uuid.UUID(str(body["manual_vendor_category_id"]))
+            except (ValueError, TypeError):
+                pass
+        if "manual_vendor_notes" in body:
+            es.manual_vendor_notes = (body.get("manual_vendor_notes") or "").strip() or None
     es.updated_at = datetime.now(EAT)
     db.commit()
 
-    return standard_response(True, "Event service updated successfully")
+    return standard_response(True, "Event service updated successfully", _service_booking_dict(db, es, event.currency_id))
 
 
 @router.delete("/{event_id}/services/{service_id}")
@@ -4513,6 +4643,164 @@ def record_service_payment(event_id: str, service_id: str, body: dict = Body(...
     db.commit()
 
     return standard_response(True, "Payment recorded successfully", {"id": str(payment.id), "amount": float(payment.amount) if payment.amount else None})
+
+
+# ──────────────────────────────────────────────
+# Vendors Report (PDF / Excel) — confirmed vendors only
+# ──────────────────────────────────────────────
+@router.get("/{event_id}/vendors/report")
+def vendors_report(
+    event_id: str,
+    format: str = Query("pdf"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        eid = uuid.UUID(event_id)
+    except ValueError:
+        return standard_response(False, "Invalid event ID format.")
+
+    event, err = _verify_event_access(db, eid, current_user, "can_view_vendors")
+    if err:
+        return err
+
+    services = db.query(EventService).filter(EventService.event_id == eid).all()
+    from utils.batch_loaders import build_event_service_dicts
+    currency = _currency_code(db, event.currency_id)
+    rows = build_event_service_dicts(db, services, currency)
+
+    # Confirmed vendor = manual with agreed price OR platform with accepted/assigned/in_progress/completed
+    confirmed_statuses = {"assigned", "in_progress", "completed", "confirmed"}
+    confirmed = [
+        r for r in rows
+        if (r.get("is_manual") and r.get("quoted_price")) or (r.get("status") in confirmed_statuses)
+    ]
+
+    # Sum payments per event_service from OfflineVendorPayment (confirmed only)
+    from models import OfflineVendorPayment
+    payments = db.query(OfflineVendorPayment).filter(
+        OfflineVendorPayment.event_id == eid,
+        OfflineVendorPayment.status == "confirmed",
+    ).all()
+    paid_map: dict = {}
+    for p in payments:
+        key = str(p.event_service_id)
+        paid_map[key] = paid_map.get(key, 0.0) + float(p.amount or 0)
+
+    report_rows = []
+    total_agreed = 0.0
+    total_paid = 0.0
+    for r in confirmed:
+        agreed = float(r.get("quoted_price") or 0)
+        paid = float(paid_map.get(r["id"], 0.0))
+        remaining = max(0.0, agreed - paid)
+        total_agreed += agreed
+        total_paid += paid
+        report_rows.append({
+            "name": (r["service"].get("provider_name") or r["service"].get("title") or "Vendor"),
+            "category": r["service"].get("category") or "—",
+            "source": "Off-platform" if r.get("is_manual") else "Nuru",
+            "agreed": agreed,
+            "paid": paid,
+            "remaining": remaining,
+        })
+    total_remaining = max(0.0, total_agreed - total_paid)
+    generated_at = datetime.now(EAT).strftime("%d %b %Y, %H:%M EAT")
+    event_name = event.name or "Event"
+
+    fmt = (format or "pdf").lower()
+    if fmt == "xlsx":
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+            from io import BytesIO
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Vendors"
+            ws.append([f"{event_name} — Vendors Report"])
+            ws.append([f"Generated {generated_at}"])
+            ws.append([])
+            headers = ["Vendor", "Category", "Source", f"Agreed ({currency})", f"Paid ({currency})", f"Remaining ({currency})"]
+            ws.append(headers)
+            header_fill = PatternFill("solid", start_color="111827")
+            for cell in ws[4]:
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal="left")
+            for row in report_rows:
+                ws.append([row["name"], row["category"], row["source"], row["agreed"], row["paid"], row["remaining"]])
+            ws.append(["", "", "TOTALS", total_agreed, total_paid, total_remaining])
+            totals_row = ws.max_row
+            for c in ws[totals_row]:
+                c.font = Font(bold=True)
+            for col_idx, w in enumerate([28, 22, 14, 18, 18, 20], start=1):
+                ws.column_dimensions[chr(64 + col_idx)].width = w
+            buf = BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            return Response(
+                content=buf.read(),
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": f'attachment; filename="vendors-{event_id}.xlsx"'},
+            )
+        except Exception as e:
+            return standard_response(False, f"Failed to build Excel report: {e}")
+
+    # PDF
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from io import BytesIO
+
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle("title", parent=styles["Title"], fontSize=18, textColor=colors.HexColor("#111827"))
+        meta_style = ParagraphStyle("meta", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#6B7280"))
+
+        elements = [
+            Paragraph(f"{event_name} — Vendors Report", title_style),
+            Paragraph(f"Generated {generated_at}", meta_style),
+            Spacer(1, 14),
+        ]
+        if not report_rows:
+            elements.append(Paragraph("No confirmed vendors yet.", styles["Normal"]))
+        else:
+            def fmt_money(v: float) -> str:
+                return f"{currency} {v:,.0f}"
+            table_data = [["Vendor", "Category", "Source", "Agreed", "Paid", "Remaining"]]
+            for r in report_rows:
+                table_data.append([r["name"], r["category"], r["source"], fmt_money(r["agreed"]), fmt_money(r["paid"]), fmt_money(r["remaining"])])
+            table_data.append(["", "", "TOTALS", fmt_money(total_agreed), fmt_money(total_paid), fmt_money(total_remaining)])
+            tbl = Table(table_data, colWidths=[140, 90, 65, 75, 75, 80], repeatRows=1)
+            tbl.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111827")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, colors.HexColor("#F9FAFB")]),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.6, colors.HexColor("#111827")),
+                ("LINEABOVE", (0, -1), (-1, -1), 0.6, colors.HexColor("#111827")),
+                ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]))
+            elements.append(tbl)
+        doc.build(elements)
+        buf.seek(0)
+        return Response(
+            content=buf.read(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="vendors-{event_id}.pdf"'},
+        )
+    except Exception as e:
+        return standard_response(False, f"Failed to build PDF report: {e}")
 
 
 # ──────────────────────────────────────────────

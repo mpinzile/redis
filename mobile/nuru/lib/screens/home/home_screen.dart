@@ -6,6 +6,8 @@ import '../../core/utils/share_helpers.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/nuru_scrollable_tabs.dart';
+
 import '../../core/services/api_service.dart';
 import '../../core/services/events_service.dart';
 import '../../core/services/social_service.dart';
@@ -245,7 +247,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadGlimpses({bool silent = false}) async {
-    if (mounted && !silent) setState(() => _glimpsesLoading = true);
+    // Show the skeleton whenever the rail has nothing yet, even during a
+    // silent background refresh - otherwise the rail is blank on first load.
+    if (mounted && _glimpses.isEmpty) setState(() => _glimpsesLoading = true);
     try {
       final res = await MomentsService.getFeed();
       if (!mounted) return;
@@ -372,19 +376,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         FeedInteractionTracker.resetSession();
         _feedSessionId = FeedInteractionTracker.sessionId;
       }
-      if (!silent) {
-        setState(() {
-          // Only show the full skeleton when we have nothing on screen.
-          // If posts are already rendered (from memory or disk cache), refresh
-          // silently so the feed never blanks out.
-          if (_feedPosts.isEmpty) _feedLoading = true;
-          _feedFallbackTried = false;
-          _feedPage = 1;
-        });
-      } else {
+      // Always show the skeleton when there is nothing on screen yet, even
+      // during a "silent" refresh. Otherwise the feed shows a blank white
+      // area until the network call returns. Only suppress the skeleton
+      // when we already have posts rendered from cache.
+      setState(() {
+        if (_feedPosts.isEmpty) _feedLoading = true;
         _feedFallbackTried = false;
         _feedPage = 1;
-      }
+      });
     }
     final reqId = ++_feedRequestId;
     final res = await SocialService.getFeed(page: _feedPage, limit: 15, sessionId: _feedSessionId);
@@ -530,7 +530,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _loadNotifications({String? search, bool silent = false}) async {
     if (search != null) _notificationsSearch = search;
     final hasCache = _notifications.isNotEmpty;
-    if (!silent && !hasCache) setState(() => _notificationsLoading = true);
+    if (!hasCache) setState(() => _notificationsLoading = true);
     final res = await SocialService.getNotifications(
       limit: 30,
       search: _notificationsSearch.isNotEmpty ? _notificationsSearch : null,
@@ -1191,108 +1191,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
 }
 
-/// Mockup-faithful underline tab bar used by the Events tab.
-/// Active tab gets a yellow (secondary) underline and bold text.
-class _UnderlineTabs extends StatefulWidget {
+/// Pill-style tabs (YouTube-style) used by the Events tab. Delegates to the
+/// shared [NuruScrollableTabs] so the visuals stay consistent app-wide.
+class _UnderlineTabs extends StatelessWidget {
   final List<String> tabs;
   final int selected;
   final ValueChanged<int> onChanged;
   const _UnderlineTabs({required this.tabs, required this.selected, required this.onChanged});
 
   @override
-  State<_UnderlineTabs> createState() => _UnderlineTabsState();
-}
-
-class _UnderlineTabsState extends State<_UnderlineTabs> {
-  final ScrollController _scrollCtrl = ScrollController();
-  final List<GlobalKey> _tabKeys = [];
-
-  void _ensureKeys() {
-    while (_tabKeys.length < widget.tabs.length) _tabKeys.add(GlobalKey());
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _ensureKeys();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollActiveIntoView());
-  }
-
-  @override
-  void didUpdateWidget(covariant _UnderlineTabs oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _ensureKeys();
-    if (oldWidget.selected != widget.selected) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollActiveIntoView());
-    }
-  }
-
-  void _scrollActiveIntoView() {
-    if (!mounted || widget.selected >= _tabKeys.length) return;
-    final ctx = _tabKeys[widget.selected].currentContext;
-    if (ctx == null || !_scrollCtrl.hasClients) return;
-    final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final viewportWidth = _scrollCtrl.position.viewportDimension;
-    final tabOffset = box.localToGlobal(Offset.zero, ancestor: context.findRenderObject()).dx;
-    final tabWidth = box.size.width;
-    final tabCenterAbs = _scrollCtrl.offset + tabOffset + tabWidth / 2;
-    final target = (tabCenterAbs - viewportWidth / 2).clamp(
-      _scrollCtrl.position.minScrollExtent,
-      _scrollCtrl.position.maxScrollExtent,
-    );
-    _scrollCtrl.animateTo(target,
-        duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
-  }
-
-  @override
-  void dispose() {
-    _scrollCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    _ensureKeys();
-    return SingleChildScrollView(
-      controller: _scrollCtrl,
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Row(
-        children: List.generate(widget.tabs.length, (i) {
-          final active = i == widget.selected;
-          return GestureDetector(
-            key: _tabKeys[i],
-            onTap: () {
-              widget.onChanged(i);
-              WidgetsBinding.instance.addPostFrameCallback((_) => _scrollActiveIntoView());
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(2, 6, 2, 10),
-              margin: const EdgeInsets.only(right: 22),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: active ? AppColors.secondary : Colors.transparent,
-                    width: 2.5,
-                  ),
-                ),
-              ),
-              child: Text(
-                widget.tabs[i],
-                style: GoogleFonts.inter(
-                  fontSize: 14.5,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                  color: active ? AppColors.textPrimary : AppColors.textSecondary,
-                  letterSpacing: -0.1,
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
+    return NuruScrollableTabs(
+      labels: tabs,
+      activeIndex: selected,
+      onChanged: onChanged,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
     );
   }
 }
+

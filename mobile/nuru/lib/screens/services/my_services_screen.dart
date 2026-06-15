@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../core/widgets/amount_input.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -1755,8 +1757,8 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                       'Brief description...',
                       maxLines: 2),
                   const SizedBox(height: 10),
-                  _sheetField(priceCtrl, 'Price (TZS)', 'e.g. 150000',
-                      keyboardType: TextInputType.number),
+                  _sheetField(priceCtrl, 'Price (TZS)', 'e.g. 150,000',
+                      keyboardType: TextInputType.number, inputFormatters: amountFormatters),
                   const SizedBox(height: 10),
                   _sheetField(featuresCtrl,
                       'Features (comma-separated)',
@@ -1790,9 +1792,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                                   body: jsonEncode({
                                     'name': nameCtrl.text.trim(),
                                     'description': descCtrl.text.trim(),
-                                    'price': num.tryParse(
-                                            priceCtrl.text.trim()) ??
-                                        0,
+                                    'price': parseAmount(priceCtrl.text) ?? 0,
                                     'features': featuresCtrl.text
                                         .split(',')
                                         .map((f) => f.trim())
@@ -1859,11 +1859,13 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
     String hint, {
     int maxLines = 1,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: ctrl,
       maxLines: maxLines,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

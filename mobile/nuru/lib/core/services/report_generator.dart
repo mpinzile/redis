@@ -1268,11 +1268,19 @@ class ReportGenerator {
         EventsService.getGuests(eventId, limit: 1),
         EventsService.getEventContributors(eventId, limit: 1),
         EventsService.getCommittee(eventId),
+        EventsService.getBudget(eventId),
+        EventsService.getExpenses(eventId),
+        EventsService.getEventServices(eventId),
+        EventsService.getManagementOverview(eventId),
       ]);
 
       final guestData = _asMap(results[0]);
       final contribData = _asMap(results[1]);
       final committeeData = _asMap(results[2]);
+      final budgetData = _asMap(results[3]);
+      final expenseData = _asMap(results[4]);
+      final servicesData = _asMap(results[5]);
+      final overviewData = _asMap(results[6]);
 
       final guestDataInner = _asMap(guestData['data']);
       final guestSummary = _asMap(guestDataInner['summary']);
@@ -1282,11 +1290,14 @@ class ReportGenerator {
       final confirmedGuests = _toNum(guestSummary['confirmed'] ?? guestSummary['attending']).toInt();
       final pendingGuests = _toNum(guestSummary['pending']).toInt();
       final declinedGuests = _toNum(guestSummary['declined']).toInt();
+      final maybeGuests = _toNum(guestSummary['maybe']).toInt();
       final checkedIn = _toNum(guestSummary['checked_in']).toInt();
+      final invitationsSent = _toNum(guestSummary['invitations_sent'] ?? eventData!['invitations_sent']).toInt();
 
       final contribDataInner = _asMap(contribData['data']);
       final contribSummary = _asMap(contribDataInner['summary']);
       final totalCollected = _toNum(contribSummary['total_paid'] ?? contribSummary['total_confirmed']);
+      final totalPledged = _toNum(contribSummary['total_pledged'] ?? contribSummary['total_amount'] ?? eventData!['contribution_target']);
       final contribList = contribDataInner['event_contributors'];
       final contribCount = contribList is List ? contribList.length : _toNum(contribDataInner['total']).toInt();
 
@@ -1294,10 +1305,32 @@ class ReportGenerator {
       final membersList = committeeDataInner['members'] ?? committeeDataInner;
       final committeeCount = membersList is List ? membersList.length : 0;
 
+      final budgetInner = _asMap(budgetData['data']);
+      final budgetItems = budgetInner['items'] is List ? budgetInner['items'] as List : const [];
+      final budgetSummary = _asMap(budgetInner['summary']);
+      final expenseInner = _asMap(expenseData['data']);
+      final expenses = expenseInner['expenses'] is List ? expenseInner['expenses'] as List : const [];
+      final expenseSummary = _asMap(expenseInner['summary']);
+      final servicesInner = servicesData['data'];
+      final services = servicesInner is List
+          ? servicesInner
+          : (servicesInner is Map ? (servicesInner['services'] ?? servicesInner['items'] ?? const []) : const []);
+      final overviewInner = _asMap(overviewData['data']);
+      final ticketSales = _asMap(overviewInner['ticket_sales']);
+      final revenueSummary = _asMap(overviewInner['revenue_summary']);
+      final sponsorSummary = _asMap(overviewInner['sponsors']);
+      final ticketsSold = _toNum(ticketSales['total_sold'] ?? eventData!['tickets_sold']).toInt();
+      final ticketCapacity = _toNum(ticketSales['total_capacity'] ?? eventData!['tickets_capacity']).toInt();
+      final sponsorRevenue = _toNum(revenueSummary['sponsors'] ?? sponsorSummary['revenue']);
+      final totalExpenses = _toNum(expenseSummary['total_expenses']);
+      final totalEstimated = _toNum(budgetSummary['total_estimated']);
+      final totalActual = _toNum(budgetSummary['total_actual']);
+      final vendorCount = services is List ? services.length : 0;
+
       if (format == 'xlsx') {
-        return await _eventXlsx(eventData!, guestCount, confirmedGuests, pendingGuests, declinedGuests, checkedIn, totalCollected, contribCount, committeeCount);
+        return await _eventXlsx(eventData!, guestCount, confirmedGuests, pendingGuests, declinedGuests, maybeGuests, checkedIn, invitationsSent, totalCollected, totalPledged, contribCount, committeeCount, vendorCount, ticketsSold, ticketCapacity, sponsorRevenue, totalExpenses, totalEstimated, totalActual, budgetItems.length, expenses.length);
       } else {
-        return await _eventPdf(eventData!, guestCount, confirmedGuests, pendingGuests, declinedGuests, checkedIn, totalCollected, contribCount, committeeCount);
+        return await _eventPdf(eventData!, guestCount, confirmedGuests, pendingGuests, declinedGuests, maybeGuests, checkedIn, invitationsSent, totalCollected, totalPledged, contribCount, committeeCount, vendorCount, ticketsSold, ticketCapacity, sponsorRevenue, totalExpenses, totalEstimated, totalActual, budgetItems.length, expenses.length);
       }
     } catch (e) {
       return {'success': false, 'message': 'Failed: $e'};
@@ -1305,8 +1338,10 @@ class ReportGenerator {
   }
 
   static Future<Map<String, dynamic>> _eventPdf(
-    Map<String, dynamic> event, int guestCount, int confirmed, int pending, int declined, int checkedIn,
-    double totalCollected, int contribCount, int committeeCount,
+    Map<String, dynamic> event, int guestCount, int confirmed, int pending, int declined, int maybe,
+    int checkedIn, int invitationsSent, double totalCollected, double totalPledged, int contribCount,
+    int committeeCount, int vendorCount, int ticketsSold, int ticketCapacity, double sponsorRevenue,
+    double totalExpenses, double totalEstimated, double totalActual, int budgetItemCount, int expenseCount,
   ) async {
     final logo = await _loadLogo();
     final pdf = pw.Document();
@@ -1315,6 +1350,8 @@ class ReportGenerator {
     final expectedGuests = _toNum(event['expected_guests']).toInt();
     final confirmRate = guestCount > 0 ? (confirmed / guestCount * 100) : 0.0;
     final budgetCoverage = budget > 0 ? (totalCollected / budget * 100) : 0.0;
+    final budgetShortfall = budget > 0 ? (budget - totalCollected).clamp(0.0, double.infinity).toDouble() : 0.0;
+    final pledgeShortfall = budget > 0 ? (budget - totalPledged).clamp(0.0, double.infinity).toDouble() : 0.0;
 
     pdf.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
@@ -1372,9 +1409,17 @@ class ReportGenerator {
         pw.Row(children: [
           _metricCard('Pending', '$pending', accent: _accentAmber, valueColor: _accentAmber),
           pw.SizedBox(width: 6),
-          _metricCard('Declined', '$declined', accent: _accentRed, valueColor: _accentRed),
+          _metricCard('Maybe', '$maybe', accent: _accentBlue, valueColor: _accentBlue),
           pw.SizedBox(width: 6),
+          _metricCard('Declined', '$declined', accent: _accentRed, valueColor: _accentRed),
+        ]),
+        pw.SizedBox(height: 6),
+        pw.Row(children: [
           _metricCard('Checked In', '$checkedIn', accent: _accentBlue, valueColor: _accentBlue),
+          pw.SizedBox(width: 6),
+          _metricCard('Invitations Sent', '$invitationsSent', accent: _accentBlue),
+          pw.SizedBox(width: 6),
+          _metricCard('Ticket Check-ins', '$ticketsSold / $ticketCapacity', accent: _accentBlue),
         ]),
         if (guestCount > 0) _progressBar('Confirmation Rate', confirmRate, color: _accentGreen),
         if (checkedIn > 0) _progressBar(
@@ -1390,14 +1435,44 @@ class ReportGenerator {
           _metricCard('Event Budget', budget > 0 ? _fmt(budget) : '-', accent: _accentOrange),
           pw.SizedBox(width: 8),
           _metricCard('Total Collected', _fmt(totalCollected), accent: _accentGreen, valueColor: _accentGreen),
+          pw.SizedBox(width: 8),
+          _metricCard('Budget Shortfall', _fmt(budgetShortfall), accent: _accentRed, valueColor: budgetShortfall > 0 ? _accentRed : _accentGreen),
+        ]),
+        pw.SizedBox(height: 6),
+        pw.Row(children: [
+          _metricCard('Total Pledged', _fmt(totalPledged), accent: _accentPurple, valueColor: _accentPurple),
+          pw.SizedBox(width: 8),
+          _metricCard('Pledge Shortfall', _fmt(pledgeShortfall), accent: _accentAmber, valueColor: pledgeShortfall > 0 ? _accentAmber : _accentGreen),
+          pw.SizedBox(width: 8),
+          _metricCard('Sponsor Revenue', _fmt(sponsorRevenue), accent: _accentGreen, valueColor: _accentGreen),
         ]),
         pw.SizedBox(height: 6),
         pw.Row(children: [
           _metricCard('Unique Contributors', '$contribCount', accent: _accentBlue),
           pw.SizedBox(width: 8),
           _metricCard('Committee Members', '$committeeCount', accent: _accentOrange),
+          pw.SizedBox(width: 8),
+          _metricCard('Vendors', '$vendorCount', accent: _accentBlue),
         ]),
         if (budget > 0) _progressBar('Budget Coverage', budgetCoverage, color: _accentOrange),
+        pw.SizedBox(height: 22),
+
+        _sectionHeading('Planning Detail'),
+        pw.Row(children: [
+          _metricCard('Budget Items', '$budgetItemCount', accent: _accentOrange),
+          pw.SizedBox(width: 8),
+          _metricCard('Estimated Costs', _fmt(totalEstimated), accent: _accentOrange),
+          pw.SizedBox(width: 8),
+          _metricCard('Actual Costs', _fmt(totalActual), accent: _accentOrange),
+        ]),
+        pw.SizedBox(height: 6),
+        pw.Row(children: [
+          _metricCard('Expense Entries', '$expenseCount', accent: _accentRed),
+          pw.SizedBox(width: 8),
+          _metricCard('Total Expenses', _fmt(totalExpenses), accent: _accentRed),
+          pw.SizedBox(width: 8),
+          _metricCard('Net Cash', _fmt(totalCollected + sponsorRevenue - totalExpenses), accent: _accentGreen),
+        ]),
       ],
     ));
 
@@ -1405,8 +1480,10 @@ class ReportGenerator {
   }
 
   static Future<Map<String, dynamic>> _eventXlsx(
-    Map<String, dynamic> event, int guestCount, int confirmed, int pending, int declined, int checkedIn,
-    double totalCollected, int contribCount, int committeeCount,
+    Map<String, dynamic> event, int guestCount, int confirmed, int pending, int declined, int maybe,
+    int checkedIn, int invitationsSent, double totalCollected, double totalPledged, int contribCount,
+    int committeeCount, int vendorCount, int ticketsSold, int ticketCapacity, double sponsorRevenue,
+    double totalExpenses, double totalEstimated, double totalActual, int budgetItemCount, int expenseCount,
   ) async {
     final excel = xl.Excel.createExcel();
     final sheet = excel['Event Summary'];
@@ -1425,15 +1502,35 @@ class ReportGenerator {
     _xlSetRow(sheet, row++, ['Expected Guests', '${_toNum(event['expected_guests']).toInt()}']);
     _xlSetRow(sheet, row++, ['Total RSVPs', '$guestCount']);
     _xlSetRow(sheet, row++, ['Confirmed', '$confirmed']);
+    _xlSetRow(sheet, row++, ['Maybe', '$maybe']);
     _xlSetRow(sheet, row++, ['Pending', '$pending']);
     _xlSetRow(sheet, row++, ['Declined', '$declined']);
     _xlSetRow(sheet, row++, ['Checked In', '$checkedIn']);
+    _xlSetRow(sheet, row++, ['Invitations Sent', '$invitationsSent']);
+    _xlSetRow(sheet, row++, ['Tickets Sold', '$ticketsSold']);
+    _xlSetRow(sheet, row++, ['Ticket Capacity', '$ticketCapacity']);
     row++;
     _xlSetRow(sheet, row++, ['FINANCIAL SUMMARY'], style: _xlSubtitleStyle());
-    _xlSetRow(sheet, row++, ['Budget', _fmt(_toNum(event['budget']))]);
+    final budget = _toNum(event['budget']);
+    final budgetShortfall = budget > 0 ? (budget - totalCollected).clamp(0.0, double.infinity).toDouble() : 0.0;
+    final pledgeShortfall = budget > 0 ? (budget - totalPledged).clamp(0.0, double.infinity).toDouble() : 0.0;
+    _xlSetRow(sheet, row++, ['Budget', _fmt(budget)]);
     _xlSetRow(sheet, row++, ['Total Collected', _fmt(totalCollected)]);
+    _xlSetRow(sheet, row++, ['Total Pledged', _fmt(totalPledged)]);
+    _xlSetRow(sheet, row++, ['Budget Shortfall', _fmt(budgetShortfall)]);
+    _xlSetRow(sheet, row++, ['Pledge Shortfall', _fmt(pledgeShortfall)]);
+    _xlSetRow(sheet, row++, ['Sponsor Revenue', _fmt(sponsorRevenue)]);
+    _xlSetRow(sheet, row++, ['Total Expenses', _fmt(totalExpenses)]);
+    _xlSetRow(sheet, row++, ['Net Cash', _fmt(totalCollected + sponsorRevenue - totalExpenses)]);
     _xlSetRow(sheet, row++, ['Contributors', '$contribCount']);
     _xlSetRow(sheet, row++, ['Committee Members', '$committeeCount']);
+    _xlSetRow(sheet, row++, ['Vendors', '$vendorCount']);
+    row++;
+    _xlSetRow(sheet, row++, ['PLANNING DETAIL'], style: _xlSubtitleStyle());
+    _xlSetRow(sheet, row++, ['Budget Items', '$budgetItemCount']);
+    _xlSetRow(sheet, row++, ['Estimated Costs', _fmt(totalEstimated)]);
+    _xlSetRow(sheet, row++, ['Actual Costs', _fmt(totalActual)]);
+    _xlSetRow(sheet, row++, ['Expense Entries', '$expenseCount']);
 
     for (int c = 0; c < 2; c++) sheet.setColumnWidth(c, 25);
     if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
@@ -1491,6 +1588,7 @@ class ReportGenerator {
     final attending = sorted.where((g) => ['attending', 'confirmed'].contains(_s(g['rsvp_status']))).length;
     final pending = sorted.where((g) => _s(g['rsvp_status']) == 'pending' || g['rsvp_status'] == null).length;
     final declined = sorted.where((g) => _s(g['rsvp_status']) == 'declined').length;
+    final maybe = sorted.where((g) => _s(g['rsvp_status']) == 'maybe').length;
     final confirmRate = total > 0 ? (attending / total * 100) : 0.0;
 
     pdf.addPage(pw.MultiPage(
@@ -1506,6 +1604,8 @@ class ReportGenerator {
           _metricCard('Total Invited', '$total', accent: _accentBlue),
           pw.SizedBox(width: 6),
           _metricCard('Attending', '$attending', accent: _accentGreen, valueColor: _accentGreen),
+          pw.SizedBox(width: 6),
+          _metricCard('Maybe', '$maybe', accent: _accentBlue, valueColor: _accentBlue),
           pw.SizedBox(width: 6),
           _metricCard('Pending', '$pending', accent: _accentAmber, valueColor: _accentAmber),
           pw.SizedBox(width: 6),

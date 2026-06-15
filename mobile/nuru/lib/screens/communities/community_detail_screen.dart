@@ -628,40 +628,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   // ─── Underline tabs ──────────────────────────────────────────────────────
 
   Widget _underlineTabs() {
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _tabs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 20),
-        itemBuilder: (_, i) {
-          final active = _activeTab == i;
-          return GestureDetector(
-            onTap: () => setState(() => _activeTab = i),
-            child: IntrinsicWidth(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-                const SizedBox(height: 12),
-                Text(_tabs[i],
-                    style: GoogleFonts.inter(
-                        fontSize: 13.5,
-                        fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                        color: active ? AppColors.primary : AppColors.textTertiary)),
-                const SizedBox(height: 8),
-                Container(
-                  height: 2.5,
-                  decoration: BoxDecoration(
-                    color: active ? AppColors.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ]),
-            ),
-          );
-        },
-      ),
+    return NuruScrollableTabs(
+      labels: _tabs,
+      activeIndex: _activeTab,
+      onChanged: (i) => setState(() => _activeTab = i),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
     );
   }
+
 
   // ─── Tab content ─────────────────────────────────────────────────────────
 

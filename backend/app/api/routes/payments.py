@@ -645,11 +645,30 @@ def _notify_payment_received(db: Session, tx: Transaction) -> None:
                 if event and event.organizer_id else None
             )
             target_label = event.name if event else "event contribution"
+            # Prefer the per-event display name the organiser stored for THIS
+            # contributor on THIS event. The same global contributor can show
+            # up as different names on different events; phone is the bridge.
+            display_for_organizer = payer_name
+            try:
+                from models import EventContributor as _EC, UserContributor as _UC
+                if event and payer and getattr(payer, "phone", None):
+                    row = (
+                        db.query(_EC, _UC)
+                        .join(_UC, _UC.id == _EC.contributor_id)
+                        .filter(_EC.event_id == event.id, _UC.phone == payer.phone)
+                        .first()
+                    )
+                    if row:
+                        ec_row, uc_row = row
+                        ev_name = (getattr(ec_row, "display_name", None) or "").strip()
+                        display_for_organizer = ev_name or (uc_row.name or payer_name)
+            except Exception:
+                pass
             if organizer and getattr(organizer, "phone", None):
                 sms_organizer_contribution_received(
                     phone=organizer.phone,
                     organizer_name=_payer_label(organizer),
-                    contributor_name=payer_name,
+                    contributor_name=display_for_organizer,
                     event_title=event.name if event else "your event",
                     amount=amount, currency=currency, transaction_code=code,
                 )

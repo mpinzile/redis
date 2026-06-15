@@ -1,4 +1,6 @@
 import '../../core/widgets/nuru_refresh_indicator.dart';
+import '../../core/widgets/nuru_scrollable_tabs.dart';
+
 import '../../core/utils/money_format.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -1306,26 +1308,30 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       final cs = (_overview != null && _overview!['contribution_status'] is Map)
           ? (_overview!['contribution_status'] as Map).cast<String, dynamic>()
           : const <String, dynamic>{};
-      final paid = _asInt(
-        cs['paid_count'] ?? _contributionSummary['paid_count'],
-      );
+      final fullyPaid = _asInt(cs['fully_paid_count'] ?? cs['paid_count'] ?? _contributionSummary['paid_count']);
+      final inProgress = _asInt(cs['in_progress_count']);
       final outstanding = _asInt(
         cs['outstanding_count'] ??
-            ((_asInt(cs['pledged_count']) - paid).clamp(0, 1 << 30)),
+            ((_asInt(cs['pledged_count']) - fullyPaid - inProgress).clamp(0, 1 << 30)),
       );
       donutData = [
         _DonutSlice(
           label: 'Paid',
-          value: paid.toDouble(),
+          value: fullyPaid.toDouble(),
+          color: const Color(0xFF16A34A),
+        ),
+        _DonutSlice(
+          label: 'In Progress',
+          value: inProgress.toDouble(),
           color: const Color(0xFFE7A622),
         ),
         _DonutSlice(
           label: 'Outstanding',
           value: outstanding.toDouble(),
-          color: const Color(0xFF111827),
+          color: const Color(0xFFDC2626),
         ),
       ];
-      centerNumber = paid + outstanding;
+      centerNumber = fullyPaid + inProgress + outstanding;
       centerLabel = 'Contributions';
     }
     final hasData = donutData.fold<double>(0, (a, b) => a + b.value) > 0;
@@ -2803,156 +2809,20 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _TabBarDelegate oldDelegate) => false;
 }
 
-/// Vendor-bookings style underline tabs - black bold active label with yellow bar.
-/// Horizontally scrollable so all event-management tabs fit on small screens.
-class _UnderlineTabs extends StatefulWidget implements PreferredSizeWidget {
+/// YouTube-style pill tabs (black selected, gray unselected). Horizontally
+/// scrollable so all event-management tabs fit on small screens.
+class _UnderlineTabs extends StatelessWidget implements PreferredSizeWidget {
   final List<String> labels;
   final TabController controller;
   const _UnderlineTabs({required this.labels, required this.controller});
   @override
-  Size get preferredSize => const Size.fromHeight(54);
-  @override
-  State<_UnderlineTabs> createState() => _UnderlineTabsState();
-}
-
-class _UnderlineTabsState extends State<_UnderlineTabs> {
-  late int _active;
-  final ScrollController _scrollCtrl = ScrollController();
-  final List<GlobalKey> _tabKeys = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _active = widget.controller.index;
-    _ensureKeys();
-    widget.controller.addListener(_onTab);
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _scrollActiveIntoView(),
-    );
-  }
-
-  void _ensureKeys() {
-    while (_tabKeys.length < widget.labels.length) _tabKeys.add(GlobalKey());
-  }
-
-  void _onTab() {
-    if (!mounted) return;
-    if (widget.controller.indexIsChanging ||
-        widget.controller.index != _active) {
-      setState(() => _active = widget.controller.index);
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _scrollActiveIntoView(),
-      );
-    }
-  }
-
-  void _scrollActiveIntoView() {
-    if (!mounted || _active >= _tabKeys.length) return;
-    final ctx = _tabKeys[_active].currentContext;
-    if (ctx == null || !_scrollCtrl.hasClients) return;
-    final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final viewportWidth = _scrollCtrl.position.viewportDimension;
-    final tabOffset = box
-        .localToGlobal(Offset.zero, ancestor: context.findRenderObject())
-        .dx;
-    final tabWidth = box.size.width;
-    final currentScroll = _scrollCtrl.offset;
-    final tabCenterAbs = currentScroll + tabOffset + tabWidth / 2;
-    final target = (tabCenterAbs - viewportWidth / 2).clamp(
-      _scrollCtrl.position.minScrollExtent,
-      _scrollCtrl.position.maxScrollExtent,
-    );
-    _scrollCtrl.animateTo(
-      target,
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOut,
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant _UnderlineTabs oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _ensureKeys();
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onTab);
-    _scrollCtrl.dispose();
-    super.dispose();
-  }
-
+  Size get preferredSize => const Size.fromHeight(58);
   @override
   Widget build(BuildContext context) {
-    _ensureKeys();
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          bottom: BorderSide(color: AppColors.borderLight, width: 1),
-        ),
-      ),
-      child: SingleChildScrollView(
-        controller: _scrollCtrl,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(
-          children: List.generate(widget.labels.length, (i) {
-            final selected = i == _active;
-            return GestureDetector(
-              key: _tabKeys[i],
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                widget.controller.animateTo(i);
-                setState(() => _active = i);
-                WidgetsBinding.instance.addPostFrameCallback(
-                  (_) => _scrollActiveIntoView(),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                child: IntrinsicWidth(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.labels[i],
-                        textAlign: TextAlign.center,
-                        style: appText(
-                          size: 13,
-                          weight: selected ? FontWeight.w700 : FontWeight.w500,
-                          color: selected
-                              ? AppColors.textPrimary
-                              : AppColors.textTertiary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.primary
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
+    return NuruPillTabBar(controller: controller, labels: labels);
   }
 }
+
 
 /// Premium CTA card on the Event Overview tab. Shows "Open Group Chat" when
 /// a group already exists, otherwise "Create Group Chat".

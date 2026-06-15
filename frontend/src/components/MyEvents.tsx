@@ -25,7 +25,7 @@ import { getEventImage } from '@/lib/eventImage';
 
 import { toast } from 'sonner';
 import { showCaughtError } from '@/lib/api';
-import { generateEventReportHtml } from '@/utils/generateEventReport';
+import { exportEventReportXlsx, generateEventReportHtml } from '@/utils/generateEventReport';
 import ReportPreviewDialog from '@/components/ReportPreviewDialog';
 import InvitedEvents from './InvitedEvents';
 import CommitteeEvents from './CommitteeEvents';
@@ -104,6 +104,7 @@ const MyEvents = () => {
   const [localStatusOverrides, setLocalStatusOverrides] = useState<Record<string, string>>({});
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
   const [reportHtml, setReportHtml] = useState('');
+  const [reportEventData, setReportEventData] = useState<any>(null);
   const [eventsTabValue, setEventsTabValue] = useState('my-events');
   
 
@@ -267,7 +268,7 @@ const MyEvents = () => {
                 </Button>
                 <Button size="sm" variant="secondary" className="bg-white/90 hover:bg-white text-foreground shadow h-7 px-2.5 text-xs"
                   onClick={() => {
-                    const html = generateEventReportHtml({
+                    const data = {
                       title: event.title, description: event.description, event_type: eventType,
                       start_date: event.start_date, end_date: event.end_date, start_time: event.start_time, end_time: event.end_time,
                       location: event.location, venue: event.venue, status,
@@ -275,11 +276,15 @@ const MyEvents = () => {
                       currency: event.currency, expected_guests: event.expected_guests || 0,
                       guest_count: event.guest_count || 0,
                       confirmed_guest_count: event.confirmed_guest_count, pending_guest_count: event.pending_guest_count,
-                      declined_guest_count: event.declined_guest_count, checked_in_count: event.checked_in_count,
+                      declined_guest_count: event.declined_guest_count, maybe_guest_count: event.maybe_guest_count, checked_in_count: event.checked_in_count,
                       committee_count: event.committee_count, contribution_total: event.contribution_total,
                       contribution_count: event.contribution_count, contribution_target: event.contribution_target,
+                      service_booking_count: event.service_booking_count, tickets_sold: event.tickets_sold, tickets_capacity: event.tickets_capacity,
+                      invitations_sent: event.invitations_sent, invitations_total: event.invitations_total,
                       dress_code: event.dress_code, special_instructions: event.special_instructions,
-                    });
+                    };
+                    const html = generateEventReportHtml(data);
+                    setReportEventData(data);
                     setReportHtml(html);
                     setReportPreviewOpen(true);
                   }}>
@@ -302,7 +307,7 @@ const MyEvents = () => {
               </Button>
               <Button size="sm" variant="secondary" className="bg-white/90 hover:bg-white text-foreground shadow h-7 px-2.5 text-xs"
                 onClick={() => {
-                  const html = generateEventReportHtml({
+                  const data = {
                     title: event.title, description: event.description, event_type: eventType,
                     start_date: event.start_date, end_date: event.end_date, start_time: event.start_time, end_time: event.end_time,
                     location: event.location, venue: event.venue, status,
@@ -310,11 +315,15 @@ const MyEvents = () => {
                     currency: event.currency, expected_guests: event.expected_guests || 0,
                     guest_count: event.guest_count || 0,
                     confirmed_guest_count: event.confirmed_guest_count, pending_guest_count: event.pending_guest_count,
-                    declined_guest_count: event.declined_guest_count, checked_in_count: event.checked_in_count,
+                    declined_guest_count: event.declined_guest_count, maybe_guest_count: event.maybe_guest_count, checked_in_count: event.checked_in_count,
                     committee_count: event.committee_count, contribution_total: event.contribution_total,
                     contribution_count: event.contribution_count, contribution_target: event.contribution_target,
+                    service_booking_count: event.service_booking_count, tickets_sold: event.tickets_sold, tickets_capacity: event.tickets_capacity,
+                    invitations_sent: event.invitations_sent, invitations_total: event.invitations_total,
                     dress_code: event.dress_code, special_instructions: event.special_instructions,
-                  });
+                  };
+                  const html = generateEventReportHtml(data);
+                  setReportEventData(data);
                   setReportHtml(html);
                   setReportPreviewOpen(true);
                 }}>
@@ -571,6 +580,7 @@ const MyEvents = () => {
         onOpenChange={setReportPreviewOpen}
         title="Event Report"
         html={reportHtml}
+        onDownloadExcel={() => reportEventData && exportEventReportXlsx(reportEventData)}
       />
     </div>
   );

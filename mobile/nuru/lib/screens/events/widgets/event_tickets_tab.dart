@@ -1,6 +1,8 @@
 import '../../../core/widgets/nuru_refresh_indicator.dart';
 import '../../../core/utils/money_format.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../core/widgets/amount_input.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../core/theme/app_colors.dart';
@@ -111,7 +113,7 @@ class _EventTicketsTabState extends State<EventTicketsTab> {
           _inputField('Name', nameCtrl, 'e.g. VIP, Regular, Early Bird'),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: _inputField('Price (TZS)', priceCtrl, '0', keyboard: TextInputType.number)),
+            Expanded(child: _inputField('Price (TZS)', priceCtrl, '0', keyboard: TextInputType.number, inputFormatters: amountFormatters)),
             const SizedBox(width: 12),
             Expanded(child: _inputField('Quantity', qtyCtrl, '100', keyboard: TextInputType.number)),
           ]),
@@ -126,7 +128,7 @@ class _EventTicketsTabState extends State<EventTicketsTab> {
                 Navigator.pop(ctx);
                 final res = await TicketingService.createTicketClass(widget.eventId, {
                   'name': nameCtrl.text.trim(),
-                  'price': double.tryParse(priceCtrl.text.trim()) ?? 0,
+                  'price': parseAmount(priceCtrl.text) ?? 0,
                   'quantity': int.tryParse(qtyCtrl.text.trim()) ?? 100,
                   if (descCtrl.text.trim().isNotEmpty) 'description': descCtrl.text.trim(),
                 });
@@ -147,7 +149,7 @@ class _EventTicketsTabState extends State<EventTicketsTab> {
     );
   }
 
-  Widget _inputField(String label, TextEditingController ctrl, String hint, {TextInputType? keyboard, int maxLines = 1}) {
+  Widget _inputField(String label, TextEditingController ctrl, String hint, {TextInputType? keyboard, int maxLines = 1, List<TextInputFormatter>? inputFormatters}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: appText(size: 11, weight: FontWeight.w600, color: AppColors.textTertiary)),
       const SizedBox(height: 4),
@@ -155,6 +157,7 @@ class _EventTicketsTabState extends State<EventTicketsTab> {
         controller: ctrl,
         keyboardType: keyboard,
         maxLines: maxLines,
+        inputFormatters: inputFormatters,
         style: appText(size: 14),
         decoration: InputDecoration(
           hintText: hint,

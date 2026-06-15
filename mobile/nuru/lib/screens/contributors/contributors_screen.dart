@@ -8,6 +8,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/services/secure_token_storage.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/nuru_subpage_app_bar.dart';
+import '../../core/widgets/nuru_scrollable_tabs.dart';
+
 import '../../core/widgets/nuru_skeleton.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../core/widgets/app_icon.dart';
@@ -618,7 +620,7 @@ class _ContributorsScreenState extends State<ContributorsScreen>
   }
 }
 
-/// Pill-style tab bar matching the event-details page aesthetic.
+/// Pill-style tab bar (YouTube-style) shared across the app.
 class _PillTabs extends StatelessWidget {
   final TabController controller;
   final List<String> tabs;
@@ -626,44 +628,11 @@ class _PillTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (_, __) => Row(
-          children: List.generate(tabs.length, (i) {
-            final active = controller.index == i;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => controller.animateTo(i),
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: active ? AppColors.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    tabs[i],
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: active ? Colors.white : AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
+    return NuruPillTabBar(
+      controller: controller,
+      labels: tabs,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
     );
   }
 }
+

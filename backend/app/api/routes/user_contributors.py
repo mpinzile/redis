@@ -3376,7 +3376,14 @@ async def self_contribute(
     if getattr(current_user, "email", None):
         contact["email"] = current_user.email
 
-    contributor_name = contributor.name if contributor else f"{current_user.first_name} {current_user.last_name}".strip()
+    # Prefer per-event display name override so the contribution is stamped
+    # with the name the organiser uses for this contributor on THIS event.
+    _ec_display = (getattr(ec, "display_name", None) or "").strip()
+    contributor_name = (
+        _ec_display
+        or (contributor.name if contributor else None)
+        or f"{current_user.first_name} {current_user.last_name}".strip()
+    )
     now = datetime.now(EAT)
 
     # Use transaction_code as the canonical reference when given.

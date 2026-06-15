@@ -104,7 +104,15 @@ export const eventsApi = {
       is_ticketed: boolean;
       kpis: { tickets_sold: number; tickets_capacity: number; total_revenue: number; contributions_count: number; days_to_go: number };
       ticket_sales: { total_sold: number; total_capacity: number; classes: { id: string; name: string; price: number; quantity: number; sold: number; revenue: number }[] };
-      contribution_status: { paid_count: number; pledged_count: number; outstanding_count: number; paid_total: number; pledged_total: number };
+      contribution_status: {
+        paid_count: number;
+        fully_paid_count?: number;
+        in_progress_count?: number;
+        pledged_count: number;
+        outstanding_count: number;
+        paid_total: number;
+        pledged_total: number;
+      };
       revenue_summary: { total_revenue: number; tickets: number; contributions: number; sponsors: number; trend_pct: number | null; trend_window_days: number };
       sponsors: { total: number; accepted: number; pending: number; declined: number; revenue: number };
     }>(`/user-events/${eventId}/management-overview`),
@@ -447,6 +455,21 @@ export const eventsApi = {
    */
   addEventService: (eventId: string, data: { provider_service_id?: string; service_id?: string; provider_user_id?: string; quoted_price?: number; notes?: string }) =>
     post<any>(`/user-events/${eventId}/services`, data),
+
+  /** Add an off-platform (manual) vendor to event */
+  addManualVendor: (eventId: string, data: { manual_vendor_name: string; manual_vendor_category_id?: string; manual_vendor_phone?: string; manual_vendor_email?: string; quoted_price?: number; manual_vendor_notes?: string }) =>
+    post<any>(`/user-events/${eventId}/services`, { ...data, is_manual: true }),
+
+  /** Download confirmed-vendors report (pdf or xlsx) — returns Blob */
+  downloadVendorsReport: async (eventId: string, format: 'pdf' | 'xlsx'): Promise<Blob> => {
+    const { resolveApiBaseUrl, getAuthHeaders } = await import('./helpers');
+    const base = resolveApiBaseUrl();
+    const res = await fetch(`${base}/user-events/${eventId}/vendors/report?format=${format}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to download report');
+    return await res.blob();
+  },
 
   /**
    * Update event service

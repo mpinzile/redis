@@ -5,6 +5,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import '../../core/services/secure_token_storage.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/nuru_scrollable_tabs.dart';
+
 import '../events/event_detail_screen.dart';
 import '../events/event_public_view_screen.dart';
 import '../public_profile/public_profile_screen.dart';
@@ -345,129 +347,15 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 }
 
-class _SearchUnderlineTabs extends StatefulWidget implements PreferredSizeWidget {
+class _SearchUnderlineTabs extends StatelessWidget implements PreferredSizeWidget {
   final List<String> labels;
   final TabController controller;
   const _SearchUnderlineTabs({required this.labels, required this.controller});
   @override
-  Size get preferredSize => const Size.fromHeight(54);
-  @override
-  State<_SearchUnderlineTabs> createState() => _SearchUnderlineTabsState();
-}
-
-class _SearchUnderlineTabsState extends State<_SearchUnderlineTabs> {
-  late int _active;
-  final ScrollController _scrollCtrl = ScrollController();
-  final List<GlobalKey> _tabKeys = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _active = widget.controller.index;
-    _ensureKeys();
-    widget.controller.addListener(_onTab);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollActiveIntoView());
-  }
-
-  void _ensureKeys() {
-    while (_tabKeys.length < widget.labels.length) _tabKeys.add(GlobalKey());
-  }
-
-  void _onTab() {
-    if (!mounted) return;
-    if (widget.controller.indexIsChanging || widget.controller.index != _active) {
-      setState(() => _active = widget.controller.index);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollActiveIntoView());
-    }
-  }
-
-  void _scrollActiveIntoView() {
-    if (!mounted || _active >= _tabKeys.length) return;
-    final ctx = _tabKeys[_active].currentContext;
-    if (ctx == null || !_scrollCtrl.hasClients) return;
-    final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final viewportWidth = _scrollCtrl.position.viewportDimension;
-    final tabOffset = box.localToGlobal(Offset.zero, ancestor: context.findRenderObject()).dx;
-    final tabWidth = box.size.width;
-    final currentScroll = _scrollCtrl.offset;
-    final tabCenterAbs = currentScroll + tabOffset + tabWidth / 2;
-    final target = (tabCenterAbs - viewportWidth / 2).clamp(
-      _scrollCtrl.position.minScrollExtent,
-      _scrollCtrl.position.maxScrollExtent,
-    );
-    _scrollCtrl.animateTo(target, duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
-  }
-
-  @override
-  void didUpdateWidget(covariant _SearchUnderlineTabs oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _ensureKeys();
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onTab);
-    _scrollCtrl.dispose();
-    super.dispose();
-  }
-
+  Size get preferredSize => const Size.fromHeight(58);
   @override
   Widget build(BuildContext context) {
-    _ensureKeys();
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.borderLight, width: 1)),
-      ),
-      child: SingleChildScrollView(
-        controller: _scrollCtrl,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(
-          children: List.generate(widget.labels.length, (i) {
-            final selected = i == _active;
-            return GestureDetector(
-              key: _tabKeys[i],
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                widget.controller.animateTo(i);
-                setState(() => _active = i);
-                WidgetsBinding.instance.addPostFrameCallback((_) => _scrollActiveIntoView());
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: IntrinsicWidth(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.labels[i],
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                          color: selected ? AppColors.textPrimary : AppColors.textTertiary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: selected ? AppColors.primary : Colors.transparent,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
+    return NuruPillTabBar(controller: controller, labels: labels);
   }
 }
+

@@ -87,16 +87,19 @@ class SocialService {
     }
   }
 
-  /// GET /moments/public/trending - trending glimpses for the rail.
+  /// GET /moments/trending - circle/follow-filtered trending glimpses.
+  /// Authenticated: only returns glimpses from authors the viewer follows or
+  /// has in their accepted circle (plus self). Strangers' glimpses are hidden.
   static Future<Map<String, dynamic>> getTrendingMoments({int limit = 12}) async {
     try {
-      final uri = Uri.parse('$_baseUrl/moments/public/trending?limit=$limit');
+      final uri = Uri.parse('$_baseUrl/moments/trending?limit=$limit');
       final res = await http.get(uri, headers: await _headers());
       return jsonDecode(res.body);
     } catch (e) {
       return {'success': false, 'message': 'Unable to fetch trending glimpses', 'data': null};
     }
   }
+
 
   /// POST /posts - create a new post with FormData (multipart).
   /// When [postType] is 'event_share', the [eventId] is attached so the feed

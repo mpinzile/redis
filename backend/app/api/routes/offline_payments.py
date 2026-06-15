@@ -100,14 +100,19 @@ def _vendor_display_name(db: Session, vendor_user_id, event_service_id) -> str:
         if full:
             return full
     es = db.query(EventService).filter(EventService.id == event_service_id).first()
-    if es and es.provider_user_service_id:
-        svc = db.query(UserService).filter(UserService.id == es.provider_user_service_id).first()
-        if svc and svc.title:
-            return svc.title
+    if es:
+        if getattr(es, "is_manual", False) and es.manual_vendor_name:
+            return es.manual_vendor_name
+        if es.provider_user_service_id:
+            svc = db.query(UserService).filter(UserService.id == es.provider_user_service_id).first()
+            if svc and svc.title:
+                return svc.title
     return "Vendor"
 
 
 def _service_title(db: Session, event_service: EventService) -> str:
+    if getattr(event_service, "is_manual", False) and event_service.manual_vendor_name:
+        return event_service.manual_vendor_name
     if event_service.provider_user_service_id:
         svc = db.query(UserService).filter(UserService.id == event_service.provider_user_service_id).first()
         if svc and svc.title:
@@ -186,6 +191,31 @@ def log_offline_payment(
     ).first()
     if not es:
         return standard_response(False, "Service assignment not found.")
+
+    # Manual (off-platform) vendor branch — no OTP, auto-confirmed.
+    if getattr(es, "is_manual", False):
+        currency = _currency_code(db, event.currency_id)
+        now_utc = datetime.now(timezone.utc)
+        p = OfflineVendorPayment(
+            id=uuid.uuid4(),
+            event_id=eid,
+            event_service_id=esid,
+            vendor_user_id=None,
+            recorded_by=current_user.id,
+            amount=body.amount,
+            currency=currency,
+            method=(body.method or "").strip() or None,
+            reference=(body.reference or "").strip() or None,
+            note=(body.note or "").strip() or None,
+            otp_code_hash="",
+            otp_expires_at=now_utc,
+            status="confirmed",
+            confirmed_at=now_utc,
+        )
+        db.add(p)
+        db.commit()
+        db.refresh(p)
+        return standard_response(True, "Payment recorded.", _serialize(db, p))
 
     vendor_user = db.query(User).filter(User.id == es.provider_user_id).first() if es.provider_user_id else None
     if not vendor_user:

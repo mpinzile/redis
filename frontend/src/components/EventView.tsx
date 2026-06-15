@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { showCaughtError } from '@/lib/api';
 import EventTicketPurchase from './EventTicketPurchase';
 import ReportPreviewDialog from '@/components/ReportPreviewDialog';
-import { generateEventReportHtml } from '@/utils/generateEventReport';
+import { exportEventReportXlsx, generateEventReportHtml } from '@/utils/generateEventReport';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { getEventImage } from '@/lib/eventImage';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -141,18 +141,42 @@ const EventView = () => {
 
   const isCreator = !!(currentUser && event && (event.organizer_id === currentUser.id || event.organizer?.id === currentUser.id));
 
+  const buildReportData = () => ({
+    title: event.title,
+    description: event.description,
+    event_type: event.event_type?.name,
+    start_date: event.start_date,
+    end_date: event.end_date,
+    start_time: event.start_time,
+    end_time: event.end_time,
+    location: event.location,
+    venue: event.venue,
+    status: event.status,
+    budget: typeof event.budget === 'number' ? event.budget : parseFloat(event.budget || '0'),
+    currency: event.currency,
+    expected_guests: event.expected_guests || 0,
+    guest_count: event.guest_count || event.total_guests || 0,
+    confirmed_guest_count: event.confirmed_guest_count || event.confirmed_guests || 0,
+    pending_guest_count: event.pending_guest_count || 0,
+    declined_guest_count: event.declined_guest_count || 0,
+    maybe_guest_count: event.maybe_guest_count || 0,
+    checked_in_count: event.checked_in_count || 0,
+    contribution_total: event.contribution_total || 0,
+    contribution_count: event.contribution_count || 0,
+    contribution_target: event.contribution_target || 0,
+    committee_count: event.committee_count || 0,
+    service_booking_count: event.service_booking_count || 0,
+    tickets_sold: event.tickets_sold || 0,
+    tickets_capacity: event.tickets_capacity || 0,
+    invitations_sent: event.invitations_sent || 0,
+    invitations_total: event.invitations_total || 0,
+    dress_code: event.dress_code,
+    special_instructions: event.special_instructions,
+  });
+
   const handleGenerateReport = () => {
     if (!event) return;
-    const html = generateEventReportHtml({
-      title: event.title,
-      description: event.description,
-      event_type: event.event_type?.name,
-      start_date: event.start_date,
-      start_time: event.start_time,
-      location: event.location,
-      venue: event.venue,
-      status: event.status,
-    });
+    const html = generateEventReportHtml(buildReportData());
     setReportHtml(html);
     setReportPreviewOpen(true);
   };
@@ -565,6 +589,7 @@ const EventView = () => {
         onOpenChange={setReportPreviewOpen}
         title="Event Report"
         html={reportHtml}
+        onDownloadExcel={() => event && exportEventReportXlsx(buildReportData())}
       />
 
       {event?.venue_coordinates?.latitude && event?.venue_coordinates?.longitude && (

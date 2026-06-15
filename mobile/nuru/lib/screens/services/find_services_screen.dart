@@ -7,10 +7,12 @@ import '../../core/services/events_service.dart';
 import '../../core/services/user_services_service.dart';
 import '../../core/utils/prefetch_helper.dart';
 import 'public_service_screen.dart';
+import 'vendor_guide_screen.dart';
 import '../../core/widgets/nuru_refresh.dart';
 import '../../core/widgets/nuru_loader.dart';
 import '../../core/widgets/nuru_skeleton.dart';
 import '../../core/widgets/nuru_search_bar.dart';
+import '../../core/widgets/self_scrolling_pills.dart';
 
 class FindServicesScreen extends StatefulWidget {
   /// When true, the screen opens already filtered to the user's saved vendors.
@@ -138,6 +140,17 @@ class _FindServicesScreenState extends State<FindServicesScreen> {
           style: _f(size: 17, weight: FontWeight.w700, letterSpacing: -0.2)),
         actions: [
           IconButton(
+            tooltip: 'Vendor guide',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const VendorGuideScreen()),
+            ),
+            icon: SvgPicture.asset(
+              'assets/icons/document-text-icon.svg',
+              width: 22, height: 22,
+              colorFilter: const ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn),
+            ),
+          ),
+          IconButton(
             tooltip: _savedOnly ? 'Show all vendors' : 'Show saved only',
             onPressed: () => setState(() => _savedOnly = !_savedOnly),
             icon: SvgPicture.asset(
@@ -202,26 +215,33 @@ class _FindServicesScreenState extends State<FindServicesScreen> {
   }
 
   Widget _categoryChips() {
-    return SizedBox(
+    // Build the full chip list, then let SelfScrollingPills smoothly
+    // center whichever chip is active when the user taps.
+    final chips = <Widget>[
+      _filterChip('All', _selectedCategory == null, () {
+        setState(() => _selectedCategory = null);
+        _load();
+      }),
+      ..._topCategories.map((name) {
+        final selected = _selectedCategory == name;
+        return _filterChip(name, selected, () {
+          setState(() => _selectedCategory = name);
+          _load();
+        });
+      }),
+      _moreChip(),
+    ];
+    int activeIndex = 0;
+    if (_selectedCategory != null) {
+      final idx = _topCategories.indexOf(_selectedCategory!);
+      if (idx >= 0) activeIndex = idx + 1;
+    }
+    return SelfScrollingPills(
+      activeIndex: activeIndex,
       height: 36,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        children: [
-          _filterChip('All', _selectedCategory == null, () {
-            setState(() => _selectedCategory = null);
-            _load();
-          }),
-          ..._topCategories.map((name) {
-            final selected = _selectedCategory == name;
-            return _filterChip(name, selected, () {
-              setState(() => _selectedCategory = name);
-              _load();
-            });
-          }),
-          _moreChip(),
-        ],
-      ),
+      spacing: 0,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      children: chips,
     );
   }
 
@@ -369,15 +389,21 @@ class _FindServicesScreenState extends State<FindServicesScreen> {
                         style: _f(size: 11, color: AppColors.textSecondary, height: 1.35)),
                     ),
                     const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.primary.withOpacity(0.5), width: 1.2),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const VendorGuideScreen()),
                       ),
-                      child: Text('View Guide',
-                        style: _f(size: 11, weight: FontWeight.w600, color: AppColors.primary)),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.5), width: 1.2),
+                        ),
+                        child: Text('View Guide',
+                          style: _f(size: 11, weight: FontWeight.w600, color: AppColors.primary)),
+                      ),
                     ),
                   ],
                 ),

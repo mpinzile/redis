@@ -191,12 +191,16 @@ class _EventServicesTabState extends State<EventServicesTab> with AutomaticKeepA
           _summaryCard(total: total, confirmed: confirmed, pending: pending, progress: progress),
           const SizedBox(height: 14),
           if (_canManage) _searchToggle(),
+          if (_canManage) const SizedBox(height: 10),
+          if (_canManage) _addManualToggle(),
           if (_canManage) const SizedBox(height: 14),
           if (_showSearch) ...[
             _searchPanel(),
             const SizedBox(height: 16),
           ],
           if (_assignedServices.isNotEmpty) ...[
+            _reportRow(),
+            const SizedBox(height: 12),
             Row(children: [
               Text('Assigned vendors',
                   style: appText(size: 13, weight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 0.3)),
@@ -540,6 +544,19 @@ class _EventServicesTabState extends State<EventServicesTab> with AutomaticKeepA
                     Text(statusLabel, style: appText(size: 10, weight: FontWeight.w700, color: sFg)),
                   ]),
                 ),
+                if (service['is_manual'] == true) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: Text('Off-platform',
+                        style: appText(size: 10, weight: FontWeight.w700, color: const Color(0xFF1D4ED8))),
+                  ),
+                ],
                 const Spacer(),
                 if (price != null)
                   Text('${getActiveCurrency()} ${_fmt(price)}',
@@ -548,7 +565,7 @@ class _EventServicesTabState extends State<EventServicesTab> with AutomaticKeepA
             ]),
           )),
         ]),
-        if (_canManage && status == 'assigned' && id.isNotEmpty) ...[
+        if (_canManage && id.isNotEmpty && (status == 'assigned' || (service['is_manual'] == true && status != 'cancelled')) ) ...[
           Container(height: 1, color: AppColors.borderLight),
           InkWell(
             onTap: () => _openLogPayment(service),
@@ -565,6 +582,102 @@ class _EventServicesTabState extends State<EventServicesTab> with AutomaticKeepA
           ),
         ],
       ]),
+    );
+  }
+
+  // ─── report download + manual vendor entry ────────────────────
+  Widget _reportRow() => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AppColors.borderLight),
+    ),
+    child: Row(children: [
+      Container(
+        width: 32, height: 32,
+        decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(10)),
+        child: const Center(child: AppIcon('document', size: 14, color: AppColors.primary)),
+      ),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Text('Vendor payments report',
+            style: appText(size: 12.5, weight: FontWeight.w700)),
+        const SizedBox(height: 2),
+        Text('Confirmed vendors, agreed price, paid and balance',
+            style: appText(size: 10.5, color: AppColors.textTertiary)),
+      ])),
+      _reportChip('PDF', () => _downloadVendorsReport('pdf')),
+      const SizedBox(width: 6),
+      _reportChip('Excel', () => _downloadVendorsReport('xlsx')),
+    ]),
+  );
+
+  Widget _reportChip(String label, VoidCallback onTap) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(999),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(label, style: appText(size: 11, weight: FontWeight.w700, color: AppColors.primary)),
+    ),
+  );
+
+  Future<void> _downloadVendorsReport(String format) async {
+    if (!mounted) return;
+    AppSnackbar.success(context, 'Preparing $format report...');
+    final res = await EventsService.downloadVendorsReport(widget.eventId, format: format);
+    if (!mounted) return;
+    if (res['success'] == true) {
+      AppSnackbar.success(context, res['message']?.toString() ?? 'Report ready');
+    } else {
+      AppSnackbar.error(context, res['message']?.toString() ?? 'Could not download report');
+    }
+  }
+
+  Widget _addManualToggle() => InkWell(
+    onTap: _openManualVendorSheet,
+    borderRadius: BorderRadius.circular(14),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderLight, style: BorderStyle.solid),
+      ),
+      child: Row(children: [
+        Container(
+          width: 32, height: 32,
+          decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(10)),
+          child: const Center(child: AppIcon('plus', size: 14, color: Color(0xFF1D4ED8))),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text('Add a vendor not on Nuru',
+              style: appText(size: 13, weight: FontWeight.w700)),
+          const SizedBox(height: 2),
+          Text('Record an off-platform vendor and track payments here',
+              style: appText(size: 11, color: AppColors.textTertiary)),
+        ])),
+        const AppIcon('chevron-right', size: 14, color: AppColors.textTertiary),
+      ]),
+    ),
+  );
+
+  void _openManualVendorSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _ManualVendorSheet(
+        eventId: widget.eventId,
+        onSaved: () => _loadAssigned(background: false),
+      ),
     );
   }
 
@@ -762,5 +875,167 @@ class _EventServicesTabState extends State<EventServicesTab> with AutomaticKeepA
     final num val = n is num ? n : (num.tryParse(n.toString()) ?? 0);
     return val.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+  }
+}
+
+class _ManualVendorSheet extends StatefulWidget {
+  final String eventId;
+  final VoidCallback onSaved;
+  const _ManualVendorSheet({required this.eventId, required this.onSaved});
+  @override
+  State<_ManualVendorSheet> createState() => _ManualVendorSheetState();
+}
+
+class _ManualVendorSheetState extends State<_ManualVendorSheet> {
+  final _nameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
+  String? _categoryId;
+  List<Map<String, dynamic>> _categories = [];
+  bool _loadingCats = true;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCats();
+  }
+
+  Future<void> _loadCats() async {
+    final res = await EventsService.getServiceCategories();
+    if (!mounted) return;
+    final list = (res['data'] is List ? res['data'] : (res['data']?['items'] ?? [])) as List? ?? [];
+    setState(() {
+      _categories = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      _loadingCats = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose(); _phoneCtrl.dispose(); _emailCtrl.dispose();
+    _priceCtrl.dispose(); _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) { AppSnackbar.error(context, 'Vendor name is required'); return; }
+    setState(() => _submitting = true);
+    final payload = <String, dynamic>{
+      'manual_vendor_name': name,
+      if (_categoryId != null) 'manual_vendor_category_id': _categoryId,
+      if (_phoneCtrl.text.trim().isNotEmpty) 'manual_vendor_phone': _phoneCtrl.text.trim(),
+      if (_emailCtrl.text.trim().isNotEmpty) 'manual_vendor_email': _emailCtrl.text.trim(),
+      if (_notesCtrl.text.trim().isNotEmpty) 'manual_vendor_notes': _notesCtrl.text.trim(),
+      if (_priceCtrl.text.trim().isNotEmpty)
+        'quoted_price': num.tryParse(_priceCtrl.text.trim().replaceAll(',', '')),
+    };
+    final res = await EventsService.addManualVendor(widget.eventId, payload);
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (res['success'] == true) {
+      AppSnackbar.success(context, '$name added as off-platform vendor');
+      Navigator.of(context).pop();
+      widget.onSaved();
+    } else {
+      AppSnackbar.error(context, res['message']?.toString() ?? "Couldn't save vendor");
+    }
+  }
+
+  InputDecoration _dec(String hint) => InputDecoration(
+    hintText: hint,
+    hintStyle: appText(size: 13, color: AppColors.textHint),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.borderLight)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.4)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + bottom),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Center(child: Container(width: 42, height: 4, margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2)))),
+        Text('Add off-platform vendor', style: appText(size: 16, weight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text('For vendors who are not on Nuru yet. You can still track their payments here.',
+            style: appText(size: 12, color: AppColors.textTertiary)),
+        const SizedBox(height: 16),
+        Flexible(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Vendor name *', style: appText(size: 11, weight: FontWeight.w700, color: AppColors.textSecondary)),
+          const SizedBox(height: 6),
+          TextField(controller: _nameCtrl, autocorrect: false, style: appText(size: 14),
+              decoration: _dec('e.g. Asili Catering')),
+          const SizedBox(height: 12),
+          Text('Category', style: appText(size: 11, weight: FontWeight.w700, color: AppColors.textSecondary)),
+          const SizedBox(height: 6),
+          _loadingCats
+              ? Container(height: 48, alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderLight)),
+                  child: Text('Loading categories...', style: appText(size: 13, color: AppColors.textHint)))
+              : Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderLight)),
+                  child: DropdownButtonHideUnderline(child: DropdownButton<String>(
+                    value: _categoryId,
+                    isExpanded: true,
+                    hint: Text('Select a category', style: appText(size: 13, color: AppColors.textHint)),
+                    items: _categories.map((c) => DropdownMenuItem<String>(
+                      value: c['id']?.toString(),
+                      child: Text(c['name']?.toString() ?? '', style: appText(size: 13)),
+                    )).toList(),
+                    onChanged: (v) => setState(() => _categoryId = v),
+                  )),
+                ),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Phone', style: appText(size: 11, weight: FontWeight.w700, color: AppColors.textSecondary)),
+              const SizedBox(height: 6),
+              TextField(controller: _phoneCtrl, autocorrect: false, keyboardType: TextInputType.phone,
+                  style: appText(size: 14), decoration: _dec('0712 345 678')),
+            ])),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Email', style: appText(size: 11, weight: FontWeight.w700, color: AppColors.textSecondary)),
+              const SizedBox(height: 6),
+              TextField(controller: _emailCtrl, autocorrect: false, keyboardType: TextInputType.emailAddress,
+                  style: appText(size: 14), decoration: _dec('vendor@example.com')),
+            ])),
+          ]),
+          const SizedBox(height: 12),
+          Text('Agreed price (${getActiveCurrency()})', style: appText(size: 11, weight: FontWeight.w700, color: AppColors.textSecondary)),
+          const SizedBox(height: 6),
+          TextField(controller: _priceCtrl, autocorrect: false, keyboardType: TextInputType.number,
+              style: appText(size: 14), decoration: _dec('0')),
+          const SizedBox(height: 12),
+          Text('Notes', style: appText(size: 11, weight: FontWeight.w700, color: AppColors.textSecondary)),
+          const SizedBox(height: 6),
+          TextField(controller: _notesCtrl, autocorrect: false, minLines: 2, maxLines: 4,
+              style: appText(size: 14), decoration: _dec('Anything you want to remember...')),
+        ]))),
+        const SizedBox(height: 14),
+        SizedBox(width: double.infinity, child: ElevatedButton(
+          onPressed: _submitting ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          child: _submitting
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : Text('Save vendor', style: appText(size: 14, weight: FontWeight.w800, color: Colors.white)),
+        )),
+      ]),
+    );
   }
 }

@@ -110,7 +110,7 @@ export const translations: Record<string, Record<Locale, string>> = {
   // Navigation
   home: { en: 'Home', sw: 'Nyumbani' },
   events: { en: 'Events', sw: 'Matukio' },
-  services: { en: 'Services', sw: 'Huduma' },
+  services: { en: 'Vendors', sw: 'Wachuuzi' },
   profile: { en: 'Profile', sw: 'Wasifu' },
   settings: { en: 'Settings', sw: 'Mipangilio' },
   notifications: { en: 'Notifications', sw: 'Arifa' },
