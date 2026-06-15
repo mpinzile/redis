@@ -602,87 +602,39 @@ class _GlimpseTrimScreenState extends State<GlimpseTrimScreen> {
   }
 
   Widget _handle({bool isLeft = true}) {
-    // A tall, pill-shaped handle that extends slightly above and below the
-    // filmstrip, with a soft amber glow, gradient fill, chevron arrow, and a
-    // chunky white grip — easy to see and easy to grab.
+    // WhatsApp-style: a slim white bar with two tiny grip dots inside.
+    // Minimal, clean, and easy to grab thanks to the invisible hit-slop wrapper.
     return SizedBox(
       width: _handleWidth,
-      height: _stripHeight + 28,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          // Outer halo
-          Container(
-            width: _handleWidth + 8,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFFB300).withOpacity(0.55),
-                  blurRadius: 18,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-          ),
-          // Pill body with gradient
-          Container(
-            width: _handleWidth,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFFFE082), Color(0xFFFFB300), Color(0xFFFF8F00)],
+      height: _stripHeight,
+      child: Center(
+        child: Container(
+          width: 6,
+          height: _stripHeight - 8,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(3),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.55), width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Icon(
-                isLeft
-                    ? Icons.chevron_left_rounded
-                    : Icons.chevron_right_rounded,
-                size: 18,
-                color: Colors.black.withOpacity(0.7),
-              ),
-            ),
+            ],
           ),
-          // Top cap dot
-          Positioned(
-            top: -4,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFD54F),
-                shape: BoxShape.circle,
-              ),
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              _GripDot(),
+              SizedBox(height: 4),
+              _GripDot(),
+            ],
           ),
-          // Bottom cap dot
-          Positioned(
-            bottom: -4,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFD54F),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
+
 
   Widget _timeChip(String text, {required String label}) {
     return Column(
@@ -707,4 +659,20 @@ class _GlimpseTrimScreenState extends State<GlimpseTrimScreen> {
   }
 }
 
+class _GripDot extends StatelessWidget {
+  const _GripDot();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 2.5,
+      height: 2.5,
+      decoration: const BoxDecoration(
+        color: Color(0xFF111111),
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+}
+
 enum _Drag { none, start, end, window }
+

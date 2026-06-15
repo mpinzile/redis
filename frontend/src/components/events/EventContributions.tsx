@@ -1145,12 +1145,12 @@ const EventContributions = ({ eventId, eventTitle, eventBudget, eventEndDate, re
                   <th className="p-4 w-16">
                     <div className="flex items-center gap-1.5">
                       <Checkbox
-                        checked={paginatedContributors.length > 0 && paginatedContributors.every(ec => selectedForGuest.includes(ec.id))}
+                        checked={filteredContributors.length > 0 && filteredContributors.every(ec => selectedForGuest.includes(ec.id))}
                         onCheckedChange={(checked) => {
-                          const pageIds = paginatedContributors.map(ec => ec.id);
+                          const allIds = filteredContributors.map(ec => ec.id);
                           setSelectedForGuest(prev => checked
-                            ? Array.from(new Set([...prev, ...pageIds]))
-                            : prev.filter(id => !pageIds.includes(id)));
+                            ? Array.from(new Set([...prev, ...allIds]))
+                            : prev.filter(id => !allIds.includes(id)));
                         }}
                       />
                       {totalPages > 1 && (
