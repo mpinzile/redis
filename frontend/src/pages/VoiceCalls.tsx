@@ -13,6 +13,8 @@
  * on top of /voice-calls/* endpoints.
  */
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { PhoneCall } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,10 +83,13 @@ function fmtDate(s: string | null | undefined) {
 }
 
 export default function VoiceCalls() {
+  const [searchParams] = useSearchParams();
+  const scopedEventId = searchParams.get("event_id") || "";
   const [tab, setTab] = useState<"campaigns" | "opt-outs">("campaigns");
   const [campaigns, setCampaigns] = useState<VoiceCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [callOneOpen, setCallOneOpen] = useState(false);
   const [activeCampaign, setActiveCampaign] = useState<VoiceCampaign | null>(null);
   const [jobDetail, setJobDetail] = useState<{
     job: VoiceCallJob;
@@ -93,7 +98,11 @@ export default function VoiceCalls() {
 
   async function loadCampaigns() {
     setLoading(true);
-    const res = await voiceCallsApi.listCampaigns({ page: 1, page_size: 50 });
+    const res = await voiceCallsApi.listCampaigns({
+      page: 1,
+      page_size: 50,
+      ...(scopedEventId ? { event_id: scopedEventId } : {}),
+    });
     if (res.success) setCampaigns(res.data || []);
     else showApiErrors(res);
     setLoading(false);
@@ -101,69 +110,94 @@ export default function VoiceCalls() {
 
   useEffect(() => {
     loadCampaigns();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopedEventId]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-      <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Nuru Voice Assistant
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight mt-1">
-            Smart RSVP Calls
-          </h1>
-          <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-            Let the assistant call your guests, collect confirmations in
-            Swahili or English, and write outcomes straight back to your
-            event. Nothing is dialled until you start a campaign.
-          </p>
-        </div>
-        {tab === "campaigns" && (
-          <Button onClick={() => setCreateOpen(true)}>New campaign</Button>
-        )}
-      </header>
+    <div className="bg-white min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              Nuru Voice Assistant
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight mt-1">
+              Smart RSVP Calls
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+              Reach your guests by phone in Swahili or English and write
+              their answers straight back to your event. Nothing is dialled
+              until you start a campaign.
+            </p>
+            {scopedEventId && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Scoped to event <span className="font-mono">{scopedEventId.slice(0, 8)}…</span>
+              </p>
+            )}
+          </div>
+          {tab === "campaigns" && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setCallOneOpen(true)}>
+                <PhoneCall className="h-4 w-4 mr-2" />
+                Call one person
+              </Button>
+              <Button onClick={() => setCreateOpen(true)}>New campaign</Button>
+            </div>
+          )}
+        </header>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-        <TabsList>
-          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-          <TabsTrigger value="opt-outs">Opt-outs</TabsTrigger>
-        </TabsList>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+          <TabsList>
+            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+            <TabsTrigger value="opt-outs">Opt-outs</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="campaigns" className="mt-6">
-          <CampaignsTable
-            loading={loading}
-            campaigns={campaigns}
-            onOpen={(c) => setActiveCampaign(c)}
-            onChanged={loadCampaigns}
-          />
-        </TabsContent>
+          <TabsContent value="campaigns" className="mt-6">
+            <CampaignsTable
+              loading={loading}
+              campaigns={campaigns}
+              onOpen={(c) => setActiveCampaign(c)}
+              onChanged={loadCampaigns}
+            />
+          </TabsContent>
 
-        <TabsContent value="opt-outs" className="mt-6">
-          <OptOutsPanel />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="opt-outs" className="mt-6">
+            <OptOutsPanel />
+          </TabsContent>
+        </Tabs>
 
-      <CreateCampaignDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={async () => {
-          setCreateOpen(false);
-          await loadCampaigns();
-        }}
-      />
+        <CreateCampaignDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          defaultEventId={scopedEventId}
+          onCreated={async () => {
+            setCreateOpen(false);
+            await loadCampaigns();
+          }}
+        />
 
-      <CampaignSheet
-        campaign={activeCampaign}
-        onClose={() => setActiveCampaign(null)}
-        onChanged={loadCampaigns}
-        onOpenJob={(detail) => setJobDetail(detail)}
-      />
+        <CallOnePersonDialog
+          open={callOneOpen}
+          onOpenChange={setCallOneOpen}
+          defaultEventId={scopedEventId}
+          onPlaced={async () => {
+            setCallOneOpen(false);
+            await loadCampaigns();
+          }}
+        />
 
-      <JobDetailDialog
-        detail={jobDetail}
-        onClose={() => setJobDetail(null)}
-      />
+        <CampaignSheet
+          campaign={activeCampaign}
+          onClose={() => setActiveCampaign(null)}
+          onChanged={loadCampaigns}
+          onOpenJob={(detail) => setJobDetail(detail)}
+        />
+
+        <JobDetailDialog
+          detail={jobDetail}
+          onClose={() => setJobDetail(null)}
+        />
+      </div>
     </div>
   );
 }
@@ -195,8 +229,8 @@ function CampaignsTable({
       <Card className="p-10 text-center">
         <p className="text-base font-medium">No voice campaigns yet</p>
         <p className="text-sm text-muted-foreground mt-1">
-          Create one to let the assistant call your guests for RSVP,
-          contribution follow-ups, or vendor confirmations.
+          Create one to call your guests for RSVP, contribution follow-ups,
+          or vendor confirmations.
         </p>
       </Card>
     );
@@ -250,25 +284,26 @@ function CampaignsTable({
 }
 
 function CreateCampaignDialog({
-  open, onOpenChange, onCreated,
+  open, onOpenChange, onCreated, defaultEventId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onCreated: () => void;
+  defaultEventId?: string;
 }) {
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState<VoicePurpose>("rsvp");
   const [language, setLanguage] = useState("sw");
-  const [eventId, setEventId] = useState("");
+  const [eventId, setEventId] = useState(defaultEventId || "");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
       setTitle(""); setPurpose("rsvp"); setLanguage("sw");
-      setEventId(""); setNotes("");
+      setEventId(defaultEventId || ""); setNotes("");
     }
-  }, [open]);
+  }, [open, defaultEventId]);
 
   async function submit() {
     setSaving(true);
@@ -301,7 +336,7 @@ function CreateCampaignDialog({
               autoComplete="off"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Harusi ya Asha — RSVP calls"
+              placeholder="Harusi ya Asha · RSVP calls"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -346,7 +381,7 @@ function CreateCampaignDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              placeholder="Anything the assistant should remember"
+              placeholder="Notes only your team can see"
             />
           </div>
         </div>
@@ -800,3 +835,294 @@ function OptOutsPanel() {
     </div>
   );
 }
+
+// ────────────────────────────────────────────────────────────────
+// Call one person · quick ad-hoc single-recipient call
+// ────────────────────────────────────────────────────────────────
+
+function CallOnePersonDialog({
+  open, onOpenChange, onPlaced, defaultEventId,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onPlaced: () => void;
+  defaultEventId?: string;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [language, setLanguage] = useState("sw");
+  const [purpose, setPurpose] = useState<VoicePurpose>("rsvp");
+  const [eventId, setEventId] = useState(defaultEventId || "");
+  const [busy, setBusy] = useState(false);
+  const [guests, setGuests] = useState<Array<{ id: string; name: string; phone: string }>>([]);
+  const [guestSearch, setGuestSearch] = useState("");
+  const [loadingGuests, setLoadingGuests] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(""); setPhone(""); setLanguage("sw");
+      setPurpose("rsvp"); setEventId(defaultEventId || "");
+      setGuestSearch("");
+    }
+  }, [open, defaultEventId]);
+
+  // Lazy-load guests when an event is scoped
+  useEffect(() => {
+    if (!open || !eventId.trim()) { setGuests([]); return; }
+    let cancelled = false;
+    (async () => {
+      setLoadingGuests(true);
+      try {
+        const { eventsApi } = await import("@/lib/api/events");
+        const res = await eventsApi.getGuests(eventId.trim(), { page: 1, page_size: 500 } as any);
+        if (cancelled) return;
+        const items: any[] = (res?.data as any)?.guests || (res as any)?.data?.items || [];
+        setGuests(items.map((g: any) => ({
+          id: String(g.id),
+          name: (g.name || g.full_name || "").toString(),
+          phone: (g.phone || g.phone_number || "").toString(),
+        })).filter((g) => g.phone));
+      } catch { /* ignore */ }
+      finally { if (!cancelled) setLoadingGuests(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [open, eventId]);
+
+  const filteredGuests = useMemo(() => {
+    const q = guestSearch.trim().toLowerCase();
+    if (!q) return guests.slice(0, 40);
+    return guests.filter((g) =>
+      g.name.toLowerCase().includes(q) || g.phone.toLowerCase().includes(q)
+    ).slice(0, 40);
+  }, [guests, guestSearch]);
+
+  function pickGuest(g: { name: string; phone: string }) {
+    setName(g.name);
+    setPhone(g.phone);
+  }
+
+  async function submit() {
+    if (!phone.trim()) {
+      toast.error("Enter a phone number");
+      return;
+    }
+    setBusy(true);
+    try {
+      const created = await voiceCallsApi.createCampaign({
+        title: `Single call · ${name.trim() || phone.trim()}`,
+        purpose,
+        language,
+        event_id: eventId.trim() || null,
+      });
+      if (!created.success || !created.data) { showApiErrors(created); return; }
+      const campaignId = created.data.id;
+      const added = await voiceCallsApi.addJobs(
+        campaignId,
+        [{ recipient_name: name.trim() || undefined, phone: phone.trim(), language }],
+        true,
+      );
+      if (!added.success) { showApiErrors(added); return; }
+      const job = (added.data?.accepted || [])[0];
+      if (!job) {
+        toast.error("Recipient was rejected (opt-out, blocked, or invalid).");
+        return;
+      }
+      const placed = await voiceCallsApi.placeCall(job.id);
+      if (placed.success) {
+        toast.success("Dialing now");
+        onPlaced();
+      } else {
+        showApiErrors(placed);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const initialOf = (s: string) =>
+    s.trim() ? s.trim()[0].toUpperCase() : "#";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden gap-0 bg-background">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-6 pt-6 pb-4">
+          <div className="flex items-center justify-center w-11 h-11 rounded-2xl bg-primary/10 text-primary">
+            <PhoneCall className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <DialogTitle className="text-lg font-semibold tracking-tight">
+              Call one person
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pick a guest or type a number to dial right away.
+            </p>
+          </div>
+        </div>
+
+        <div className="px-6 pb-2 space-y-4">
+          {/* Compose card */}
+          <div className="rounded-2xl border border-border bg-muted/30 divide-y divide-border/70">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div className="w-9 h-9 rounded-full bg-background border border-border flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                {initialOf(name || phone)}
+              </div>
+              <Input
+                autoComplete="off"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Name (optional)"
+                className="border-0 bg-transparent shadow-none focus-visible:ring-0 px-0 h-8 text-sm font-medium"
+              />
+            </div>
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div className="w-9 h-9 rounded-full bg-background border border-border flex items-center justify-center text-primary">
+                <PhoneCall className="h-4 w-4" />
+              </div>
+              <Input
+                autoComplete="off"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+255 712 345 678"
+                className="border-0 bg-transparent shadow-none focus-visible:ring-0 px-0 h-8 text-sm font-medium tracking-wide"
+              />
+            </div>
+          </div>
+
+          {/* Meta selectors */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Purpose</label>
+              <Select value={purpose} onValueChange={(v) => setPurpose(v as VoicePurpose)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rsvp">RSVP</SelectItem>
+                  <SelectItem value="contribution">Contribution</SelectItem>
+                  <SelectItem value="verification">Verification</SelectItem>
+                  <SelectItem value="committee">Committee</SelectItem>
+                  <SelectItem value="vendor">Vendor</SelectItem>
+                  <SelectItem value="feedback">Feedback</SelectItem>
+                  <SelectItem value="general">General</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Language</label>
+              <Select value={language} onValueChange={setLanguage}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sw">Swahili</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {!defaultEventId && (
+            <div>
+              <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Event ID (optional)</label>
+              <Input
+                autoComplete="off"
+                value={eventId}
+                onChange={(e) => setEventId(e.target.value)}
+                placeholder="Link this call to an event"
+                className="mt-1"
+              />
+            </div>
+          )}
+
+          {/* Primary CTA */}
+          <Button
+            onClick={submit}
+            disabled={busy || !phone.trim()}
+            className="w-full h-12 rounded-xl text-sm font-semibold"
+          >
+            {busy ? "Placing call…" : (
+              <span className="inline-flex items-center gap-2">
+                <PhoneCall className="h-4 w-4" />
+                Call now
+              </span>
+            )}
+          </Button>
+
+          {/* Guest picker */}
+          {eventId.trim() && (
+            <div className="pt-2">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Or pick a guest
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <Input
+                autoComplete="off"
+                value={guestSearch}
+                onChange={(e) => setGuestSearch(e.target.value)}
+                placeholder="Search guest by name or phone"
+                className="mt-3"
+              />
+              <div className="mt-3 max-h-72 overflow-y-auto pr-1 space-y-2">
+                {loadingGuests && (
+                  <div className="text-xs text-muted-foreground text-center py-6">
+                    Loading guests…
+                  </div>
+                )}
+                {!loadingGuests && filteredGuests.length === 0 && (
+                  <div className="text-xs text-muted-foreground text-center py-6">
+                    No guests match.
+                  </div>
+                )}
+                {filteredGuests.map((g) => {
+                  const selected = phone.trim() === g.phone.trim();
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => pickGuest(g)}
+                      className={`w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                        selected
+                          ? "border-primary/40 bg-primary/5"
+                          : "border-border hover:border-primary/30 hover:bg-muted/40"
+                      }`}
+                    >
+                      <div className="w-9 h-9 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                        {initialOf(g.name || g.phone)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold truncate">
+                          {g.name || g.phone}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground tabular-nums truncate">
+                          {g.phone}
+                        </div>
+                      </div>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        selected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+                      }`}>
+                        {selected ? (
+                          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                            <path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7A1 1 0 014.7 8.3l3.1 3.1 6.8-6.8a1 1 0 011.4 0z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          <PhoneCall className="w-3.5 h-3.5" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/20">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

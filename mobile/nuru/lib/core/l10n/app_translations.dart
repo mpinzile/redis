@@ -1695,6 +1695,103 @@ class AppTranslations {
     'tooltip_refresh': {'en': 'Refresh', 'sw': 'Onyesha upya'},
     'tooltip_filter': {'en': 'Filter', 'sw': 'Chuja'},
     'tooltip_sort': {'en': 'Sort', 'sw': 'Panga'},
+
+    // ─── Smart RSVP Calls (Nuru Voice Assistant) ─────────────────────────
+    'voice_screen_title': {'en': 'Smart RSVP Calls', 'sw': 'Simu za RSVP'},
+    'voice_hero_title': {'en': 'Nuru Voice Assistant', 'sw': 'Msaidizi wa Nuru'},
+    'voice_hero_subtitle': {
+      'en': 'Calls your guests and confirms attendance in their language.',
+      'sw': 'Anapiga simu na kuthibitisha mahudhurio kwa lugha ya mgeni.'
+    },
+    'voice_stat_pending': {'en': 'Awaiting reply', 'sw': 'Wanaosubiri'},
+    'voice_stat_called': {'en': 'Reached', 'sw': 'Wameitwa'},
+    'voice_stat_confirmed': {'en': 'Going', 'sw': 'Wamekubali'},
+    'voice_idle_title': {'en': 'Start an AI campaign', 'sw': 'Anza kampeni ya AI'},
+    'voice_idle_body': {
+      'en':
+          'We will call {n} pending guests and write each reply back as an RSVP.',
+      'sw': 'Tutawapigia wageni {n} na kuandika majibu yao kama RSVP.'
+    },
+    'voice_start_btn': {'en': 'Start Smart RSVP Calls', 'sw': 'Anza Smart RSVP Calls'},
+    'voice_no_pending': {
+      'en': 'No guests are waiting to reply.',
+      'sw': 'Hakuna wageni wanaosubiri kujibu.'
+    },
+    'voice_create_failed': {
+      'en': 'Could not start the campaign.',
+      'sw': 'Imeshindikana kuanzisha campaign.'
+    },
+    'voice_dialing_started': {
+      'en': 'AI is now calling {n} guests.',
+      'sw': 'Simu za AI zimeanza kupigwa kwa wageni {n}.'
+    },
+    'voice_pause': {'en': 'Pause', 'sw': 'Pumzika'},
+    'voice_resume': {'en': 'Resume', 'sw': 'Endelea'},
+    'voice_cancel': {'en': 'Cancel', 'sw': 'Sitisha'},
+    'voice_cancel_title': {'en': 'Cancel campaign?', 'sw': 'Sitisha campaign?'},
+    'voice_cancel_body': {
+      'en': 'Pending calls will be removed. This cannot be undone.',
+      'sw':
+          'Simu ambazo bado hazijapigwa zitafutwa. Hatua hii haiwezi kutendulewa.'
+    },
+    'voice_cancel_no': {'en': 'Keep it', 'sw': 'Hapana'},
+    'voice_cancel_yes': {'en': 'Yes, cancel', 'sw': 'Ndio, sitisha'},
+    'voice_section_recipients': {'en': 'Guest calls', 'sw': 'Simu za wageni'},
+    'voice_no_recipients': {'en': 'No recipients yet.', 'sw': 'Bado hakuna wapokeaji.'},
+    'voice_status_pending': {'en': 'Waiting', 'sw': 'Anasubiri'},
+    'voice_status_queued': {'en': 'Queued', 'sw': 'Mstarini'},
+    'voice_status_in_progress': {'en': 'Talking', 'sw': 'Inazungumza'},
+    'voice_status_completed': {'en': 'Done', 'sw': 'Imekamilika'},
+    'voice_status_failed': {'en': 'Failed', 'sw': 'Imeshindwa'},
+    'voice_status_no_answer': {'en': 'No answer', 'sw': 'Hakujibu'},
+    'voice_status_busy': {'en': 'Line busy', 'sw': 'Laini ina shughuli'},
+    'voice_status_opted_out': {'en': 'Opted out', 'sw': 'Ameondolewa'},
+    'voice_status_blocked': {'en': 'Blocked', 'sw': 'Imezuiwa'},
+    'voice_status_cancelled': {'en': 'Cancelled', 'sw': 'Imesitishwa'},
+    'voice_status_running': {'en': 'Running', 'sw': 'Inaendelea'},
+    'voice_status_paused': {'en': 'Paused', 'sw': 'Imepumzika'},
+    'voice_status_draft': {'en': 'Draft', 'sw': 'Rasimu'},
+    'voice_outcome_confirmed': {'en': 'Going', 'sw': 'Atakuja'},
+    'voice_outcome_declined': {'en': 'Not going', 'sw': 'Hatakuja'},
+    'voice_outcome_maybe': {'en': 'Maybe', 'sw': 'Pengine'},
+    'voice_outcome_call_later': {'en': 'Call later', 'sw': 'Piga tena baadaye'},
+    'voice_outcome_wrong_number': {'en': 'Wrong number', 'sw': 'Namba si sahihi'},
+    'voice_sheet_not_found': {
+      'en': 'Could not load this call.',
+      'sw': 'Imeshindikana kupata simu hii.'
+    },
+    'voice_sheet_ai_reply': {'en': 'AI reply', 'sw': 'Jibu la AI'},
+    'voice_sheet_confidence': {'en': 'Confidence: {p}%', 'sw': 'Uhakika: {p}%'},
+    'voice_sheet_summary': {'en': 'Summary', 'sw': 'Muhtasari'},
+    'voice_sheet_attempts': {'en': 'CALL ATTEMPTS', 'sw': 'SIMU ZILIZOPIGWA'},
+    'voice_sheet_no_attempts': {
+      'en': 'No attempts yet.',
+      'sw': 'Hakuna simu zilizopigwa bado.'
+    },
+    'voice_sheet_retry': {'en': 'Call again', 'sw': 'Piga tena'},
+    'voice_call_one_title': {
+      'en': 'Call one person',
+      'sw': 'Piga simu kwa mtu mmoja'
+    },
+    'voice_call_one_sub': {
+      'en': 'Pick a guest or type a number to dial right away.',
+      'sw': 'Chagua mgeni au ingiza namba ili kupiga sasa hivi.'
+    },
+    'voice_call_one_name': {'en': 'Name (optional)', 'sw': 'Jina (hiari)'},
+    'voice_call_one_phone': {'en': 'Phone number', 'sw': 'Namba ya simu'},
+    'voice_call_one_btn': {'en': 'Call now', 'sw': 'Piga simu sasa'},
+    'voice_call_one_pick': {'en': 'Or pick a guest', 'sw': 'Au chagua mgeni'},
+    'voice_search_guests': {'en': 'Search by name or phone', 'sw': 'Tafuta kwa jina au namba'},
+    'voice_call_one_phone_required': {
+      'en': 'Please enter a phone number.',
+      'sw': 'Tafadhali ingiza namba ya simu.'
+    },
+    'voice_call_one_blocked': {
+      'en': 'Number rejected (opted out or blocked).',
+      'sw': 'Namba haijakubaliwa (huenda imezuiwa au imejiondoa).'
+    },
+    'voice_call_one_dialing': {'en': 'Dialing now…', 'sw': 'Inapiga simu sasa…'},
+    'voice_call_one_queued': {'en': 'Queued.', 'sw': 'Imepangwa.'},
   };
 
   static String tr(String key, String locale) {
