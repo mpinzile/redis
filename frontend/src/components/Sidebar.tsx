@@ -15,6 +15,7 @@ import {
   StarOff,
   MessageSquare,
   Activity,
+  PhoneCall,
 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
@@ -213,6 +214,7 @@ const Sidebar = ({ onNavigate, onReplayTour, inDrawer = false }: SidebarProps) =
       items: [
         { customIcon: IssueIcon, label: t('my_issues'), path: '/my-issues', hint: 'Submit and track issues or disputes.' },
         { lucideIcon: MessageSquare, label: 'WhatsApp Logs', path: '/whatsapp-logs', hint: 'Track every WhatsApp message Nuru sent · what worked and what failed.' },
+        { lucideIcon: PhoneCall, label: 'Voice Calls', path: '/voice-calls', hint: 'AI voice assistant that calls guests in Swahili to confirm RSVPs.' },
         { lucideIcon: Activity, label: 'Background Tasks', path: '/background-tasks', hint: 'Live progress of uploads, bulk actions, exports and other work Nuru is doing for you.' },
         { lucideIcon: AlertTriangle, label: t('removed_content'), path: '/removed-content', hint: 'Removed posts, reasons, and appeals.' },
         { customIcon: HelpIcon, label: t('help'), path: '/help', hint: 'FAQs and contact support.' },

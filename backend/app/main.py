@@ -200,6 +200,17 @@ def startup_checks():
     print("[startup] Background tasks handled by Celery workers (not in-process threads)")
     print("[startup] Run:  celery -A core.celery_app worker --beat --loglevel=info")
 
+    # Voice Assistant — install Gemini Live realtime bridge if configured.
+    # Safe no-op when GEMINI_API_KEY is missing (Phase 5 SilentAgentBridge stays).
+    try:
+        from voice.ai import install as install_voice_bridge
+        if install_voice_bridge():
+            print("[startup] Voice Assistant: Gemini Live bridge installed ✓")
+        else:
+            print("[startup] Voice Assistant: Gemini Live not configured — silent bridge active")
+    except Exception as exc:  # noqa: BLE001
+        print(f"[startup] Voice Assistant bridge install failed: {exc!r}")
+
 
 # ------------------------------------------------------------------
 # Health endpoint
