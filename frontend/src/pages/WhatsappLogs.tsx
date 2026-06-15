@@ -442,7 +442,7 @@ export default function WhatsappLogs() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-3 py-4 md:px-6 md:py-6 space-y-5">
+    <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-slate-900">WhatsApp Logs</h1>

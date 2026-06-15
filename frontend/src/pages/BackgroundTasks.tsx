@@ -197,8 +197,8 @@ export default function BackgroundTasksPage() {
   const hasCompleted = tasks.some((t) => t.status !== "running");
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-start justify-between gap-4 mb-4">
+    <div className="space-y-5">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Activity className="w-6 h-6 text-primary" /> Background Tasks

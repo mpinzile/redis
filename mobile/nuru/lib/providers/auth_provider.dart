@@ -13,6 +13,7 @@ import '../core/utils/event_groups_cache.dart';
 import '../core/utils/home_cache.dart';
 import '../core/utils/messages_cache.dart';
 import '../core/utils/mobile_cache.dart';
+import '../core/utils/feed_persistent_cache.dart';
 import '../core/utils/money_format.dart' as money_fmt;
 
 class AuthProvider extends ChangeNotifier {
@@ -469,6 +470,9 @@ class AuthProvider extends ChangeNotifier {
     try { EventGroupsCache.reset(); EventGroupsCache.groups = null; } catch (_) {}
     try { HomeCache.reset(); } catch (_) {}
     try { MessagesCache.reset(); } catch (_) {}
+    // Wipe the persisted feed + glimpses cache so the next account never
+    // briefly sees the previous user's glimpses on the home tab.
+    try { await FeedPersistentCache.clear(); } catch (_) {}
     try { await MobileCache.clearAll(); } catch (_) {}
     try {
       PaintingBinding.instance.imageCache.clear();

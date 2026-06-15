@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,7 +19,7 @@ class GlimpseTrimScreen extends StatefulWidget {
   const GlimpseTrimScreen({
     super.key,
     required this.source,
-    this.maxDurationSeconds = 30.0,
+    this.maxDurationSeconds = 60.0,
     this.minDurationSeconds = 1.0,
   });
 
@@ -31,8 +32,9 @@ class _GlimpseTrimScreenState extends State<GlimpseTrimScreen> {
       MethodChannel('flutter_native_video_trimmer');
 
   static const int _thumbCount = 10;
-  static const double _stripHeight = 56;
-  static const double _handleWidth = 14;
+  static const double _stripHeight = 64;
+  static const double _handleWidth = 22;
+  static const double _handleHitSlop = 36; // extra invisible padding for touch
 
   VideoPlayerController? _controller;
   double _start = 0.0;
@@ -188,14 +190,31 @@ class _GlimpseTrimScreenState extends State<GlimpseTrimScreen> {
     double s = _start, e = _end;
     final minW = widget.minDurationSeconds;
     final maxW = widget.maxDurationSeconds;
+    final atMax = (e - s) >= (maxW - 0.05);
     switch (_drag) {
       case _Drag.start:
-        s = (s + deltaSec).clamp(0.0, (e - minW)).toDouble();
-        if (e - s > maxW) s = e - maxW;
+        // If the window already spans the max duration, dragging the start
+        // handle should slide the whole selection (so the user can scroll
+        // through the video while keeping a 60s window). Otherwise it just
+        // shrinks/grows against the end edge.
+        if (atMax && deltaSec < 0) {
+          final w = (e - s).clamp(minW, maxW);
+          s = (s + deltaSec).clamp(0.0, _duration - w).toDouble();
+          e = s + w;
+        } else {
+          s = (s + deltaSec).clamp(0.0, e - minW).toDouble();
+          if (e - s > maxW) s = e - maxW;
+        }
         break;
       case _Drag.end:
-        e = (e + deltaSec).clamp(s + minW, _duration).toDouble();
-        if (e - s > maxW) e = s + maxW;
+        if (atMax && deltaSec > 0) {
+          final w = (e - s).clamp(minW, maxW);
+          e = (e + deltaSec).clamp(w, _duration).toDouble();
+          s = e - w;
+        } else {
+          e = (e + deltaSec).clamp(s + minW, _duration).toDouble();
+          if (e - s > maxW) e = s + maxW;
+        }
         break;
       case _Drag.window:
         final w = e - s;
@@ -390,6 +409,7 @@ class _GlimpseTrimScreenState extends State<GlimpseTrimScreen> {
               return SizedBox(
                 height: _stripHeight + 16,
                 child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
                     // Filmstrip
                     Positioned.fill(
@@ -430,7 +450,7 @@ class _GlimpseTrimScreenState extends State<GlimpseTrimScreen> {
                       right: 0,
                       child: Container(color: Colors.black.withOpacity(0.55)),
                     ),
-                    // Selection frame
+                    // Selection frame — amber top/bottom rails with subtle glow
                     Positioned(
                       left: startX,
                       top: 4,
@@ -438,14 +458,27 @@ class _GlimpseTrimScreenState extends State<GlimpseTrimScreen> {
                       bottom: 4,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
+                        dragStartBehavior: DragStartBehavior.down,
                         onHorizontalDragStart: (_) => _drag = _Drag.window,
-                        onHorizontalDragUpdate: (d) => _applyDrag(d.delta.dx, trackWidth),
+                        onHorizontalDragUpdate: (d) =>
+                            _applyDrag(d.delta.dx, trackWidth),
                         onHorizontalDragEnd: (_) => _drag = _Drag.none,
+                        onHorizontalDragCancel: () => _drag = _Drag.none,
                         child: Container(
                           decoration: BoxDecoration(
                             border: Border.symmetric(
-                              horizontal: BorderSide(color: const Color(0xFFFFB300), width: 3),
+                              horizontal: BorderSide(
+                                color: const Color(0xFFFFD54F),
+                                width: 3,
+                              ),
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    const Color(0xFFFFB300).withOpacity(0.25),
+                                blurRadius: 18,
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -469,34 +502,46 @@ class _GlimpseTrimScreenState extends State<GlimpseTrimScreen> {
                           ),
                         ),
                       ),
-                    // Left handle
+                    // Left handle (large invisible hit area for easy dragging)
                     Positioned(
-                      left: (startX - _handleWidth / 2)
-                          .clamp(-_handleWidth / 2, trackWidth - _handleWidth / 2),
-                      top: 0,
-                      bottom: 0,
-                      width: _handleWidth + 12,
+                      left: (startX - _handleHitSlop)
+                          .clamp(-_handleHitSlop, trackWidth),
+                      top: -8,
+                      bottom: -8,
+                      width: _handleHitSlop * 2,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
+                        dragStartBehavior: DragStartBehavior.down,
                         onHorizontalDragStart: (_) => _drag = _Drag.start,
-                        onHorizontalDragUpdate: (d) => _applyDrag(d.delta.dx, trackWidth),
+                        onHorizontalDragUpdate: (d) =>
+                            _applyDrag(d.delta.dx, trackWidth),
                         onHorizontalDragEnd: (_) => _drag = _Drag.none,
-                        child: Center(child: _handle()),
+                        onHorizontalDragCancel: () => _drag = _Drag.none,
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: _handle(isLeft: true),
+                        ),
                       ),
                     ),
                     // Right handle
                     Positioned(
-                      left: (endX - _handleWidth / 2 - 6)
-                          .clamp(-_handleWidth / 2, trackWidth - _handleWidth / 2),
-                      top: 0,
-                      bottom: 0,
-                      width: _handleWidth + 12,
+                      left: (endX - _handleHitSlop)
+                          .clamp(-_handleHitSlop, trackWidth),
+                      top: -8,
+                      bottom: -8,
+                      width: _handleHitSlop * 2,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
+                        dragStartBehavior: DragStartBehavior.down,
                         onHorizontalDragStart: (_) => _drag = _Drag.end,
-                        onHorizontalDragUpdate: (d) => _applyDrag(d.delta.dx, trackWidth),
+                        onHorizontalDragUpdate: (d) =>
+                            _applyDrag(d.delta.dx, trackWidth),
                         onHorizontalDragEnd: (_) => _drag = _Drag.none,
-                        child: Center(child: _handle()),
+                        onHorizontalDragCancel: () => _drag = _Drag.none,
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: _handle(isLeft: false),
+                        ),
                       ),
                     ),
                   ],
@@ -556,28 +601,85 @@ class _GlimpseTrimScreenState extends State<GlimpseTrimScreen> {
     );
   }
 
-  Widget _handle() {
-    return Container(
+  Widget _handle({bool isLeft = true}) {
+    // A tall, pill-shaped handle that extends slightly above and below the
+    // filmstrip, with a soft amber glow, gradient fill, chevron arrow, and a
+    // chunky white grip — easy to see and easy to grab.
+    return SizedBox(
       width: _handleWidth,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFB300),
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFFB300).withOpacity(0.45),
-            blurRadius: 12,
+      height: _stripHeight + 28,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          // Outer halo
+          Container(
+            width: _handleWidth + 8,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFB300).withOpacity(0.55),
+                  blurRadius: 18,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+          ),
+          // Pill body with gradient
+          Container(
+            width: _handleWidth,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFFFE082), Color(0xFFFFB300), Color(0xFFFF8F00)],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.55), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(
+                isLeft
+                    ? Icons.chevron_left_rounded
+                    : Icons.chevron_right_rounded,
+                size: 18,
+                color: Colors.black.withOpacity(0.7),
+              ),
+            ),
+          ),
+          // Top cap dot
+          Positioned(
+            top: -4,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFD54F),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          // Bottom cap dot
+          Positioned(
+            bottom: -4,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFD54F),
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
         ],
-      ),
-      child: Center(
-        child: Container(
-          width: 3,
-          height: 16,
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.45),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
       ),
     );
   }
