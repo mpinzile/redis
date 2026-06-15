@@ -1,6 +1,7 @@
 import '../../core/widgets/nuru_refresh_indicator.dart';
 import '../../core/utils/money_format.dart';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -698,7 +699,12 @@ class _TicketClassesSheetState extends State<_TicketClassesSheet> {
               )
             // Loading
             else if (_loading)
-              const Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: AppColors.primary))
+              SkeletonList(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                count: 3,
+                spacing: 12,
+                builder: (_, __) => const SkeletonCard(height: 80),
+              )
             // Empty
             else if (_classes.isEmpty)
               Padding(padding: const EdgeInsets.all(40), child: Text('No ticket classes available',

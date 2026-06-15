@@ -2,6 +2,7 @@ import '../../core/widgets/nuru_refresh_indicator.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
@@ -190,7 +191,21 @@ class _ServiceVerificationScreenState extends State<ServiceVerificationScreen> {
       backgroundColor: Colors.white,
       appBar: NuruSubPageAppBar(title: context.tr('service_verification')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? SkeletonGroup(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: const [
+                  SkeletonBox(height: 64, radius: 14),
+                  SizedBox(height: 14),
+                  SkeletonBox(height: 110, radius: 16),
+                  SizedBox(height: 14),
+                  SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                  SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                  SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                  SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                ],
+              ),
+            )
           : NuruRefreshIndicator(
               onRefresh: _loadKyc,
               color: AppColors.primary,

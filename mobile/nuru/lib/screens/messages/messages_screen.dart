@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../core/widgets/expanding_search_action.dart';
@@ -2230,7 +2231,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             child: Stack(
               children: [
                 _loading
-                    ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                    ? const SkeletonChatBubbles(count: 8)
                     : _buildMessagesList(),
                 if (!_loading && !_isAtBottom)
                   Positioned(

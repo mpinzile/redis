@@ -1,5 +1,6 @@
 import '../../core/widgets/nuru_refresh_indicator.dart';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -56,7 +57,20 @@ class _NuruCardsScreenState extends State<NuruCardsScreen> {
         onRefresh: _load,
         color: AppColors.primary,
         child: _loading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            ? SkeletonGroup(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: const [
+                    SkeletonBox(height: 160, radius: 18),
+                    SizedBox(height: 18),
+                    SkeletonLine(widthFactor: 0.5, height: 14),
+                    SizedBox(height: 14),
+                    SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                    SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                    SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                  ],
+                ),
+              )
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [

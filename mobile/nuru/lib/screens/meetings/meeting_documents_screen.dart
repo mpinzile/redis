@@ -3,6 +3,7 @@ import '../../core/widgets/nuru_scrollable_tabs.dart';
 
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -453,7 +454,7 @@ class _MeetingDocumentsScreenState extends State<MeetingDocumentsScreen> with Si
     context.watch<LocaleProvider>();
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF111111) : const Color(0xFFF8F9FB),
+      backgroundColor: isDark ? const Color(0xFF111111) : Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -558,7 +559,14 @@ class _MeetingDocumentsScreenState extends State<MeetingDocumentsScreen> with Si
   }
 
   Widget _buildAgendaTab(ThemeData theme) {
-    if (_loadingAgenda) return const Center(child: CircularProgressIndicator());
+    if (_loadingAgenda) {
+      return SkeletonList(
+        padding: const EdgeInsets.all(16),
+        count: 5,
+        spacing: 12,
+        builder: (_, __) => const SkeletonListTile(padding: EdgeInsets.zero),
+      );
+    }
     final isDark = theme.brightness == Brightness.dark;
 
     if (_agendaItems.isEmpty) {
@@ -744,7 +752,28 @@ class _MeetingDocumentsScreenState extends State<MeetingDocumentsScreen> with Si
   }
 
   Widget _buildMinutesTab(ThemeData theme) {
-    if (_loadingMinutes) return const Center(child: CircularProgressIndicator());
+    if (_loadingMinutes) {
+      return SkeletonGroup(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: const [
+            SkeletonLine(widthFactor: 0.55, height: 16),
+            SizedBox(height: 14),
+            SkeletonBox(height: 12),
+            SizedBox(height: 8),
+            SkeletonBox(height: 12),
+            SizedBox(height: 8),
+            SkeletonLine(widthFactor: 0.7, height: 12),
+            SizedBox(height: 24),
+            SkeletonLine(widthFactor: 0.4, height: 14),
+            SizedBox(height: 12),
+            SkeletonBox(height: 12),
+            SizedBox(height: 8),
+            SkeletonBox(height: 12),
+          ],
+        ),
+      );
+    }
     final isDark = theme.brightness == Brightness.dark;
 
     if (_minutes == null) {
@@ -925,7 +954,7 @@ class _RecordMinutesPage extends StatelessWidget {
     final primary = theme.colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF111111) : const Color(0xFFF8F9FB),
+      backgroundColor: isDark ? const Color(0xFF111111) : Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

@@ -80,7 +80,7 @@ class _YourTicketScreenState extends State<YourTicketScreen> {
     final currency = ticket['currency']?.toString() ?? getActiveCurrency();
     final totalAmount = ticket['total_amount'];
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F8),
+      backgroundColor: Colors.white,
       appBar: _buildAppBar(context),
       body: SafeArea(
         top: false,
@@ -139,7 +139,7 @@ class _YourTicketScreenState extends State<YourTicketScreen> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xFFF7F7F8),
+      backgroundColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
       leadingWidth: 56,

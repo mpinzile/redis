@@ -1,5 +1,6 @@
 import '../../../core/widgets/nuru_refresh_indicator.dart';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/events_service.dart';
 import '../../../core/widgets/app_snackbar.dart';
@@ -39,7 +40,14 @@ class _EventScheduleTabState extends State<EventScheduleTab> with AutomaticKeepA
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    if (_loading) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    if (_loading) {
+      return SkeletonList(
+        padding: const EdgeInsets.all(16),
+        count: 6,
+        spacing: 12,
+        builder: (_, __) => const SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+      );
+    }
 
     return NuruRefreshIndicator(
       onRefresh: _load,

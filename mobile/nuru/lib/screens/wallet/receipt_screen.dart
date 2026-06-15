@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_svg/flutter_svg.dart';
@@ -247,7 +248,24 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       body: SafeArea(
         top: false,
         child: _loading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            ? SkeletonGroup(
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: const [
+                    SkeletonBox(height: 140, radius: 16),
+                    SizedBox(height: 20),
+                    SkeletonLine(widthFactor: 0.5, height: 14),
+                    SizedBox(height: 10),
+                    SkeletonLine(widthFactor: 0.8, height: 12),
+                    SizedBox(height: 8),
+                    SkeletonLine(widthFactor: 0.7, height: 12),
+                    SizedBox(height: 8),
+                    SkeletonLine(widthFactor: 0.6, height: 12),
+                    SizedBox(height: 24),
+                    SkeletonBox(height: 50, radius: 14),
+                  ],
+                ),
+              )
             : _error != null
                 ? Center(
                     child: Text(

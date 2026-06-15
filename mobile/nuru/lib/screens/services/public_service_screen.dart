@@ -1,6 +1,7 @@
 import '../../core/widgets/nuru_refresh_indicator.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -1386,10 +1387,14 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
       title: 'Availability',
       iconAsset: 'assets/icons/calendar-icon.svg',
       child: _calendarLoading
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(28),
-                child: CircularProgressIndicator(color: _gold),
+          ? const Padding(
+              padding: EdgeInsets.all(16),
+              child: SkeletonGroup(
+                child: Column(children: [
+                  SkeletonLine(widthFactor: 0.4, height: 14),
+                  SizedBox(height: 14),
+                  SkeletonBox(height: 220, radius: 12),
+                ]),
               ),
             )
           : Column(
@@ -1669,10 +1674,16 @@ class _PublicServiceScreenState extends State<PublicServiceScreen> {
         ),
       ),
       child: _reviewsLoading
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _gold),
+          ? const Padding(
+              padding: EdgeInsets.all(16),
+              child: SkeletonGroup(
+                child: Column(children: [
+                  SkeletonListTile(padding: EdgeInsets.zero),
+                  SizedBox(height: 12),
+                  SkeletonListTile(padding: EdgeInsets.zero),
+                  SizedBox(height: 12),
+                  SkeletonListTile(padding: EdgeInsets.zero),
+                ]),
               ),
             )
           : _reviews.isEmpty

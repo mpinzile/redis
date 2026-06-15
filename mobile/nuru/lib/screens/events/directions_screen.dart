@@ -126,7 +126,7 @@ class _DirectionsScreenState extends State<DirectionsScreen> {
     final dest = LatLng(widget.destinationLat, widget.destinationLng);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE8EEF5),
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           // Map

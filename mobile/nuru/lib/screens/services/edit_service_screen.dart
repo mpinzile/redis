@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
@@ -455,7 +456,20 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
       backgroundColor: Colors.white,
       appBar: NuruSubPageAppBar(title: context.tr('edit_service')),
       body: _loadingRefs
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? SkeletonGroup(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                children: const [
+                  SkeletonBox(height: 110, radius: 16),
+                  SizedBox(height: 16),
+                  SkeletonBox(height: 160, radius: 16),
+                  SizedBox(height: 16),
+                  SkeletonBox(height: 140, radius: 16),
+                  SizedBox(height: 16),
+                  SkeletonBox(height: 100, radius: 16),
+                ],
+              ),
+            )
           : Column(
               children: [
                 Expanded(

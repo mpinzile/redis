@@ -5,6 +5,7 @@
 import 'package:nuru/core/utils/money_format.dart'
     show getActiveCurrency, formatMoney;
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -135,10 +136,18 @@ class _PublicContributeScreenState extends State<PublicContributeScreen> {
       backgroundColor: AppColors.surface,
       appBar: const NuruSubPageAppBar(title: 'Contribute'),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.primary,
+          ? SkeletonGroup(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: const [
+                  SkeletonBox(height: 140, radius: 18),
+                  SizedBox(height: 16),
+                  SkeletonLine(widthFactor: 0.5, height: 14),
+                  SizedBox(height: 12),
+                  SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                  SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                  SkeletonListTile(padding: EdgeInsets.zero, trailing: true),
+                ],
               ),
             )
           : _link == null

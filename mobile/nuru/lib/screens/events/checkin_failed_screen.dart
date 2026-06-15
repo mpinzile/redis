@@ -36,42 +36,59 @@ class CheckinFailedScreen extends StatelessWidget {
   String get _reasonLabel {
     final r = (data['reason'] ?? '').toString();
     switch (r) {
-      case 'already_used': return 'Already Used';
+      case 'already_used': return 'Already Checked In';
       case 'not_found': return 'Not Recognised';
+      case 'wrong_event': return 'Wrong Event';
       case 'ticket_pending': return 'Awaiting Payment';
-      case 'ticket_rejected': return 'Rejected';
-      case 'ticket_cancelled': return 'Cancelled';
+      case 'ticket_rejected': return 'Ticket Rejected';
+      case 'ticket_cancelled': return 'Ticket Cancelled';
       case 'event_ended': return 'Event Ended';
-      case 'event_not_started': return 'Too Early';
-      case 'empty_code': return 'No Code';
-      default: return 'Invalid';
+      case 'event_not_started': return 'Event Not Started';
+      case 'rsvp_declined': return 'Guest Declined';
+      case 'empty_code': return 'No Code Scanned';
+      default: return 'Cannot Check In';
     }
   }
 
   String get _whatThisMeans {
     final r = (data['reason'] ?? '').toString();
     final at = _fmtDateTime(data['checked_in_at']?.toString());
+    final guest = (data['name'] ?? '').toString();
+    final ev = (data['event'] as Map?) ?? const {};
+    final evName = (ev['name'] ?? '').toString();
+    final who = guest.isNotEmpty && guest.toLowerCase() != 'unknown'
+        ? guest
+        : 'This guest';
     switch (r) {
       case 'already_used':
-        return 'This QR code has already been used for check-in on $at.';
+        return at == '-'
+            ? '$who has already been checked in for this event.'
+            : '$who was already checked in on $at.';
       case 'not_found':
-        return 'We couldn\'t match this QR code to any guest or ticket for this event.';
+        return "We couldn't match this QR code to any guest or ticket for ${evName.isNotEmpty ? evName : 'this event'}. They may not be invited, or the code is from another event.";
+      case 'wrong_event':
+        return "This QR code belongs to a different event. Switch to the correct event in the scanner and try again.";
       case 'ticket_pending':
-        return 'This ticket has not been paid for yet, so it can\'t be used to enter.';
+        return "$who hasn't paid for this ticket yet, so it can't be used to enter.";
       case 'ticket_rejected':
-        return 'This ticket was rejected and cannot be used.';
+        return "$who's ticket was rejected and cannot be used for entry.";
       case 'ticket_cancelled':
-        return 'This ticket was cancelled and is no longer valid.';
+        return "$who's ticket was cancelled and is no longer valid.";
       case 'event_ended':
-        return 'This event has already ended, so check-in is closed.';
+        return "${evName.isNotEmpty ? evName : 'This event'} has already ended, so check-in is closed.";
       case 'event_not_started':
-        return 'This event has not started yet, so check-in is not open.';
+        return "${evName.isNotEmpty ? evName : 'This event'} hasn't started yet. Check-in opens on the event day.";
+      case 'rsvp_declined':
+        return "$who declined this invitation and isn't expected to attend.";
       case 'empty_code':
         return 'No readable QR code was received. Please scan again or enter the code manually.';
       default:
-        return message.isEmpty ? 'The QR code is invalid for this event.' : message;
+        return message.isEmpty
+            ? 'This QR code cannot be used to check in right now.'
+            : message;
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

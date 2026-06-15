@@ -2,6 +2,7 @@ import 'dart:io';
 import '../../widgets/app_action_sheet.dart';
 import '../../widgets/app_checkbox.dart';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
@@ -344,7 +345,20 @@ END:VCALENDAR''';
         ],
       ),
       body: _loading && _meeting == null
-          ? const Center(child: CircularProgressIndicator())
+          ? SkeletonList(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              count: 6,
+              spacing: 12,
+              builder: (_, i) => i == 0
+                  ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                      SkeletonBox(height: 160, radius: 16),
+                      SizedBox(height: 14),
+                      SkeletonLine(widthFactor: 0.6, height: 16),
+                      SizedBox(height: 8),
+                      SkeletonLine(widthFactor: 0.4, height: 12),
+                    ])
+                  : const SkeletonListTile(trailing: true, padding: EdgeInsets.zero),
+            )
           : _meeting == null
               ? Center(child: Text(_error ?? 'No data'))
               : RefreshIndicator(

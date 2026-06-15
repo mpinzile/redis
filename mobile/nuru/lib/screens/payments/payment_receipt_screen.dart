@@ -248,7 +248,7 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F8),
+      backgroundColor: Colors.white,
       appBar: _buildAppBar(),
       body: SafeArea(
         top: false,
@@ -359,7 +359,7 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFFF7F7F8),
+      backgroundColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
       leadingWidth: 56,

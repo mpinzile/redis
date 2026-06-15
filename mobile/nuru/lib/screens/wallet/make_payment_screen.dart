@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -658,8 +659,16 @@ class _MakePaymentScreenState extends State<MakePaymentScreen> {
   Widget _providerGrid() {
     if (_loadingProviders) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 18),
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: SkeletonGroup(
+          child: Column(children: [
+            SkeletonBox(height: 56, radius: 12),
+            SizedBox(height: 10),
+            SkeletonBox(height: 56, radius: 12),
+            SizedBox(height: 10),
+            SkeletonBox(height: 56, radius: 12),
+          ]),
+        ),
       );
     }
     if (_providers.isEmpty) {
