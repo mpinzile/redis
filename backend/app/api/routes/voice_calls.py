@@ -48,8 +48,78 @@ from models import (
     VoiceCampaign, VoiceCallJob, VoiceCallLog, VoiceOptOut,
     VoiceFeatureSetting, Event, User,
 )
+from models.admin import AdminUser
 from utils.auth import get_current_user
 from utils.helpers import standard_response
+import jwt as _jwt
+from fastapi import Request as _FastRequest
+from core.config import SECRET_KEY as _SECRET_KEY, ALGORITHM as _ALGORITHM
+
+
+def _decode_bearer(request: "_FastRequest") -> Optional[dict]:
+    """Best-effort decode of the Authorization Bearer JWT. Returns the
+    payload dict on success, or None when no/invalid token is present.
+    """
+    auth = request.headers.get("Authorization") or ""
+    if not auth.lower().startswith("bearer "):
+        return None
+    token = auth.split(" ", 1)[1].strip()
+    try:
+        return _jwt.decode(token, _SECRET_KEY, algorithms=[_ALGORITHM])
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _get_admin_principal(
+    request: "_FastRequest",
+    db: "Session",
+) -> Optional[AdminUser]:
+    """Return the AdminUser when the request carries a valid admin token
+    (``admin_id`` claim + ``is_admin: True``). Returns ``None`` otherwise
+    so callers can fall through to user-based admin detection.
+    """
+    payload = _decode_bearer(request)
+    if not payload or not payload.get("is_admin"):
+        return None
+    admin_id = payload.get("admin_id")
+    if not admin_id:
+        return None
+    admin = db.query(AdminUser).filter(AdminUser.id == admin_id).first()
+    if admin and getattr(admin, "is_active", True):
+        return admin
+    return None
+
+
+def require_voice_admin(
+    request: _FastRequest,
+    db: Session = Depends(get_db),
+) -> AdminUser:
+    """FastAPI dependency: only callers with a valid admin JWT may pass."""
+    admin = _get_admin_principal(request, db)
+    if not admin:
+        raise HTTPException(status_code=403, detail="Admins only")
+    return admin
+
+
+def get_user_or_admin(
+    request: _FastRequest,
+    db: Session = Depends(get_db),
+) -> Any:
+    """Returns either an ``AdminUser`` (admin token) or a regular ``User``
+    (user access token). Used by read-only endpoints that both surfaces
+    need — e.g. the feature-flag status panel.
+    """
+    admin = _get_admin_principal(request, db)
+    if admin:
+        return admin
+    # Fall back to regular user auth — decode the access_token JWT.
+    payload = _decode_bearer(request)
+    uid = payload.get("uid") if payload else None
+    if uid:
+        user = db.query(User).filter(User.id == uid).first()
+        if user and getattr(user, "is_active", True):
+            return user
+    raise HTTPException(status_code=401, detail="Unauthorized")
 from utils.event_owner import user_can_manage_event
 from voice.safety import check_can_call
 from voice import twilio_client
@@ -290,12 +360,12 @@ class FeatureToggleUpdate(BaseModel):
 
 @router.get("/feature-status")
 def get_feature_status(
+    principal: Any = Depends(get_user_or_admin),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    """Public to any authenticated user — used by web + mobile to render
-    a polite "temporarily disabled" panel when admins have paused the
-    feature. Returns both EN and SW copies so the client can pick.
+    """Public to any authenticated user (regular ``access_token``) OR any
+    admin (``admin_token``) — used by web + mobile to render a polite
+    "temporarily disabled" panel when admins have paused the feature.
     """
     row = _get_or_create_feature(db)
     return standard_response(True, "ok", _serialize_feature(row))
@@ -304,14 +374,13 @@ def get_feature_status(
 @router.patch("/admin/feature-status")
 def update_feature_status(
     payload: FeatureToggleUpdate,
+    admin: AdminUser = Depends(require_voice_admin),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    """Admin-only toggle. Body fields are all optional — only the ones
+    """Admin-only toggle (requires the dedicated admin JWT issued by
+    ``/admin/auth/login``). Body fields are all optional — only the ones
     provided are updated.
     """
-    if not _is_admin(current_user):
-        raise HTTPException(403, detail="Admins only")
     row = _get_or_create_feature(db)
     if payload.enabled is not None:
         row.enabled = bool(payload.enabled)
@@ -323,7 +392,10 @@ def update_feature_status(
         msg = payload.disabled_message_sw.strip()
         if msg:
             row.disabled_message_sw = msg
-    row.updated_by_user_id = current_user.id
+    # ``updated_by_user_id`` references ``users.id``; admin users live in
+    # a separate table, so we only stamp it when a regular user is the
+    # author (currently unused — admin token is always used). Leaving
+    # it untouched is safer than writing a non-existent user id.
     db.commit()
     db.refresh(row)
     return standard_response(
