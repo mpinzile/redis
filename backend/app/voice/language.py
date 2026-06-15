@@ -73,13 +73,17 @@ def resolve_voice_language(
     if v in ("sw", "en"):
         return v, "recipient_preference"
 
+    # Recipient preference: only honour Swahili at call start. English
+    # requires an explicit campaign/event override — otherwise a stale
+    # "en" profile flag would silently flip every call.
     v = _pick_language(job, "language_preference", "voice_language_preference")
-    if v in ("sw", "en"):
-        return v, "recipient_preference"
+    if v == "sw":
+        return "sw", "recipient_preference"
 
     v = _pick_language(job, "language")
-    if v in ("sw", "en") and _extra_language_source(job) == "recipient_preference":
-        return v, "recipient_preference"
+    if v == "sw" and _extra_language_source(job) == "recipient_preference":
+        return "sw", "recipient_preference"
+
 
     v = _pick_language(campaign, "language")
     if v == "sw":
