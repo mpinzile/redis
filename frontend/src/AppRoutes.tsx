@@ -104,6 +104,7 @@ import MyContributions from "@/pages/MyContributions";
 import PublicContribute from "@/pages/PublicContribute";
 import PublicContributionReceipt from "@/pages/PublicContributionReceipt";
 import PublicCardView from "@/pages/PublicCardView";
+import VoiceCalls from "@/pages/VoiceCalls";
 
 // Admin
 import AdminLogin from "@/pages/admin/AdminLogin";
@@ -238,6 +239,7 @@ function InnerRoutes() {
           {/* /event/:id moved to public routes below */}
           <Route path="/event/:id/automations" element={<EventAutomationsRedirect />} />
           <Route path="/my-contributors" element={<MyContributors />} />
+          <Route path="/voice-calls" element={<VoiceCalls />} />
           <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/removed-content" element={<RemovedContent />} />
           <Route path="/my-issues" element={<MyIssues />} />

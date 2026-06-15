@@ -65,6 +65,7 @@ from .account_setup import router as account_setup_router
 from .meeting_redirect import router as meeting_redirect_router
 from .event_cards import router as event_cards_router
 from .whatsapp_logs import router as whatsapp_logs_router
+from .voice_calls import router as voice_calls_router
 
 # All routers to be included in main app
 all_routers = [
@@ -131,6 +132,7 @@ all_routers = [
     meeting_redirect_router,            # /m/{token}  (WhatsApp meeting button resolver)
     event_cards_router,                 # /cards/... + /events/.../cards/...
     whatsapp_logs_router,               # /whatsapp/logs/...
+    voice_calls_router,                 # /voice-calls/... (Nuru Voice Assistant)
 ]
 
 __all__ = [
@@ -167,4 +169,5 @@ __all__ = [
     "agreements_router",
     "card_templates_router",
     "meetings_router",
+    "voice_calls_router",
 ]

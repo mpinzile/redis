@@ -2469,3 +2469,444 @@ The strongest business value is not that AI can talk.
 The strongest business value is that Nuru can collect real event answers automatically and update the event system without the organizer calling everyone manually.
 
 That is a serious advantage for Nuru.
+
+---
+
+# Natural Conversation Handling and Human Like Voice Behavior
+
+The Nuru Voice Assistant must not expect users to answer only with direct values such as yes, no, or maybe.
+
+Real people may respond with unclear, indirect, emotional, interrupted, noisy, or conversational answers. The AI must interpret the intent, respond naturally, and continue the call without sounding robotic.
+
+The assistant must support conversation repair, tone adaptation, interruption handling, silence handling, and natural Swahili conversational flow.
+
+## 1. Conversation Repair
+
+The AI must understand and respond naturally when the recipient does not hear, does not understand, or asks for repetition.
+
+Examples of recipient responses:
+
+```
+Unasema?
+Umesema?
+Sikusikii vizuri.
+Sijasikia.
+Rudia.
+Umesema tukio gani?
+Nani huyu?
+Wewe ni nani?
+Unapiga kutoka wapi?
+Hii ni kuhusu nini?
+```
+
+The AI should not classify these as RSVP answers. Instead, it should repeat or clarify briefly.
+
+Example response:
+
+```
+Samahani. Napiga kutoka Nuru kwa niaba ya mratibu wa tukio.
+Ni kuhusu mwaliko wako wa tukio la {event_name}.
+Ningependa tu kuthibitisha kama utahudhuria.
+```
+
+If the recipient still does not hear after repeated attempts, the AI should end politely and trigger WhatsApp follow up.
+
+System action:
+
+```
+mark_human_follow_up_needed(guest_id, "recipient_could_not_hear")
+send_whatsapp_follow_up(guest_id, "rsvp_follow_up")
+```
+
+## 2. Identity and Trust Questions
+
+The AI must handle questions about who is calling.
+
+Examples:
+
+```
+Wewe ni nani?
+Nani anaongea?
+Umenipataje?
+Namba yangu mmeipata wapi?
+Nani amewatuma?
+Ni tukio gani?
+```
+
+The AI should answer clearly and calmly.
+
+Example response:
+
+```
+Mimi ni Nuru Voice Assistant.
+Napiga kwa niaba ya mratibu wa tukio la {event_name}.
+Namba yako ipo kwenye orodha ya wageni walioalikwa kwenye tukio hili.
+```
+
+The AI must never pretend to be a human person.
+
+Do not say:
+
+```
+Mimi ni Happyphania.
+Mimi ni mfanyakazi wa Nuru.
+Mimi ni rafiki wa mratibu.
+```
+
+Use:
+
+```
+Mimi ni Nuru Voice Assistant.
+Napiga kutoka Nuru kwa niaba ya mratibu wa tukio.
+```
+
+## 3. Natural RSVP Interpretation
+
+The AI must understand indirect RSVP answers.
+
+The recipient may say yes in many ways. Examples that mean **confirmed**:
+
+```
+Ndio.
+Nitakuja.
+Nitahudhuria.
+Nipo.
+Tupo pamoja.
+Nitafika.
+Nitaonekana.
+Nitakuwepo.
+Inshallah nitakuja.
+Mungu akipenda nitakuja.
+Sawa nitakuja.
+```
+
+Examples that mean **declined**:
+
+```
+Sitakuja.
+Sitaweza.
+Nina safari.
+Nina ratiba nyingine.
+Niko mbali.
+Niko kazini.
+Sitaweza kuhudhuria.
+Samahani sitafika.
+```
+
+Examples that mean **maybe**:
+
+```
+Bado sijajua.
+Nitaangalia.
+Ngoja nione.
+Sina uhakika.
+Nitakujibu baadaye.
+Labda.
+Inawezekana.
+```
+
+Examples that mean **call later**:
+
+```
+Nipigie baadaye.
+Nipo busy.
+Niko kwenye kikao.
+Nipo kwenye kelele.
+Sasa hivi siwezi kuongea.
+Nipigie jioni.
+Nipigie kesho.
+```
+
+Examples that mean **wrong number**:
+
+```
+Umekosea namba.
+Simfahamu huyo mtu.
+Mimi sio huyo.
+Hii sio namba yake.
+Hamjanipatia.
+```
+
+The AI must classify these correctly and only save the result when confidence is high. If the answer is not clear, mark human follow up needed.
+
+## 4. Tone Adaptation
+
+The AI must adjust tone based on the recipient's mood.
+
+If the recipient sounds **confused**, the AI should slow down and simplify.
+
+```
+Samahani kwa kuchanganya.
+Ni swali moja tu. Je, utahudhuria tukio la {event_name}?
+```
+
+If the recipient sounds **annoyed**, the AI should be brief and respectful.
+
+```
+Samahani kwa usumbufu.
+Ningependa tu kuthibitisha kama utahudhuria.
+Ukisema ndiyo au hapana, nitahifadhi majibu yako na sitakuchukulia muda zaidi.
+```
+
+If the recipient sounds **busy**, the AI should offer callback.
+
+```
+Nimekuelewa. Naweza kukupigia muda mwingine unaofaa.
+```
+
+If the recipient sounds **happy or friendly**, the AI can respond warmly but still keep the call short.
+
+```
+Asante sana. Tumefurahi kusikia utahudhuria. Karibu sana.
+```
+
+The AI must not become too chatty. The call should remain focused on the event purpose.
+
+## 5. Interruption Handling
+
+The AI must support barge in behavior.
+
+If the recipient starts speaking while the AI is talking, the AI should stop speaking, listen, and respond to what the recipient said.
+
+Example:
+
+```
+AI: Ningependa kufahamu kama uta...
+Recipient: Ndio nitakuja.
+AI should stop and save confirmed.
+```
+
+The AI should not continue reading the script after the recipient has already answered.
+
+System behavior:
+
+```
+Detect interruption
+Stop current AI speech
+Listen to recipient
+Classify latest user intent
+Continue from the correct step
+```
+
+## 6. Silence Handling
+
+The AI must handle silence naturally. If the recipient is silent after a question, wait briefly, then prompt once.
+
+First silence prompt:
+
+```
+Halo, unanipata?
+```
+
+Second silence prompt:
+
+```
+Naomba nikurudie kwa kifupi. Je, utahudhuria tukio la {event_name}?
+```
+
+If silence continues:
+
+```
+Sawa, inaonekana muda huu haupo vizuri. Tutakutumia ujumbe kupitia WhatsApp. Asante.
+```
+
+System action:
+
+```
+mark_human_follow_up_needed(guest_id, "no_clear_response")
+send_whatsapp_follow_up(guest_id, "rsvp_follow_up")
+```
+
+## 7. Noisy Environment Handling
+
+The AI must detect when the recipient cannot hear or is in a noisy place.
+
+Examples:
+
+```
+Sikusikii.
+Kuna kelele.
+Nipo barabarani.
+Mtandao unasumbua.
+Sauti inakatika.
+```
+
+The AI should respond:
+
+```
+Samahani kwa hilo. Naweza kukutumia ujumbe kupitia WhatsApp au kukupigia baadaye.
+```
+
+If the recipient chooses WhatsApp:
+
+```
+Sawa, tutakutumia ujumbe kupitia WhatsApp. Asante.
+```
+
+System action:
+
+```
+send_whatsapp_follow_up(guest_id, "rsvp_follow_up")
+```
+
+If the recipient chooses later call:
+
+```
+schedule_callback(guest_id, preferred_time)
+```
+
+## 8. Confirmation Before Saving
+
+The AI should save RSVP immediately only when the answer is clear.
+
+Clear examples:
+
+```
+Ndio nitakuja.
+Sitakuja.
+Bado sijajua.
+Nipigie baadaye.
+Umekosea namba.
+```
+
+For unclear answers, the AI must ask one short confirmation question.
+
+```
+Ili nihifadhi vizuri, unamaanisha utahudhuria?
+```
+
+If confirmed, save result. If still unclear, mark human follow up.
+
+## 9. Conversation State Machine
+
+The AI call should follow a state machine, not a loose chat.
+
+Recommended states:
+
+```
+greeting
+identity_clarification
+event_explanation
+invitation_received_check
+rsvp_question
+rsvp_confirmation
+callback_request
+wrong_number
+whatsapp_follow_up
+human_follow_up
+closing
+```
+
+Each recipient response should be classified into one of these intent categories:
+
+```
+confirmed
+declined
+maybe
+call_later
+wrong_number
+did_not_hear
+identity_question
+event_question
+busy
+noisy_environment
+request_whatsapp
+human_requested
+angry_or_uncomfortable
+unclear
+silence
+```
+
+The AI should move to the correct next state based on the detected intent.
+
+## 10. AI Response Style
+
+The AI should sound natural, polite, and brief.
+
+- Use short Swahili sentences.
+- Avoid long formal speeches.
+- Avoid awkward robotic phrases.
+- Use phrases people actually understand.
+
+Good examples:
+
+```
+Samahani, narudia kwa kifupi.
+Nimekuelewa.
+Sawa, nimehifadhi hivyo.
+Karibu sana.
+Pole kwa usumbufu.
+Naweza kukutumia ujumbe WhatsApp.
+Naweza kukupigia baadaye.
+```
+
+Avoid:
+
+```
+Ninathibitisha kupokea taarifa zako kikamilifu.
+Uamuzi wako umefanikiwa kuchakatwa.
+Mfumo wetu umehifadhi majibu yako.
+```
+
+The AI should not sound like a government form wearing headphones.
+
+## 11. Backend Fields for Conversation Quality
+
+Add these optional fields to `voice_call_logs`:
+
+```
+conversation_quality
+detected_mood
+noise_detected
+interruption_count
+silence_count
+clarification_count
+final_confidence
+human_follow_up_reason
+```
+
+Recommended values for `detected_mood`:
+
+```
+neutral
+friendly
+confused
+busy
+annoyed
+angry
+uncomfortable
+```
+
+Recommended values for `conversation_quality`:
+
+```
+clear
+minor_clarification_needed
+noisy
+interrupted
+unclear
+failed
+```
+
+## 12. Success Criteria for Natural Conversation
+
+The voice assistant is production ready only if it can handle:
+
+- Recipient says yes directly.
+- Recipient says no directly.
+- Recipient gives indirect yes.
+- Recipient gives indirect no.
+- Recipient says maybe.
+- Recipient asks "wewe ni nani?"
+- Recipient says "sikusikii vizuri."
+- Recipient interrupts the AI.
+- Recipient stays silent.
+- Recipient is in a noisy place.
+- Recipient asks to be called later.
+- Recipient says wrong number.
+- Recipient sounds annoyed.
+- Recipient asks for WhatsApp instead.
+
+The AI must not force every user into yes, no, or maybe.
+
+It must interpret natural speech, ask short follow up questions, and save only high confidence results.
