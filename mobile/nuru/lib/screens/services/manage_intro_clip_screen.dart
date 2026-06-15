@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
@@ -183,10 +184,21 @@ class _ManageIntroClipScreenState extends State<ManageIntroClipScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F3F8),
+      backgroundColor: Colors.white,
       appBar: NuruSubPageAppBar(title: '${widget.serviceName} · Intro Clip'),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? SkeletonGroup(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: const [
+                  SkeletonBox(height: 56, radius: 14),
+                  SizedBox(height: 16),
+                  SkeletonBox(height: 200, radius: 16),
+                  SizedBox(height: 16),
+                  SkeletonLine(widthFactor: 0.5, height: 12),
+                ],
+              ),
+            )
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [

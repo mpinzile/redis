@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/nuru_subpage_app_bar.dart';
@@ -63,7 +64,12 @@ class _RemovedContentScreenState extends State<RemovedContentScreen> {
           ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? SkeletonList(
+                    padding: const EdgeInsets.all(16),
+                    count: 5,
+                    spacing: 12,
+                    builder: (_, __) => const SkeletonCard(height: 140),
+                  )
                 : (_activeTab == 0
                     ? _contentList(_removedPosts, isPost: true)
                     : _contentList(_removedMoments, isPost: false)),

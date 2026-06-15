@@ -105,6 +105,11 @@ def standard_response(
 
     if not success:
         response["errors"] = errors or []
+        # Allow callers to still attach a structured `data` payload on failure
+        # (used by scanner / check-in / voice endpoints so the mobile UI can
+        # render rich error context — guest name, reason code, scan time, …).
+        if data is not None:
+            response["data"] = data
     else:
         if pagination:
             # Wrap items with pagination
@@ -114,6 +119,7 @@ def standard_response(
                 response["data"] = data
         else:
             response["data"] = data
+
 
     return response
 

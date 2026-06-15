@@ -50,24 +50,27 @@ class GeminiTextClient:
     # ── low-level ──────────────────────────────────────────────
     def _post(self, body: dict) -> Optional[dict]:
         if not self.api_key:
-            logger.warning("GEMINI_API_KEY not set; skipping Gemini text call")
+            logger.error("Gemini AUTH FAILURE: GEMINI_API_KEY is not set; skipping %s call", self.model)
             return None
         url = f"{GEMINI_API_BASE}/models/{self.model}:generateContent?key={self.api_key}"
         try:
             with httpx.Client(timeout=self.timeout) as client:
                 resp = client.post(url, json=body, headers={"Content-Type": "application/json"})
-        except Exception:  # noqa: BLE001
-            logger.exception("Gemini text request failed")
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Gemini text request failed for %s: %r", self.model, exc)
             return None
         if resp.status_code >= 400:
-            logger.warning("Gemini text %s -> %s %s",
-                           self.model, resp.status_code, resp.text[:300])
+            level = logger.error if resp.status_code in (401, 403) else logger.warning
+            tag = "AUTH FAILURE" if resp.status_code in (401, 403) else "API ERROR"
+            level("Gemini %s [%s] model=%s body=%s",
+                  tag, resp.status_code, self.model, resp.text[:500])
             return None
         try:
             return resp.json()
         except ValueError:
-            logger.warning("Gemini text returned non-JSON body")
+            logger.warning("Gemini text returned non-JSON body (model=%s)", self.model)
             return None
+
 
     @staticmethod
     def _first_text(payload: Optional[dict]) -> Optional[str]:

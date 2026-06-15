@@ -278,7 +278,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.grey[50],
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.grey[200]!),
           ),

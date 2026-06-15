@@ -37,7 +37,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request, Form, Response, WebSocket
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request, Form, Response, WebSocket, BackgroundTasks
 from pydantic import BaseModel, Field, validator
 from sqlalchemy import func as sa_func, and_, or_
 from sqlalchemy.orm import Session
@@ -414,12 +414,139 @@ def _set_campaign_status(
 
 @router.post("/campaigns/{campaign_id}/start")
 def start_campaign(campaign_id: str,
+                   background_tasks: BackgroundTasks,
                    db: Session = Depends(get_db),
                    current_user: User = Depends(get_current_user)):
-    return _set_campaign_status(
-        db, campaign_id, current_user, "queued", "Campaign queued",
-        allowed_from={"draft", "paused"},
+    result = _set_campaign_status(
+        db, campaign_id, current_user, "running", "Campaign started — dialing now",
+        allowed_from={"draft", "queued", "paused"},
     )
+    # Kick off the dispatcher in the background so the HTTP response
+    # returns immediately while Twilio is being called.
+    background_tasks.add_task(_dispatch_campaign_jobs, campaign_id)
+    return result
+
+
+def _dispatch_campaign_jobs(campaign_id: str) -> None:
+    """Dial every pending job for a campaign right now.
+
+    Runs after the HTTP response is sent (FastAPI BackgroundTasks). Every
+    dispatch attempt — success, Twilio rejection, missing creds — is
+    written to ``backend/app/log.txt`` via the voice file logger so the
+    operator can tail it on the server.
+    """
+    import logging as _logging
+    from core.database import SessionLocal
+    log = _logging.getLogger("nuru.voice.dispatch")
+    db: Session = SessionLocal()
+    try:
+        try:
+            cid = uuid.UUID(campaign_id)
+        except (TypeError, ValueError):
+            log.error("dispatch: invalid campaign id %r", campaign_id)
+            return
+        c = db.query(VoiceCampaign).filter(VoiceCampaign.id == cid).first()
+        if not c:
+            log.error("dispatch: campaign %s not found", campaign_id)
+            return
+        if c.status not in {"queued", "running"}:
+            log.info("dispatch: campaign %s is %s — skipping", campaign_id, c.status)
+            return
+
+        pending = (
+            db.query(VoiceCallJob)
+            .filter(VoiceCallJob.campaign_id == cid,
+                    VoiceCallJob.status == "pending")
+            .order_by(VoiceCallJob.created_at.asc())
+            .all()
+        )
+        log.info("dispatch: campaign=%s dialing %d pending job(s)",
+                 campaign_id, len(pending))
+        for job in pending:
+            try:
+                opted_out = _opt_out_set(db, [job.phone_e164])
+                verdict = check_can_call(
+                    job.phone_e164,
+                    recipient_tz=job.timezone,
+                    is_opted_out=lambda p: p in opted_out,
+                    # Campaign-level dialing respects calling hours.
+                    enforce_hours=True,
+                )
+                if not verdict.allowed:
+                    job.status = ("pending" if verdict.code == "outside_hours"
+                                  else "blocked")
+                    job.block_reason = verdict.reason
+                    if verdict.code == "outside_hours":
+                        job.next_retry_at = datetime.utcnow() + timedelta(
+                            seconds=int(config.VOICE_RETRY_BACKOFF_SECONDS or 60),
+                        )
+                    db.commit()
+                    log.warning("dispatch: job=%s skipped reason=%s",
+                                job.id, verdict.reason)
+                    continue
+
+                try:
+                    result = twilio_client.place_call(
+                        to_phone_e164=job.phone_e164,
+                        job_id=str(job.id),
+                    )
+                except twilio_client.TwilioConfigError as exc:
+                    db.add(VoiceCallLog(
+                        job_id=job.id, provider="twilio", status="failed",
+                        error_code="config", error_message=str(exc)[:500],
+                    ))
+                    job.status = "failed"
+                    db.commit()
+                    log.error("dispatch: job=%s config error: %s", job.id, exc)
+                    continue
+                except twilio_client.TwilioApiError as exc:
+                    db.add(VoiceCallLog(
+                        job_id=job.id, provider="twilio", status="failed",
+                        error_code=str(exc.status), error_message=str(exc)[:500],
+                    ))
+                    job.status = "failed"
+                    job.attempt = (job.attempt or 0) + 1
+                    job.last_called_at = datetime.utcnow()
+                    db.commit()
+                    log.error("dispatch: job=%s twilio error [%s]: %s",
+                              job.id, exc.status, exc)
+                    continue
+
+                db.add(VoiceCallLog(
+                    job_id=job.id, provider="twilio",
+                    provider_call_sid=result.call_sid,
+                    status=result.status or "queued",
+                    started_at=datetime.utcnow(),
+                ))
+                job.status = twilio_client.status_to_job_status(result.status or "queued")
+                job.attempt = (job.attempt or 0) + 1
+                job.last_called_at = datetime.utcnow()
+                job.block_reason = None
+                db.commit()
+                log.info("dispatch: job=%s sid=%s status=%s",
+                         job.id, result.call_sid, result.status)
+            except Exception as exc:  # noqa: BLE001
+                db.rollback()
+                log.exception("dispatch: unexpected failure for job=%s: %r",
+                              getattr(job, "id", "?"), exc)
+
+        # Flip campaign to running while there are still in-flight jobs, or
+        # completed when all jobs are terminal.
+        remaining = (
+            db.query(VoiceCallJob)
+            .filter(VoiceCallJob.campaign_id == cid,
+                    VoiceCallJob.status.in_(("pending", "queued", "in_progress")))
+            .count()
+        )
+        c = db.query(VoiceCampaign).filter(VoiceCampaign.id == cid).first()
+        if c and c.status != "cancelled":
+            c.status = "running" if remaining else "completed"
+            if c.status == "completed":
+                c.completed_at = datetime.utcnow()
+            db.commit()
+    finally:
+        db.close()
+
 
 
 @router.post("/campaigns/{campaign_id}/pause")
@@ -609,9 +736,13 @@ def get_job(
 @router.post("/jobs/{job_id}/retry")
 def retry_job(
     job_id: str,
+    force: bool = Query(True, description="Skip calling-hours guard (default true so retries dial immediately)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Re-queue a job AND immediately dispatch the outbound Twilio call so
+    the user receives a call right away (no waiting for a worker pass).
+    """
     jid = _uuid_or_400(job_id, "job_id")
     job = db.query(VoiceCallJob).filter(VoiceCallJob.id == jid).first()
     if not job:
@@ -620,20 +751,84 @@ def retry_job(
 
     if job.status in {"queued", "in_progress"}:
         raise HTTPException(400, detail="Job is already active")
-    if job.status == "blocked":
-        raise HTTPException(400, detail="Blocked jobs cannot be retried")
+    if job.status in {"blocked", "opted_out"}:
+        raise HTTPException(400, detail=f"Job is {job.status}; cannot retry")
 
-    # Bump max_attempts so the retry actually goes out.
     if job.attempt >= job.max_attempts:
         job.max_attempts = job.attempt + 1
     job.status = "pending"
     job.block_reason = None
-    job.next_retry_at = datetime.utcnow() + timedelta(
-        seconds=int(config.VOICE_RETRY_BACKOFF_SECONDS or 60),
-    )
+    job.next_retry_at = None
     db.commit()
     db.refresh(job)
-    return standard_response(True, "Job re-queued", _serialize_job(job))
+
+    # ── Dispatch the Twilio call right now (no worker round-trip). Mirrors
+    #    the body of place_call_now so retries are instant for the caller.
+    opted_out_phones = _opt_out_set(db, [job.phone_e164])
+    verdict = check_can_call(
+        job.phone_e164,
+        recipient_tz=job.timezone,
+        is_opted_out=lambda p: p in opted_out_phones,
+        enforce_hours=not force,
+    )
+    if not verdict.allowed:
+        job.status = "blocked" if verdict.code != "outside_hours" else "pending"
+        job.block_reason = verdict.reason
+        if verdict.code == "outside_hours":
+            job.next_retry_at = datetime.utcnow() + timedelta(
+                seconds=int(config.VOICE_RETRY_BACKOFF_SECONDS or 60),
+            )
+        db.commit()
+        raise HTTPException(
+            409,
+            detail={"code": verdict.code, "message": verdict.reason},
+        )
+
+    try:
+        result = twilio_client.place_call(
+            to_phone_e164=job.phone_e164,
+            job_id=str(job.id),
+        )
+    except twilio_client.TwilioConfigError as exc:
+        log = VoiceCallLog(
+            job_id=job.id, provider="twilio", status="failed",
+            error_code="config", error_message=str(exc)[:500],
+        )
+        db.add(log)
+        job.status = "failed"
+        db.commit()
+        raise HTTPException(503, detail=str(exc))
+    except twilio_client.TwilioApiError as exc:
+        log = VoiceCallLog(
+            job_id=job.id, provider="twilio", status="failed",
+            error_code=str(exc.status), error_message=str(exc)[:500],
+        )
+        db.add(log)
+        job.status = "failed"
+        job.attempt = (job.attempt or 0) + 1
+        job.last_called_at = datetime.utcnow()
+        db.commit()
+        raise HTTPException(502, detail=f"Twilio rejected the call: {exc}")
+
+    log = VoiceCallLog(
+        job_id=job.id,
+        provider="twilio",
+        provider_call_sid=result.call_sid,
+        status=result.status or "queued",
+        started_at=datetime.utcnow(),
+    )
+    db.add(log)
+    job.status = twilio_client.status_to_job_status(result.status or "queued")
+    job.attempt = (job.attempt or 0) + 1
+    job.last_called_at = datetime.utcnow()
+    job.block_reason = None
+    db.commit()
+    db.refresh(job)
+    return standard_response(True, "Call dialing now", {
+        "job": _serialize_job(job),
+        "call_sid": result.call_sid,
+    })
+
 
 
 # ──────────────────────────────────────────────────────────────────

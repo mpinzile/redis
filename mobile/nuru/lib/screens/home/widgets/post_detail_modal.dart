@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -296,7 +297,18 @@ class _PostDetailModalState extends State<PostDetailModal> {
 
                   // Echoes list
                   if (_commentsLoading)
-                    const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)))
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: SkeletonGroup(
+                        child: Column(children: [
+                          SkeletonListTile(padding: EdgeInsets.zero),
+                          SizedBox(height: 8),
+                          SkeletonListTile(padding: EdgeInsets.zero),
+                          SizedBox(height: 8),
+                          SkeletonListTile(padding: EdgeInsets.zero),
+                        ]),
+                      ),
+                    )
                   else if (_comments.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),

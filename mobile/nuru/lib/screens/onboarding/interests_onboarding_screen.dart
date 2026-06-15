@@ -238,7 +238,7 @@ class _InterestsOnboardingScreenState extends State<InterestsOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBFAF7),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())

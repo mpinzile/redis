@@ -93,7 +93,7 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
         statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
+        backgroundColor: Colors.white,
         body: SafeArea(
           bottom: false,
           child: Column(

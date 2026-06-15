@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
@@ -337,11 +338,7 @@ class _LiveChatScreenState extends State<LiveChatScreen> {
         ],
       ),
       body: _starting
-          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const CircularProgressIndicator(color: AppColors.primary),
-              const SizedBox(height: 16),
-              Text('Connecting to support...', style: _f(size: 14, color: AppColors.textTertiary)),
-            ]))
+          ? const SkeletonChatBubbles(count: 6)
           : Column(
               children: [
                 Expanded(

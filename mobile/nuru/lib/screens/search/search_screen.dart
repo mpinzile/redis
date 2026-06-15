@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
@@ -185,7 +186,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             : null,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? SkeletonList(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              count: 8,
+              spacing: 4,
+              builder: (_, __) => const SkeletonListTile(padding: EdgeInsets.zero),
+            )
           : _query.isEmpty
               ? Center(child: Column(
                   mainAxisSize: MainAxisSize.min,

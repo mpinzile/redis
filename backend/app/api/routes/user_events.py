@@ -3313,30 +3313,12 @@ def checkin_guest_qr(event_id: str, body: dict = Body(...), db: Session = Depend
     now = datetime.now(EAT)
     stats = _scan_event_aggregates(db, event)
 
-    # Validate event timing
-    if hasattr(event, 'start_date') and event.start_date:
-        from datetime import date as date_type, timedelta
-        event_date = event.start_date if isinstance(event.start_date, date_type) else (event.start_date.date() if hasattr(event.start_date, 'date') else None)
-        if event_date:
-            today = now.date()
-            if event_date < today:
-                return standard_response(False, "Cannot check in — this event has already ended", {
-                    "reason": "event_ended",
-                    "scan_time": now.isoformat(),
-                    "event": {"id": str(event.id), "name": event.name},
-                    "stats": stats,
-                })
-            if event_date > today + timedelta(days=1):
-                return standard_response(False, "Cannot check in — this event hasn't started yet", {
-                    "reason": "event_not_started",
-                    "scan_time": now.isoformat(),
-                    "event": {"id": str(event.id), "name": event.name},
-                    "stats": stats,
-                })
-
+    # ── 1. Parse the scanned code first so we can ALWAYS surface the
+    #       guest/ticket name in the failure payload (even when blocked
+    #       by event timing or rsvp_status). The scanner UI requires it.
     raw = (body.get("code") or body.get("qr_code") or "").strip()
     if not raw:
-        return standard_response(False, "QR code is required", {
+        return standard_response(False, "No QR code was scanned — please try again", {
             "reason": "empty_code",
             "scan_time": now.isoformat(),
             "event": {"id": str(event.id), "name": event.name},
@@ -3344,44 +3326,99 @@ def checkin_guest_qr(event_id: str, body: dict = Body(...), db: Session = Depend
         })
     code = _extract_scan_code(raw)
 
-    # ── Try TICKET first by ticket_code (most distinctive) ──
+    # ── 2. Try to locate ticket or attendee for this event.
     ticket = db.query(EventTicket).filter(
         EventTicket.event_id == eid, EventTicket.ticket_code == code
     ).first()
 
     att = None
     if not ticket:
-        # Try attendee UUID
         try:
             att_id = uuid.UUID(code)
             att = db.query(EventAttendee).filter(EventAttendee.id == att_id, EventAttendee.event_id == eid).first()
         except ValueError:
             pass
-        # Try invitation code
         if not att:
             inv = db.query(EventInvitation).filter(EventInvitation.event_id == eid, EventInvitation.invitation_code == code).first()
             if inv:
                 att = db.query(EventAttendee).filter(EventAttendee.invitation_id == inv.id).first()
 
+    # Detect cross-event matches — guest exists on the platform but for a
+    # different event. Surfaces a clearer "wrong event" reason.
+    cross_event_match = None
     if not ticket and not att:
-        return standard_response(False, "QR code not recognised for this event", {
-            "reason": "not_found",
-            "scanned_code": code,
-            "scan_time": now.isoformat(),
-            "event": {"id": str(event.id), "name": event.name},
-            "stats": stats,
-        })
+        cross_ticket = db.query(EventTicket).filter(EventTicket.ticket_code == code).first()
+        cross_att = None
+        if not cross_ticket:
+            try:
+                aid = uuid.UUID(code)
+                cross_att = db.query(EventAttendee).filter(EventAttendee.id == aid).first()
+            except ValueError:
+                cross_inv = db.query(EventInvitation).filter(EventInvitation.invitation_code == code).first()
+                if cross_inv:
+                    cross_att = db.query(EventAttendee).filter(EventAttendee.invitation_id == cross_inv.id).first()
+        cross_event_match = cross_ticket or cross_att
 
-    # ── TICKET branch ──
+    # ── 3. Build a "best so far" payload (name + ids) for any failure return.
+    def _base_payload(reason: str) -> dict:
+        if ticket:
+            p = _ticket_payload(db, ticket, event, reason=reason)
+        elif att:
+            p = _attendee_payload(db, att, event, reason=reason)
+        else:
+            p = {
+                "kind": "unknown",
+                "name": "Unknown Guest",
+                "code": code,
+                "ticket_id": code,
+                "event": {"id": str(event.id), "name": event.name},
+                "reason": reason,
+            }
+        p["scan_time"] = now.isoformat()
+        p["stats"] = stats
+        return p
+
+    # ── 4. Validate event timing AFTER we have the name to display.
+    if hasattr(event, 'start_date') and event.start_date:
+        from datetime import date as date_type, timedelta
+        event_date = event.start_date if isinstance(event.start_date, date_type) else (event.start_date.date() if hasattr(event.start_date, 'date') else None)
+        if event_date:
+            today = now.date()
+            if event_date < today:
+                return standard_response(False, "This event has already ended — check-in is closed",
+                                         _base_payload("event_ended"))
+            if event_date > today + timedelta(days=1):
+                return standard_response(False, "This event hasn't started yet — check-in opens on event day",
+                                         _base_payload("event_not_started"))
+
+    # ── 5. No match → unknown / wrong-event guidance.
+    if not ticket and not att:
+        if cross_event_match is not None:
+            return standard_response(False,
+                "This QR belongs to a different event — please switch events and try again",
+                _base_payload("wrong_event"))
+        return standard_response(False,
+            "We couldn't match this QR code to any guest or ticket for this event",
+            _base_payload("not_found"))
+
+    # ── 6. TICKET branch.
     if ticket:
+        if ticket.status == TicketOrderStatusEnum.pending:
+            return standard_response(False, "This ticket hasn't been paid for yet",
+                                     _base_payload("ticket_pending"))
+        if ticket.status == TicketOrderStatusEnum.rejected:
+            return standard_response(False, "This ticket was rejected and cannot be used",
+                                     _base_payload("ticket_rejected"))
+        if ticket.status == TicketOrderStatusEnum.cancelled:
+            return standard_response(False, "This ticket was cancelled and is no longer valid",
+                                     _base_payload("ticket_cancelled"))
         if ticket.status not in (TicketOrderStatusEnum.approved, TicketOrderStatusEnum.confirmed):
-            payload = _ticket_payload(db, ticket, event, reason=f"ticket_{ticket.status.value}")
-            payload.update({"scan_time": now.isoformat(), "stats": stats})
-            return standard_response(False, f"Ticket is {ticket.status.value} — cannot check in", payload)
+            return standard_response(False,
+                f"Ticket is {ticket.status.value} — cannot check in",
+                _base_payload(f"ticket_{ticket.status.value}"))
         if ticket.checked_in:
-            payload = _ticket_payload(db, ticket, event, reason="already_used")
-            payload.update({"scan_time": now.isoformat(), "stats": stats})
-            return standard_response(False, "Ticket already used for check-in", payload)
+            return standard_response(False, "This ticket has already been used to check in",
+                                     _base_payload("already_used"))
 
         ticket.checked_in = True
         ticket.checked_in_at = now
@@ -3391,11 +3428,16 @@ def checkin_guest_qr(event_id: str, body: dict = Body(...), db: Session = Depend
         payload.update({"scan_time": now.isoformat(), "stats": stats})
         return standard_response(True, "Ticket checked in successfully", payload)
 
-    # ── GUEST branch ──
+    # ── 7. GUEST branch.
     if att.checked_in:
-        payload = _attendee_payload(db, att, event, reason="already_used")
-        payload.update({"scan_time": now.isoformat(), "stats": stats})
-        return standard_response(False, "Guest already checked in", payload)
+        return standard_response(False, "This guest has already been checked in",
+                                 _base_payload("already_used"))
+
+    # Honour rsvp_status: declined guests shouldn't sneak past via QR.
+    rsvp_val = att.rsvp_status.value if hasattr(att.rsvp_status, "value") else att.rsvp_status
+    if rsvp_val == "declined":
+        return standard_response(False, "This guest declined the invitation",
+                                 _base_payload("rsvp_declined"))
 
     att.checked_in = True
     att.checked_in_at = now
@@ -3406,6 +3448,7 @@ def checkin_guest_qr(event_id: str, body: dict = Body(...), db: Session = Depend
     payload = _attendee_payload(db, att, event)
     payload.update({"scan_time": now.isoformat(), "stats": stats})
     return standard_response(True, "Guest checked in successfully", payload)
+
 
 
 @router.post("/{event_id}/guests/{guest_id}/undo-checkin")

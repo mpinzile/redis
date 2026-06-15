@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -256,7 +257,22 @@ class _InvitationQRScreenState extends State<InvitationQRScreen> {
       body: SafeArea(
         top: false,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? SkeletonGroup(
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Center(
+                      child: SkeletonBox(width: 240, height: 240, radius: 16),
+                    ),
+                    const SizedBox(height: 24),
+                    const SkeletonLine(widthFactor: 0.5, height: 14),
+                    const SizedBox(height: 10),
+                    const SkeletonLine(widthFactor: 0.7, height: 12),
+                    const SizedBox(height: 8),
+                    const SkeletonLine(widthFactor: 0.4, height: 12),
+                  ],
+                ),
+              )
             : _error != null
                 ? _errorView()
                 : _content(),

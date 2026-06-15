@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:nuru/core/services/meetings_service.dart';
@@ -139,8 +140,14 @@ class _MeetingsCalendarSheetState extends State<MeetingsCalendarSheet> {
             ]),
           ),
           if (_loading)
-            const Expanded(
-                child: Center(child: CircularProgressIndicator()))
+            Expanded(
+              child: SkeletonList(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                count: 6,
+                spacing: 10,
+                builder: (_, __) => const SkeletonListTile(padding: EdgeInsets.zero),
+              ),
+            )
           else
             Expanded(
               child: ListView(

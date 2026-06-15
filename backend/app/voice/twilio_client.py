@@ -52,12 +52,17 @@ def _require_credentials() -> tuple[str, str, str]:
     sid = (config.TWILIO_ACCOUNT_SID or "").strip()
     token = (config.TWILIO_AUTH_TOKEN or "").strip()
     frm = (config.TWILIO_VOICE_FROM_NUMBER or "").strip()
-    if not sid or not token or not frm:
-        raise TwilioConfigError(
-            "Twilio credentials not configured (need TWILIO_ACCOUNT_SID, "
-            "TWILIO_AUTH_TOKEN, TWILIO_VOICE_FROM_NUMBER)."
-        )
+    missing = [k for k, v in (
+        ("TWILIO_ACCOUNT_SID", sid),
+        ("TWILIO_AUTH_TOKEN", token),
+        ("TWILIO_VOICE_FROM_NUMBER", frm),
+    ) if not v]
+    if missing:
+        msg = "Twilio credentials not configured (missing: " + ", ".join(missing) + ")"
+        logger.error("Twilio AUTH FAILURE: %s", msg)
+        raise TwilioConfigError(msg)
     return sid, token, frm
+
 
 
 def place_call(
@@ -91,19 +96,39 @@ def place_call(
     }
 
     url = f"{TWILIO_API_BASE}/Accounts/{sid}/Calls.json"
-    with httpx.Client(timeout=timeout) as client:
-        resp = client.post(url, data=form, auth=(sid, token))
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            resp = client.post(url, data=form, auth=(sid, token))
+    except httpx.HTTPError as exc:
+        # Network / DNS / timeout — surface as TwilioApiError so the
+        # caller's error path runs and the failure lands in log.txt.
+        logger.error("Twilio network failure calling %s: %r", to_phone_e164, exc, exc_info=True)
+        raise TwilioApiError(0, f"network error: {exc}") from exc
 
     if resp.status_code >= 400:
-        logger.warning("Twilio place_call failed: %s %s", resp.status_code, resp.text[:300])
+        # Annotate auth failures explicitly so they're easy to spot in log.txt.
+        if resp.status_code in (401, 403):
+            logger.error(
+                "Twilio AUTH FAILURE [%s] for %s — check TWILIO_ACCOUNT_SID / "
+                "TWILIO_AUTH_TOKEN / number ownership. Body: %s",
+                resp.status_code, to_phone_e164, resp.text[:500],
+            )
+        else:
+            logger.error(
+                "Twilio place_call failed [%s] for %s. Body: %s",
+                resp.status_code, to_phone_e164, resp.text[:500],
+            )
         raise TwilioApiError(resp.status_code, resp.text)
 
     data = resp.json()
+    logger.info("Twilio call placed sid=%s status=%s to=%s",
+                data.get("sid"), data.get("status"), to_phone_e164)
     return PlaceCallResult(
         call_sid=data.get("sid", ""),
         status=data.get("status", "queued"),
         raw=data,
     )
+
 
 
 def build_twiml(

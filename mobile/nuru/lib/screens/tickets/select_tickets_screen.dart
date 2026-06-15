@@ -229,7 +229,7 @@ class _SelectTicketsScreenState extends State<SelectTicketsScreen> {
         systemNavigationBarColor: AppColors.surface,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: Colors.white,
         appBar: _appBar(),
         body: _loading
             ? const _SelectTicketsSkeleton()

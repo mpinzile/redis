@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
@@ -111,7 +112,7 @@ class _ManagePhotosScreenState extends State<ManagePhotosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F3F8),
+      backgroundColor: Colors.white,
       appBar: NuruSubPageAppBar(title: '${widget.serviceName} · Photos'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _uploading ? null : _addPhotos,
@@ -123,7 +124,7 @@ class _ManagePhotosScreenState extends State<ManagePhotosScreen> {
         label: Text(_uploading ? 'Uploading...' : 'Add Photos', style: _f(size: 13, weight: FontWeight.w700, color: Colors.white)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const SkeletonGrid(count: 9, crossAxisCount: 3, spacing: 6, padding: EdgeInsets.all(12))
           : _images.isEmpty
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   SvgPicture.asset('assets/icons/photos-icon.svg', width: 48, height: 48, colorFilter: const ColorFilter.mode(AppColors.textHint, BlendMode.srcIn)),

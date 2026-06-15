@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nuru/widgets/skeletons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/event_groups_service.dart';
@@ -70,7 +71,20 @@ class _GuestGroupJoinScreenState extends State<GuestGroupJoinScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? SkeletonGroup(
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: const [
+                    SkeletonBox(height: 180, radius: 18),
+                    SizedBox(height: 18),
+                    SkeletonLine(widthFactor: 0.6, height: 16),
+                    SizedBox(height: 10),
+                    SkeletonLine(widthFactor: 0.4, height: 12),
+                    SizedBox(height: 24),
+                    SkeletonBox(height: 50, radius: 14),
+                  ],
+                ),
+              )
             : _error != null
                 ? Center(
                     child: Padding(

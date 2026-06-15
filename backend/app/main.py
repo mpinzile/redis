@@ -6,6 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import all_routers
 from api.routes.card_templates import router as card_templates_router
 from core.config import ENV
+from utils.voice_logging import setup_voice_file_logging
+
+# Install the rotating file logger that captures Twilio / Gemini /
+# dispatch errors to backend/app/log.txt as early as possible so worker
+# fork order doesn't matter.
+setup_voice_file_logging()
+
 
 app = FastAPI(
     title="Nuru API",
