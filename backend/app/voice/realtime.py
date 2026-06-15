@@ -178,7 +178,7 @@ class StreamSession:
             self.interruption_count += 1
             self.assistant_speaking = False
         try:
-            from voice.agents.conversation import classify
+            from voice.agents.conversation import classify, detect_language_switch
             turn = classify(text)
             if turn.noise_detected:
                 self.noise_detected = True
@@ -186,8 +186,23 @@ class StreamSession:
                 self.clarification_count += 1
             if self.detected_mood in (None, "neutral") and turn.mood != "neutral":
                 self.detected_mood = turn.mood
+            # Language switch detection — only flip on explicit request.
+            req = detect_language_switch(text)
+            if req is not None:
+                cur = "en" if str(self.language or "sw").lower().startswith("en") else "sw"
+                if req != cur:
+                    reason = (
+                        "user_requested_english" if req == "en"
+                        else "user_requested_swahili"
+                    )
+                    logger.info(
+                        "Smart RSVP language switched: %s -> %s reason=%s job=%s",
+                        cur, req, reason, self.job_id,
+                    )
+                    self.language = "en-US" if req == "en" else "sw-TZ"
         except Exception:  # noqa: BLE001
             pass
+
 
     def add_assistant_text(self, text: str) -> None:
         if text:
@@ -427,6 +442,14 @@ async def handle_twilio_stream(ws: WebSocket) -> None:
                 params = start.get("customParameters") or {}
                 session.job_id = params.get("job_id") or session.job_id
                 session.language = params.get("language") or session.language
+                # Force Swahili by default — only an explicit recipient/job
+                # override or upstream language=en customParameter switches.
+                _lang_lower = str(session.language or "").lower()
+                if not (_lang_lower.startswith("sw") or _lang_lower.startswith("en")):
+                    session.language = "sw-TZ"
+                _sel = "en" if str(session.language).lower().startswith("en") else "sw"
+                logger.info("Smart RSVP language selected: %s job=%s",
+                            _sel, session.job_id)
                 job = _resolve_job(session.job_id)
                 _t_connect = asyncio.get_event_loop().time()
                 await bridge.start(job=job, language=session.language)  # type: ignore[arg-type]

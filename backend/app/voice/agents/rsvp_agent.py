@@ -17,14 +17,17 @@ web/mobile UI uses (``rsvp_status``, ``rsvp_at``) via the ORM.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
+import re
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 from core.database import SessionLocal
 from models import (
     EventAttendee, EventInvitation, Event,
+    EventScheduleItem, EventVenueCoordinate,
     RSVPStatusEnum,
     VoiceCallJob, VoiceCallLog, VoiceOptOut,
 )
@@ -42,41 +45,249 @@ _ALLOWED_RSVP = {"confirmed", "declined", "maybe", "call_later",
 
 
 # ──────────────────────────────────────────────────────────────────
+# Address / greeting helpers
+# ──────────────────────────────────────────────────────────────────
+
+# Titles we should preserve verbatim with the LAST name (e.g. "Mr Frank" → "Bw. Frank").
+# Keys are normalised (lowercase, no dots). Values are (sw_title, en_title).
+_TITLE_MAP = {
+    "mr":    ("Bw.",   "Mr."),
+    "mister":("Bw.",   "Mr."),
+    "bw":    ("Bw.",   "Mr."),
+    "bwana": ("Bwana", "Mr."),
+    "mrs":   ("Bi.",   "Mrs."),
+    "ms":    ("Bi.",   "Ms."),
+    "miss":  ("Bi.",   "Miss"),
+    "bi":    ("Bi.",   "Ms."),
+    "dr":    ("Dkt.",  "Dr."),
+    "doctor":("Dkt.",  "Dr."),
+    "dkt":   ("Dkt.",  "Dr."),
+    "prof":  ("Prof.", "Prof."),
+    "professor":("Prof.","Prof."),
+    "mzee":  ("Mzee",  "Mzee"),
+    "mama":  ("Mama",  "Mama"),
+    "baba":  ("Baba",  "Baba"),
+    "shekh": ("Shekh", "Sheikh"),
+    "sheikh":("Shekh", "Sheikh"),
+}
+
+# Rotating Swahili greetings — natural Tanzanian speech, not "Shalom".
+_SW_GREETINGS = (
+    "Habari", "Habari za leo", "Habari za asubuhi", "Habari yako",
+    "Salama", "Hujambo", "Mambo vipi",
+)
+_EN_GREETINGS = ("Hello", "Hi", "Good day", "Good morning")
+
+
+def _address_for(recipient_name: str, *, is_sw: bool) -> Tuple[str, str]:
+    """Return ``(addressed_name, vocative)``.
+
+    ``addressed_name`` is what the AI should say after the greeting:
+      - "Mr Frank"  → "Bw. Frank" (sw) / "Mr. Frank" (en)  — keep the title
+      - "David Mwakalinga" → "David" — first name only
+      - "" / falsy → "rafiki" (sw) / "there" (en)
+
+    ``vocative`` is the same string but safe to drop inside a longer sentence
+    (currently identical; kept for future tweaks).
+    """
+    raw = (recipient_name or "").strip()
+    if not raw:
+        fallback = "rafiki" if is_sw else "there"
+        return fallback, fallback
+
+    # Split on whitespace; drop empty bits.
+    parts = [p for p in re.split(r"\s+", raw) if p]
+    if not parts:
+        fallback = "rafiki" if is_sw else "there"
+        return fallback, fallback
+
+    # Title detection: first token, stripped of trailing dot.
+    head = parts[0].rstrip(".").lower()
+    if head in _TITLE_MAP and len(parts) >= 2:
+        title_sw, title_en = _TITLE_MAP[head]
+        # Use the LAST remaining token as the surname (handles "Mr John Frank" → "Bw. Frank").
+        surname = parts[-1]
+        title = title_sw if is_sw else title_en
+        addr = f"{title} {surname}"
+        return addr, addr
+
+    # No title — use first name only, properly cased.
+    first = parts[0]
+    # Keep original casing if it already has lowercase letters (e.g. "deCarlo"),
+    # otherwise title-case a SHOUTED name like "DAVID".
+    if first.isupper() or first.islower():
+        first = first.capitalize()
+    return first, first
+
+
+def _pick_greeting(job: Optional[VoiceCallJob], greetings: tuple) -> str:
+    """Deterministic per-job rotation so retries don't keep switching greetings."""
+    seed_src = ""
+    if job is not None:
+        seed_src = str(getattr(job, "id", "") or getattr(job, "phone_e164", "") or "")
+    if not seed_src:
+        seed_src = datetime.utcnow().strftime("%Y%m%d%H")
+    idx = int(hashlib.md5(seed_src.encode("utf-8")).hexdigest(), 16) % len(greetings)
+    return greetings[idx]
+
+
+
+# ──────────────────────────────────────────────────────────────────
 # System prompt + tool schema for Gemini Live
 # ──────────────────────────────────────────────────────────────────
 
+def _fmt_date_sw(dt: datetime) -> str:
+    months = ["Januari","Februari","Machi","Aprili","Mei","Juni",
+              "Julai","Agosti","Septemba","Oktoba","Novemba","Desemba"]
+    try:
+        return f"tarehe {dt.day} {months[dt.month-1]} {dt.year}"
+    except Exception:
+        return dt.strftime("%d/%m/%Y")
+
+
+def _fmt_time_sw(dt: datetime) -> str:
+    try:
+        return dt.strftime("saa %H:%M")
+    except Exception:
+        return ""
+
+
+def _event_facts(event: Optional[Event], db, *, is_sw: bool = True) -> dict:
+    """Pre-load every detail the agent might be asked about during a call.
+
+    Returned keys are always present (empty string if unknown) so the prompt
+    template stays simple. Schedule items (ibada, mapokezi, chakula, ...) are
+    summarised into one human-readable string per item.
+    """
+    facts = {
+        "name": "", "type": "", "date": "", "time": "", "end": "",
+        "venue": "", "address": "", "guest_of_honor": "",
+        "dress_code": "", "special_instructions": "",
+        "description": "", "schedule": "", "extra": "",
+    }
+    if event is None:
+        return facts
+    facts["name"] = (getattr(event, "name", None) or "").strip()
+    try:
+        et = getattr(event, "event_type", None)
+        if et is not None:
+            facts["type"] = (getattr(et, "name", None) or "").strip()
+    except Exception:
+        pass
+    sd = getattr(event, "start_date", None)
+    st = getattr(event, "start_time", None)
+    ed = getattr(event, "end_date", None) or getattr(event, "end_time", None)
+    if sd:
+        facts["date"] = _fmt_date_sw(sd) if is_sw else sd.strftime("%A, %d %B %Y")
+    if st:
+        facts["time"] = _fmt_time_sw(st) if is_sw else st.strftime("%H:%M")
+    if ed:
+        try:
+            facts["end"] = ed.strftime("%H:%M")
+        except Exception:
+            pass
+    location = (getattr(event, "location", None) or "").strip()
+    venue_name = ""
+    address = ""
+    try:
+        vc = getattr(event, "venue_coordinate", None)
+        if vc is not None:
+            venue_name = (getattr(vc, "venue_name", None) or "").strip()
+            address = (getattr(vc, "formatted_address", None) or "").strip()
+    except Exception:
+        pass
+    facts["venue"] = venue_name or location
+    facts["address"] = address or location
+    facts["guest_of_honor"] = (getattr(event, "guest_of_honor", None) or "").strip()
+    facts["dress_code"] = (getattr(event, "dress_code", None) or "").strip()
+    facts["special_instructions"] = (
+        getattr(event, "special_instructions", None) or "").strip()
+    desc = (getattr(event, "description", None) or "").strip()
+    if desc:
+        facts["description"] = desc[:400]
+
+    # Schedule items (ibada, mapokezi, chakula, etc.).
+    try:
+        if db is not None and getattr(event, "id", None):
+            items = (
+                db.query(EventScheduleItem)
+                .filter(EventScheduleItem.event_id == event.id)
+                .order_by(EventScheduleItem.start_time.asc().nullslast(),
+                          EventScheduleItem.display_order.asc())
+                .limit(8)
+                .all()
+            )
+            lines = []
+            for it in items:
+                title = (getattr(it, "title", None) or "").strip()
+                if not title:
+                    continue
+                t = getattr(it, "start_time", None)
+                tpart = (t.strftime("%H:%M") if t else "")
+                loc = (getattr(it, "location", None) or "").strip()
+                bits = [b for b in (tpart, title, loc) if b]
+                lines.append(" - ".join(bits))
+            if lines:
+                facts["schedule"] = "; ".join(lines)
+    except Exception:
+        logger.exception("Failed to load schedule for event=%s",
+                         getattr(event, "id", None))
+
+    # Extra details JSON ([{label, details}, ...]).
+    try:
+        extras = getattr(event, "extra_details", None) or []
+        if isinstance(extras, list):
+            pairs = []
+            for row in extras[:6]:
+                if isinstance(row, dict):
+                    lbl = (row.get("label") or "").strip()
+                    det = (row.get("details") or row.get("value") or "").strip()
+                    if lbl and det:
+                        pairs.append(f"{lbl}: {det}")
+            if pairs:
+                facts["extra"] = "; ".join(pairs)
+    except Exception:
+        pass
+    return facts
+
+
 def _event_brief(event: Optional[Event], *, is_sw: bool = True) -> str:
+    """Backwards-compatible one-liner used in older log strings/tests."""
     if event is None:
         return "tukio lijalo" if is_sw else "an upcoming event"
     name = (getattr(event, "name", None) or "").strip()
     if not name:
         return "tukio lijalo" if is_sw else "an upcoming event"
-    starts = getattr(event, "event_date", None) or getattr(event, "start_date", None)
-    when_part = ""
+    starts = getattr(event, "start_date", None)
+    parts = [name]
     if starts:
         try:
-            when_part = (
-                f" tarehe {starts.strftime('%d/%m/%Y')}" if is_sw
-                else f" on {starts.strftime('%A, %d %B %Y')}"
+            parts.append(
+                _fmt_date_sw(starts) if is_sw
+                else starts.strftime("%A, %d %B %Y")
             )
-        except Exception:  # noqa: BLE001
-            when_part = ""
+        except Exception:
+            pass
     location = (getattr(event, "location", None) or "").strip()
-    where_part = ""
     if location:
-        where_part = f" {'eneo la' if is_sw else 'at'} {location}"
-    return f"{name}{when_part}{where_part}".strip()
+        parts.append(("eneo la " if is_sw else "at ") + location)
+    return " ".join(parts).strip()
+
 
 
 def build_rsvp_spec(job: Optional[VoiceCallJob], language: str) -> dict:
     """Return ``{system_text, tools}`` for the Gemini Live setup frame."""
     lang = (language or "sw").lower()
     is_sw = not lang.startswith("en")  # default to Swahili unless explicitly English
-    recipient = (getattr(job, "recipient_name", None) or "").strip() or (
-        "rafiki" if is_sw else "there"
-    )
+    raw_name = (getattr(job, "recipient_name", None) or "").strip()
+    addressed, _ = _address_for(raw_name, is_sw=is_sw)
+    recipient = addressed  # used throughout the prompt
+    greeting_sw = _pick_greeting(job, _SW_GREETINGS)
+    greeting_en = _pick_greeting(job, _EN_GREETINGS)
     event_text = "tukio lijalo" if is_sw else "an upcoming event"
+    has_event_name = False
     event_name_only = "tukio lijalo" if is_sw else "the event"
+    facts: dict = _event_facts(None, None, is_sw=is_sw)
     if job is not None and job.campaign_id:
         db = SessionLocal()
         try:
@@ -87,78 +298,256 @@ def build_rsvp_spec(job: Optional[VoiceCallJob], language: str) -> dict:
             if camp and camp.event_id:
                 ev = db.query(Event).filter(Event.id == camp.event_id).first()
                 event_text = _event_brief(ev, is_sw=is_sw)
-                if ev is not None and (getattr(ev, "name", None) or "").strip():
-                    event_name_only = ev.name.strip()
+                facts = _event_facts(ev, db, is_sw=is_sw)
+                if facts.get("name"):
+                    event_name_only = facts["name"]
+                    has_event_name = True
         except Exception:  # noqa: BLE001
             logger.exception("Failed to load event context for job=%s", job.id)
         finally:
             db.close()
 
-    if is_sw:
-        opening = (
-            f"Habari, napiga kutoka Nuru kwa niaba ya mratibu wa tukio la "
-            f"{event_name_only}. Ningependa kuthibitisha kama utahudhuria."
+    # Build a compact "facts sheet" the model can quote from. Only include
+    # keys that have a value so we don't tell the model "venue: (unknown)"
+    # and have it invent something.
+    def _fact_block(labels: dict) -> str:
+        rows = []
+        for key, label in labels.items():
+            val = (facts.get(key) or "").strip()
+            if val:
+                rows.append(f"- {label}: {val}")
+        return "\n".join(rows) if rows else (
+            "- (hakuna taarifa zaidi)" if is_sw else "- (no extra details)"
         )
+
+    if is_sw:
+        facts_block = _fact_block({
+            "name": "Jina la tukio",
+            "type": "Aina ya tukio",
+            "date": "Tarehe",
+            "time": "Muda wa kuanza",
+            "end": "Muda wa kumaliza",
+            "venue": "Eneo / ukumbi",
+            "address": "Anwani",
+            "guest_of_honor": "Mgeni rasmi",
+            "dress_code": "Mavazi",
+            "special_instructions": "Maelekezo maalum",
+            "schedule": "Ratiba (ibada, mapokezi, chakula, n.k.)",
+            "extra": "Maelezo mengine",
+            "description": "Maelezo mafupi",
+        })
+    else:
+        facts_block = _fact_block({
+            "name": "Event name",
+            "type": "Event type",
+            "date": "Date",
+            "time": "Start time",
+            "end": "End time",
+            "venue": "Venue",
+            "address": "Address",
+            "guest_of_honor": "Guest of honor",
+            "dress_code": "Dress code",
+            "special_instructions": "Special instructions",
+            "schedule": "Programme (service, reception, meal, etc.)",
+            "extra": "Other details",
+            "description": "Short description",
+        })
+
+    if is_sw:
+        if has_event_name:
+            opening = (
+                f"{greeting_sw} {recipient}, napiga kutoka Nuru kwa niaba "
+                f"ya mratibu wa tukio la {event_name_only}. "
+                "Ningependa kuthibitisha kama utahudhuria."
+            )
+        else:
+            opening = (
+                f"{greeting_sw} {recipient}, napiga kutoka Nuru kwa niaba "
+                "ya mratibu wa tukio. "
+                "Ningependa kuthibitisha kama utahudhuria."
+            )
         system_text = (
-            "LAZIMA uzungumze KISWAHILI CHA TANZANIA tu, wakati wote wa simu. "
-            "Fikiri na jibu moja kwa moja kwa Kiswahili (usitafsiri kutoka Kiingereza). "
-            "Usitumie Kiingereza hata neno moja, isipokuwa kama mteja AMEKUOMBA WAZI "
-            "kuendelea kwa Kiingereza. Tumia Kiswahili rahisi, kifupi, cha kibinadamu — "
-            "epuka Kiswahili cha kirobo, cha kutafsiriwa, au cha kimaandishi.\n\n"
-            f"Wewe ni Msaidizi wa Sauti wa Nuru (Nuru Voice Assistant). KAMWE usidai "
-            f"wewe ni mtu wa kweli. Unampigia {recipient} kuhusu mwaliko wa "
-            f"{event_text}.\n\n"
-            f"UJUMBE WA KUFUNGUA (tumia mara moja tu baada ya kupokea simu): "
-            f"\"{opening}\"\n\n"
-            "Sheria kuu:\n"
-            "- Uliza swali MOJA tu kwa wakati. Simu iwe fupi.\n"
-            "- Lengo: thibitisha kama atahudhuria.\n"
-            "- Hifadhi save_rsvp PEKEE wakati uhakika (confidence) uko juu na jibu liko wazi.\n"
-            "- Likiwa halieleweki, uliza swali moja la uthibitisho: "
-            f"\"Ili nihifadhi vizuri, unamaanisha utahudhuria tukio la {event_name_only}?\" "
-            "Likibaki halieleweki, tumia mark_human_follow_up.\n"
-            "- Akiuliza wewe ni nani / umempataje, jibu: \"Mimi ni Nuru Voice Assistant. "
-            f"Napiga kwa niaba ya mratibu wa tukio la {event_name_only}. Namba yako ipo "
-            "kwenye orodha ya wageni walioalikwa.\"\n"
-            "- Akisema 'sikusikii' / 'rudia' / 'unasema?', omba radhi kisha rudia kwa "
-            f"kifupi: \"Samahani. Narudia kwa kifupi. Napiga kutoka Nuru kuhusu mwaliko "
-            f"wako wa tukio la {event_name_only}. Je, utahudhuria?\" Akishindwa kusikia "
-            "tena, tumia request_whatsapp_followup.\n"
-            "- Akiwa busy/kelele/mtandao mbovu, tumia request_callback au "
-            "request_whatsapp_followup.\n"
+            "LUGHA (KIOO CHA MTEJA): Anza KISWAHILI CHA TANZANIA. KISHA "
+            "lugha yako lazima IFUATE lugha ya mteja kila wakati: \n"
+            "  • Mteja akiongea Kiingereza kwa sentensi nzima, badilisha "
+            "    Kiingereza mara moja kuanzia jibu lako linalofuata.\n"
+            "  • Akirudi Kiswahili, rudi Kiswahili mara moja.\n"
+            "  • Akisema 'sijakuelewa', 'I don't understand', 'sema kwa "
+            "    lugha yangu', 'speak my language' au akirudia kwa lugha "
+            "    tofauti, BADILISHA mara moja kwenda lugha aliyoitumia mara "
+            "    ya mwisho na rudia jibu lako kwa kifupi katika lugha hiyo.\n"
+            "  • Akichanganya maneno machache tu (mfano: anasema Kiswahili "
+            "    na neno moja la Kiingereza), endelea lugha kuu.\n"
+            "Usitumie misemo ya kiroboti kama 'Processing', 'Your response "
+            "has been saved'. Tumia: 'Sawa.', 'Nimekuelewa.', 'Asante.', "
+            "'Halo, unanipata?', 'Samahani, narudia kwa kifupi.'\n\n"
+            "MTINDO WA KUONGEA: Sauti ya kawaida (siyo ya kirobo), joto, "
+            "ya kibinadamu. Ongea kwa kasi ya kawaida ya simu ya Mtanzania "
+            "(haraka kidogo, siyo polepole). Sentensi fupi. Pumzika baada "
+            "ya swali. Usisome kama notisi.\n\n"
+            f"Wewe ni Msaidizi wa Sauti wa Nuru. KAMWE usidai wewe ni mtu "
+            f"wa kweli. Unampigia {recipient} kuhusu mwaliko wa {event_text}.\n\n"
+            "TAARIFA ZA TUKIO (tumia hizi PEKEE — usibuni jambo lolote):\n"
+            f"{facts_block}\n\n"
+            "MTIRIRIKO WA SIMU (fuata mpangilio huu):\n"
+            "\n"
+            "1) MWANZO (sentensi moja, fupi):\n"
+            f"   \"{opening}\"\n"
+            "\n"
+            "2) UTHIBITISHO WA MWALIKO:\n"
+            "   Uliza: \"Tumekutumia mwaliko kupitia WhatsApp na ujumbe wa "
+            "   kawaida. Je, umeupokea?\"\n"
+            "\n"
+            "3) AKISEMA 'NDIO, NIMEUPOKEA':\n"
+            "   Jibu: \"Asante sana. Ningependa kuthibitisha kama "
+            "   utahudhuria.\" Kisha nenda hatua ya 5.\n"
+            "\n"
+            "4) AKISEMA 'HAPANA, SIJAPOKEA':\n"
+            "   Jibu: \"Pole sana. Tutakutumia tena mwaliko muda mfupi "
+            "   ujao kupitia WhatsApp au ujumbe wa kawaida. Kwa sasa, "
+            "   ningependa pia kuthibitisha kama unatarajia kuhudhuria.\" "
+            "   Kisha nenda hatua ya 5. (Tumia request_whatsapp_followup "
+            "   kabla ya kufunga simu ili mratibu ajulishwe.)\n"
+            "\n"
+            "5) ANAJIBU KUHUSU KUHUDHURIA:\n"
+            "\n"
+            "   a) Akisema 'NDIO, NITAHUDHURIA':\n"
+            "      Sema: \"Asante sana, na karibu sana.\" Kisha taja "
+            "      taarifa muhimu kutoka TAARIFA ZA TUKIO kwa sentensi "
+            "      fupi fupi: tarehe, kisha ibada (muda + eneo), kisha "
+            "      mapokezi/sherehe (muda + eneo) ikiwa zipo kwenye "
+            "      ratiba. Mfano: \"Tukio litafanyika [tarehe]. Ibada "
+            "      itaanza [muda] katika [eneo]. Baada ya ibada, sherehe "
+            "      itaanza [muda] katika [eneo].\" Kisha sema: \"Tunafurahi "
+            "      kukukaribisha. Asante sana kwa muda wako.\" Tumia "
+            "      save_rsvp(status=confirmed) na nenda hatua ya 6.\n"
+            "\n"
+            "   b) Akisema 'HAPANA, SITAHUDHURIA':\n"
+            "      Sema: \"Asante kwa kutujulisha. Tunakushukuru kwa muda "
+            "      wako, na tunakutakia kila la heri.\" Tumia "
+            "      save_rsvp(status=declined) na nenda hatua ya 6.\n"
+            "\n"
+            "   c) Akisema 'BADO SIJAJUA' / 'SINA UHAKIKA':\n"
+            "      Sema: \"Sawa, hakuna tatizo. Unaweza kuthibitisha "
+            "      baadaye kupitia mwaliko uliotumwa WhatsApp au ujumbe "
+            "      mfupi. Tutashukuru kupata majibu yako mapema kadri "
+            "      iwezekanavyo.\" Tumia save_rsvp(status=maybe) na nenda "
+            "      hatua ya 6.\n"
+            "\n"
+            "6) MWISHO WA SIMU:\n"
+            "   Sema: \"Asante sana kwa muda wako. Nakutakia siku njema.\" "
+            "   Kisha tumia log_conversation_quality. USIENDELEE kuongea.\n"
+            "\n"
+            "SHERIA ZA ZIADA:\n"
+            "- Akiuliza taarifa za tukio (tarehe, ibada, mapokezi, eneo, "
+            "  mavazi, mgeni rasmi), jibu kutoka TAARIFA ZA TUKIO kwa "
+            "  sentensi MOJA fupi, kisha rudi kwenye hatua uliyokuwa.\n"
+            "- Taarifa IKIWA HAIPO, sema kwa unyenyekevu: \"Samahani, sina "
+            "  taarifa hiyo kamili sasa hivi. Nitamuomba mratibu akutumie "
+            "  kupitia WhatsApp.\" Usibuni jibu.\n"
+            "- Akiuliza wewe ni nani, sema: \"Mimi ni Msaidizi wa Sauti "
+            f"  wa Nuru. Napiga kwa niaba ya mratibu wa tukio la {event_name_only}. "
+            "  Namba yako ipo kwenye orodha ya wageni walioalikwa.\"\n"
+            "- Akisema 'sikusikii' / 'rudia', omba radhi na rudia kwa "
+            "  kifupi. Akishindwa tena, tumia request_whatsapp_followup.\n"
+            "- Akiwa busy / kelele, tumia request_callback au "
+            "  request_whatsapp_followup.\n"
             "- Akiomba usimpigie tena, tumia mark_opt_out kwa heshima.\n"
-            "- Akionekana amekasirika: \"Samahani kwa usumbufu. Ningependa tu kuthibitisha "
-            "kama utahudhuria, kisha sitakuchukulia muda zaidi.\"\n"
-            "- Akionyesha urafiki na atahudhuria: \"Asante sana. Tumefurahi kusikia "
-            "utahudhuria. Karibu sana.\"\n"
-            "- Mwishoni mwa simu LAZIMA tumia log_conversation_quality.\n"
-            "- Usitoe taarifa za malipo, usidai pesa, usichukue muda mrefu.\n\n"
+            "- Akisema 'kwaheri' / 'bye' / 'tutaonana' / 'baadaye' / "
+            "  'naenda' AU kimya kabisa baada ya majaribio 2 — funga simu "
+            "  mara moja: \"Asante sana, kwaheri.\" + log_conversation_quality.\n"
+            "- Akiwa salio halieleweki baada ya kuuliza mara MOJA "
+            f"  (\"Ili nihifadhi vizuri, unamaanisha utahudhuria tukio la {event_name_only}?\"), "
+            "  tumia mark_human_follow_up.\n"
+            "- Usitoe taarifa za malipo wala kiasi cha mchango.\n"
+            "- KILA SIMU LAZIMA iishie na log_conversation_quality.\n\n"
             + NATURAL_CONVERSATION_RULES_SW
         )
     else:
         opening = (
-            f"Hello, I'm calling from Nuru on behalf of the organiser of "
-            f"{event_name_only}. I'd like to confirm whether you'll attend."
+            f"{greeting_en} {recipient}, I'm calling from Nuru on behalf "
+            f"of the organiser of {event_name_only}. I'd like to confirm "
+            "whether you'll attend."
         )
         system_text = (
-            "You are the Nuru Voice Assistant. Never claim to be a real person. "
-            f"You're calling {recipient} about their invitation to {event_text}.\n\n"
-            f"OPENING LINE (use once on pickup): \"{opening}\"\n\n"
-            "Speak simple, short, warm English. "
-            "Ask one question at a time. Keep the call short. "
-            "Goal: confirm whether they will attend (yes, no, maybe). "
-            "When clearly answered, call save_rsvp and confirm politely. "
-            "Only save_rsvp when confidence is high; if unclear ask one short "
-            f"clarifier: \"Just to confirm — you mean you'll attend {event_name_only}?\" "
-            "If still unclear, call mark_human_follow_up. "
-            "If they ask not to be called again, call mark_opt_out. "
-            "If they're busy or ask for a later call, call request_callback. "
-            "If they ask for WhatsApp or there's bad signal/noise, call "
-            "request_whatsapp_followup. "
-            "At the end of every call, call log_conversation_quality. "
-            "Never request payment details or extend the conversation.\n\n"
+            "LANGUAGE (MIRROR THE RECIPIENT): Start in English. From then "
+            "on your language must FOLLOW the recipient: \n"
+            "  • If they speak a full sentence in Swahili, switch to "
+            "    Swahili immediately on your very next reply.\n"
+            "  • If they return to English, switch back immediately.\n"
+            "  • If they say 'I don't understand', 'sijakuelewa', 'speak "
+            "    my language', 'sema kwa lugha yangu', or repeat in a "
+            "    different language — switch to the language they last "
+            "    used and briefly repeat your last sentence in it.\n"
+            "  • Small loanwords don't count — only switch on a full "
+            "    sentence in the other language.\n\n"
+            "TONE & PACE: Natural human voice, warm. Brisk natural phone "
+            "pace, not slow. Short sentences. Pause after a question.\n\n"
+            "You are the Nuru Voice Assistant. Never claim to be a real "
+            f"person. You're calling {recipient} about their invitation to "
+            f"{event_text}.\n\n"
+            "EVENT FACTS (use ONLY these — never invent details):\n"
+            f"{facts_block}\n\n"
+            "CALL FLOW (follow in order):\n"
+            "\n"
+            f"1) OPENING (one short sentence): \"{opening}\"\n"
+            "\n"
+            "2) INVITATION CHECK: Ask: \"We've sent you the invitation "
+            "   via WhatsApp and SMS. Did you receive it?\"\n"
+            "\n"
+            "3) IF 'YES, RECEIVED': Say: \"Thank you. I'd like to confirm "
+            "   whether you'll attend.\" Then go to step 5.\n"
+            "\n"
+            "4) IF 'NO, NOT RECEIVED': Say: \"I'm sorry about that. We'll "
+            "   resend it shortly via WhatsApp or SMS. In the meantime, "
+            "   I'd still like to confirm whether you plan to attend.\" "
+            "   Then go to step 5. (Also call request_whatsapp_followup "
+            "   before ending.)\n"
+            "\n"
+            "5) ATTENDANCE ANSWER:\n"
+            "   a) YES: \"Thank you, you're most welcome.\" Then share the "
+            "      key facts in short sentences (date, then service time "
+            "      + venue, then reception time + venue) from EVENT FACTS "
+            "      if present. End that block with: \"We look forward to "
+            "      hosting you. Thank you for your time.\" Then call "
+            "      save_rsvp(status=confirmed) and go to step 6.\n"
+            "   b) NO: \"Thank you for letting us know. We appreciate "
+            "      your time and wish you all the best.\" Then call "
+            "      save_rsvp(status=declined) and go to step 6.\n"
+            "   c) NOT SURE: \"That's fine. You can confirm later via the "
+            "      WhatsApp invitation or the SMS. We'd appreciate hearing "
+            "      back as soon as you can.\" Then save_rsvp(status=maybe) "
+            "      and go to step 6.\n"
+            "\n"
+            "6) CLOSING: \"Thank you for your time. Have a great day.\" "
+            "   Then call log_conversation_quality. Do NOT keep talking.\n"
+            "\n"
+            "EXTRA RULES:\n"
+            "- For event detail questions, answer in ONE short sentence "
+            "  from EVENT FACTS, then return to the current step.\n"
+            "- If a detail is missing: \"I don't have that exact detail "
+            "  right now — I'll have the organiser send it on WhatsApp.\" "
+            "  Never invent an answer.\n"
+            "- If asked who you are: \"I'm the Nuru Voice Assistant, "
+            f"  calling on behalf of the organiser of {event_name_only}. "
+            "  Your number is on the invited guest list.\"\n"
+            "- 'Can't hear' / 'repeat' — apologise and repeat briefly. "
+            "  Twice failed → request_whatsapp_followup.\n"
+            "- Busy / noisy → request_callback or request_whatsapp_followup.\n"
+            "- 'Don't call again' → mark_opt_out.\n"
+            "- 'Bye' / 'goodbye' / 'talk later' / 'I have to go' OR silence "
+            "  after 2 prompts → close with \"Thank you, goodbye.\" + "
+            "  log_conversation_quality.\n"
+            "- Still unclear after ONE clarifier "
+            f"  (\"Just to confirm — you mean you'll attend {event_name_only}?\") "
+            "  → mark_human_follow_up.\n"
+            "- Never request payment details.\n"
+            "- EVERY call MUST end with log_conversation_quality.\n\n"
             + NATURAL_CONVERSATION_RULES_EN
         )
+
+
+
 
     # Gemini Live tools — function declarations (camelCase per the API).
     tools = [{
