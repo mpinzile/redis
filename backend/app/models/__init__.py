@@ -126,3 +126,4 @@ from models.card_url_mapping import CardUrlMapping
 from models.voice_calls import (
     VoiceCampaign, VoiceCallJob, VoiceCallLog, VoiceOptOut,
 )
+from models.voice_feature import VoiceFeatureSetting

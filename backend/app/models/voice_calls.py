@@ -14,7 +14,7 @@ so we can extend the vocabulary later without an enum migration.
 from __future__ import annotations
 
 from sqlalchemy import (
-    Boolean, Column, Integer, Text, DateTime, ForeignKey, Index, UniqueConstraint, Numeric,
+    Boolean, Column, Integer, LargeBinary, Text, DateTime, ForeignKey, Index, UniqueConstraint, Numeric,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -100,6 +100,14 @@ class VoiceCallJob(Base):
     summary = Column(Text, nullable=True)
 
     extra = Column(JSONB, nullable=True)
+
+    # Pre-generated personalised greeting played the instant the recipient
+    # picks up the call so they do not hear silence while Gemini Live spins
+    # up. All three are optional — if generation fails we fall back to the
+    # original behaviour (Gemini speaks first).
+    greeting_text = Column(Text, nullable=True)
+    greeting_audio = Column(LargeBinary, nullable=True)
+    greeting_audio_mime = Column(Text, nullable=True)
 
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(),

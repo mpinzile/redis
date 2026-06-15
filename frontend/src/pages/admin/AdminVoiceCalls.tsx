@@ -2,11 +2,15 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   PhoneCall, Search, Loader2, AlertTriangle, RefreshCw, X, ChevronDown, ChevronUp,
+  Power,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { voiceCallsApi, type JobStatus } from "@/lib/api/voiceCalls";
+import { toast } from "sonner";
+import { voiceCallsApi, type JobStatus, type VoiceFeatureStatus } from "@/lib/api/voiceCalls";
 import { cn } from "@/lib/utils";
 import { getTimeAgo } from "@/utils/getTimeAgo";
 
@@ -101,6 +105,8 @@ export default function AdminVoiceCalls() {
           Refresh
         </Button>
       </div>
+
+      <FeatureToggleCard />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -284,6 +290,128 @@ export default function AdminVoiceCalls() {
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Feature toggle (admin on/off switch for Smart RSVP Calls)
+// ──────────────────────────────────────────────────────────────────
+
+function FeatureToggleCard() {
+  const [feature, setFeature] = useState<VoiceFeatureStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msgEn, setMsgEn] = useState("");
+  const [msgSw, setMsgSw] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await voiceCallsApi.getFeatureStatus();
+    if (res.success && res.data) {
+      setFeature(res.data);
+      setMsgEn(res.data.disabled_message_en);
+      setMsgSw(res.data.disabled_message_sw);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const onToggle = async (next: boolean) => {
+    setSaving(true);
+    const res = await voiceCallsApi.updateFeatureStatus({ enabled: next });
+    setSaving(false);
+    if (res.success && res.data) {
+      setFeature(res.data);
+      toast.success(next ? "Voice Assistant enabled" : "Voice Assistant disabled");
+    } else {
+      toast.error("Could not update feature status");
+    }
+  };
+
+  const onSaveMessages = async () => {
+    setSaving(true);
+    const res = await voiceCallsApi.updateFeatureStatus({
+      disabled_message_en: msgEn,
+      disabled_message_sw: msgSw,
+    });
+    setSaving(false);
+    if (res.success && res.data) {
+      setFeature(res.data);
+      toast.success("Polite message updated");
+    } else {
+      toast.error("Could not save message");
+    }
+  };
+
+  if (loading) return <Skeleton className="h-32 w-full rounded-2xl" />;
+  const enabled = !!feature?.enabled;
+
+  return (
+    <div className={cn(
+      "rounded-2xl border p-5 space-y-4",
+      enabled
+        ? "bg-card border-border"
+        : "bg-amber-50/60 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30",
+    )}>
+      <div className="flex items-start gap-4">
+        <div className={cn(
+          "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+          enabled ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700",
+        )}>
+          <Power className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="font-semibold">Smart RSVP Calls feature</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {enabled
+                  ? "Live — organisers and admins can place voice calls."
+                  : "Paused — every user sees a polite \"temporarily unavailable\" message."}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {enabled ? "Enabled" : "Disabled"}
+              </span>
+              <Switch checked={enabled} disabled={saving} onCheckedChange={onToggle} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Message (English)
+          </label>
+          <Textarea
+            value={msgEn}
+            onChange={(e) => setMsgEn(e.target.value)}
+            rows={3}
+            autoComplete="off"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Ujumbe (Kiswahili)
+          </label>
+          <Textarea
+            value={msgSw}
+            onChange={(e) => setMsgSw(e.target.value)}
+            rows={3}
+            autoComplete="off"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <Button size="sm" onClick={onSaveMessages} disabled={saving}>
+          {saving && <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />}
+          Save messages
+        </Button>
+      </div>
     </div>
   );
 }

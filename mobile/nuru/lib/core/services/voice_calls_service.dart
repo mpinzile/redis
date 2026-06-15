@@ -122,4 +122,11 @@ class VoiceCallsService {
 
   static Future<Map<String, dynamic>> removeOptOut(String phone) =>
       ApiBase.delete('/voice-calls/opt-outs/${Uri.encodeComponent(phone)}');
+
+  // ─── Feature flag (admin-controlled on/off switch) ───
+  /// Returns `{enabled, disabled_message_en, disabled_message_sw, ...}`.
+  /// Web and mobile use this to render a polite "temporarily unavailable"
+  /// banner when Nuru administrators have paused the Voice Assistant.
+  static Future<Map<String, dynamic>> getFeatureStatus() =>
+      ApiBase.get('/voice-calls/feature-status');
 }

@@ -46,7 +46,7 @@ from core.database import get_db
 from core import config
 from models import (
     VoiceCampaign, VoiceCallJob, VoiceCallLog, VoiceOptOut,
-    Event, User,
+    VoiceFeatureSetting, Event, User,
 )
 from utils.auth import get_current_user
 from utils.helpers import standard_response
@@ -227,6 +227,112 @@ def _is_admin(user: User) -> bool:
     return bool(getattr(user, "is_admin", False) or getattr(user, "is_superuser", False))
 
 
+# ──────────────────────────────────────────────────────────────────
+# Feature flag (admin-controlled on/off switch)
+# ──────────────────────────────────────────────────────────────────
+
+def _get_or_create_feature(db: Session) -> VoiceFeatureSetting:
+    row = (
+        db.query(VoiceFeatureSetting)
+        .filter(VoiceFeatureSetting.singleton == "global")
+        .first()
+    )
+    if row is None:
+        row = VoiceFeatureSetting(singleton="global", enabled=True)
+        db.add(row)
+        try:
+            db.commit()
+            db.refresh(row)
+        except Exception:  # noqa: BLE001
+            db.rollback()
+            row = (
+                db.query(VoiceFeatureSetting)
+                .filter(VoiceFeatureSetting.singleton == "global")
+                .first()
+            )
+    return row
+
+
+def _serialize_feature(row: VoiceFeatureSetting) -> dict:
+    return {
+        "enabled": bool(row.enabled),
+        "disabled_message_en": row.disabled_message_en,
+        "disabled_message_sw": row.disabled_message_sw,
+        "updated_by_user_id": str(row.updated_by_user_id) if row.updated_by_user_id else None,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
+def _require_feature_enabled(db: Session) -> None:
+    """Raise HTTP 503 with a polite payload when admins disabled the feature.
+
+    Admin users are NOT exempt — disabling means the feature is offline
+    for everyone, including admins (they can still toggle it back on).
+    """
+    row = _get_or_create_feature(db)
+    if not row.enabled:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "voice_feature_disabled",
+                "message": row.disabled_message_en,
+                "message_sw": row.disabled_message_sw,
+                "feature": "voice_calls",
+            },
+        )
+
+
+class FeatureToggleUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    disabled_message_en: Optional[str] = Field(default=None, max_length=1000)
+    disabled_message_sw: Optional[str] = Field(default=None, max_length=1000)
+
+
+@router.get("/feature-status")
+def get_feature_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Public to any authenticated user — used by web + mobile to render
+    a polite "temporarily disabled" panel when admins have paused the
+    feature. Returns both EN and SW copies so the client can pick.
+    """
+    row = _get_or_create_feature(db)
+    return standard_response(True, "ok", _serialize_feature(row))
+
+
+@router.patch("/admin/feature-status")
+def update_feature_status(
+    payload: FeatureToggleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Admin-only toggle. Body fields are all optional — only the ones
+    provided are updated.
+    """
+    if not _is_admin(current_user):
+        raise HTTPException(403, detail="Admins only")
+    row = _get_or_create_feature(db)
+    if payload.enabled is not None:
+        row.enabled = bool(payload.enabled)
+    if payload.disabled_message_en is not None:
+        msg = payload.disabled_message_en.strip()
+        if msg:
+            row.disabled_message_en = msg
+    if payload.disabled_message_sw is not None:
+        msg = payload.disabled_message_sw.strip()
+        if msg:
+            row.disabled_message_sw = msg
+    row.updated_by_user_id = current_user.id
+    db.commit()
+    db.refresh(row)
+    return standard_response(
+        True,
+        "Voice Assistant feature " + ("enabled" if row.enabled else "disabled"),
+        _serialize_feature(row),
+    )
+
+
 def _get_owned_campaign(
     db: Session, campaign_id: str, user: User, *, for_write: bool = True,
 ) -> VoiceCampaign:
@@ -274,6 +380,7 @@ def create_campaign(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _require_feature_enabled(db)
     event_uuid = None
     if payload.event_id:
         event_uuid = _uuid_or_400(payload.event_id, "event_id")
@@ -417,6 +524,7 @@ def start_campaign(campaign_id: str,
                    background_tasks: BackgroundTasks,
                    db: Session = Depends(get_db),
                    current_user: User = Depends(get_current_user)):
+    _require_feature_enabled(db)
     result = _set_campaign_status(
         db, campaign_id, current_user, "running", "Campaign started — dialing now",
         allowed_from={"draft", "queued", "paused", "completed"},
@@ -434,7 +542,8 @@ def _active_stale_after_seconds() -> int:
     # If Twilio status callbacks are not reaching us, jobs can remain queued
     # forever even after the recipient's phone call has ended. Treat an active
     # job as stale after the normal call window so Resume / Call again can redial.
-    return max(20, min(90, int(config.VOICE_MAX_CALL_SECONDS or 60)))
+    # Respect VOICE_MAX_CALL_SECONDS (default 120) — do NOT cap at 90s.
+    return max(20, int(config.VOICE_MAX_CALL_SECONDS or 120))
 
 
 def _active_attempt_is_stale(job: VoiceCallJob, now: datetime) -> bool:
@@ -539,6 +648,18 @@ def _dispatch_campaign_jobs(campaign_id: str) -> None:
                                 job.id, verdict.reason)
                     continue
 
+                # Pre-generate the personalised greeting so the recipient
+                # hears speech the instant they pick up. Best-effort: any
+                # failure is logged but doesn't block the call.
+                try:
+                    from voice.greeting_audio import ensure_for_job as _ensure_greeting
+                    _gen, _gerr = _ensure_greeting(job.id)
+                    if _gerr:
+                        log.info("dispatch: greeting not generated job=%s reason=%s",
+                                 job.id, _gerr)
+                except Exception:  # noqa: BLE001
+                    log.exception("dispatch: pre-greeting hook crashed job=%s", job.id)
+
                 try:
                     result = twilio_client.place_call(
                         to_phone_e164=job.phone_e164,
@@ -634,6 +755,7 @@ def add_jobs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _require_feature_enabled(db)
     if not payload.recipients:
         raise HTTPException(400, detail="At least one recipient is required")
     if len(payload.recipients) > 5000:
@@ -802,6 +924,7 @@ def retry_job(
     """Re-queue a job AND immediately dispatch the outbound Twilio call so
     the user receives a call right away (no waiting for a worker pass).
     """
+    _require_feature_enabled(db)
     jid = _uuid_or_400(job_id, "job_id")
     job = db.query(VoiceCallJob).filter(VoiceCallJob.id == jid).first()
     if not job:
@@ -843,6 +966,11 @@ def retry_job(
             detail={"code": verdict.code, "message": verdict.reason},
         )
 
+    try:
+        from voice.greeting_audio import ensure_for_job as _ensure_greeting
+        _ensure_greeting(job.id)
+    except Exception:  # noqa: BLE001
+        pass
     try:
         result = twilio_client.place_call(
             to_phone_e164=job.phone_e164,
@@ -1141,6 +1269,7 @@ def place_call_now(
     Intended for manual one-off testing or for a worker invocation. The
     bulk campaign worker (Celery / cron) is out of scope for this phase.
     """
+    _require_feature_enabled(db)
     job = _job_or_404(db, job_id)
     _get_owned_campaign(db, str(job.campaign_id), current_user)
 
@@ -1171,6 +1300,11 @@ def place_call_now(
             detail={"code": verdict.code, "message": verdict.reason},
         )
 
+    try:
+        from voice.greeting_audio import ensure_for_job as _ensure_greeting
+        _ensure_greeting(job.id)
+    except Exception:  # noqa: BLE001
+        pass
     try:
         result = twilio_client.place_call(
             to_phone_e164=job.phone_e164,

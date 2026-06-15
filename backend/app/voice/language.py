@@ -111,8 +111,18 @@ def get_voice_language(
 
 
 def to_bcp47(lang: str) -> str:
-    """Map our short code to a Twilio/Gemini BCP-47 tag."""
+    """Map our short code to a Twilio/Gemini BCP-47 tag.
+
+    For Swahili, prefer the configured ``GEMINI_VOICE_LANGUAGE`` /
+    ``VOICE_DIALECT`` env values; hardcoded ``sw-TZ`` is only the
+    last-resort fallback.
+    """
+    from core import config as _config
     v = _normalize(lang)
     if v == "en":
         return "en-US"
-    return "sw-TZ"
+    return (
+        getattr(_config, "GEMINI_VOICE_LANGUAGE", None)
+        or getattr(_config, "VOICE_DIALECT", None)
+        or "sw-TZ"
+    )
