@@ -169,16 +169,44 @@ class GeminiLiveBridge(AgentBridge):
         if self._ws is None or self._closed:
             return
         is_sw = (language or "sw").lower().startswith("sw")
-        name = (getattr(job, "recipient_name", None) or "").strip()
+        raw_name = (getattr(job, "recipient_name", None) or "").strip()
+        # Mirror rsvp_agent's address rules so the title/first-name lands correctly
+        # in the greeting (e.g. "Mr Frank" -> "Bw. Frank"; "David Mwakalinga" -> "David").
+        try:
+            from voice.agents.rsvp_agent import _address_for  # local import to avoid cycle
+            addressed, _ = _address_for(raw_name, is_sw=is_sw)
+        except Exception:  # noqa: BLE001
+            addressed = raw_name or ("mgeni" if is_sw else "the guest")
         text = (
-            f"LAZIMA uzungumze KISWAHILI tu kuanzia sasa hadi mwisho wa simu. "
-            f"Usitumie Kiingereza hata kidogo. Anza simu sasa: msalimie "
-            f"{name or 'mgeni'} kwa sentensi moja fupi kwa Kiswahili, "
-            "jitambulishe kama Msaidizi wa Sauti wa Nuru, kisha uliza kama atahudhuria."
+            f"Anza simu SASA kwa KISWAHILI CHA TANZANIA. Tumia salamu fupi "
+            f"ya Kitanzania (Habari / Habari za leo / Salama / Hujambo) "
+            f"ukimuita '{addressed}', kisha sema 'napiga kutoka Nuru kwa "
+            f"niaba ya mratibu wa tukio', kisha uliza kama amepokea mwaliko "
+            f"kupitia WhatsApp au ujumbe wa kawaida. FUATA mtiririko wa "
+            f"simu uliopo kwenye system_instruction (mwanzo → uthibitisho "
+            f"wa mwaliko → swali la kuhudhuria → taarifa za tukio → "
+            f"kufunga). Ongea kwa kasi ya kawaida ya simu ya Mtanzania "
+            f"(haraka kidogo, siyo polepole), sauti ya joto na ya "
+            f"kibinadamu. LUGHA: anza Kiswahili, lakini IFUATE lugha ya "
+            f"mteja — akiongea Kiingereza sentensi nzima au akisema "
+            f"'sijakuelewa' / 'I don't understand', BADILISHA Kiingereza "
+            f"mara moja na rudia jibu lako. Akirudi Kiswahili, rudi "
+            f"Kiswahili. Akisema 'kwaheri' / 'bye' / 'tutaonana', funga "
+            f"mara moja: 'Asante sana, kwaheri.' Usitumie 'rafiki' kama "
+            f"jina lipo, wala 'Shalom'."
             if is_sw else
-            f"Speak ENGLISH only for the entire call. Start the call now. "
-            f"Greet {name or 'the guest'} in one short English sentence, "
-            "introduce yourself as the Nuru Voice Assistant, then ask if they will attend."
+            f"Start the call NOW in English. Greet {addressed} in one "
+            f"short sentence, say you're calling from Nuru on behalf of "
+            f"the organiser, then ask if they received the invitation on "
+            f"WhatsApp or SMS. FOLLOW the call flow in the "
+            f"system_instruction (opening → invitation check → attendance "
+            f"→ event facts → closing). Use a brisk, natural phone pace, "
+            f"warm human tone. LANGUAGE: start in English but MIRROR the "
+            f"recipient — if they speak a full sentence in Swahili or say "
+            f"'sijakuelewa' / 'I don't understand', switch to Swahili "
+            f"immediately and repeat your last sentence. If they return "
+            f"to English, switch back. End on 'bye' / 'kwaheri' with "
+            f"'Thank you, goodbye.'"
         )
         try:
             await self._ws.send(json.dumps({

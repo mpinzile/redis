@@ -132,6 +132,46 @@ FRIENDLY_PHRASES = (
     "thank you", "thanks",
 )
 
+GOODBYE_PHRASES = (
+    "kwaheri", "kwa heri", "tutaonana", "tuonane baadaye",
+    "naenda zangu", "nakatisha simu", "nina shughuli sasahivi",
+    "asante kwaheri", "baadaye basi",
+    "bye", "goodbye", "good bye", "talk later", "i have to go",
+    "got to go", "gotta go",
+)
+
+# Explicit language-switch requests. The agent stays in Swahili by default
+# and only flips to English when the recipient clearly asks for it.
+SWITCH_TO_EN_PHRASES = (
+    "speak english", "talk in english", "in english please",
+    "use english", "english please", "can you speak english",
+    "can you talk in english", "switch to english",
+    "naomba english", "naomba kiingereza", "tumia kiingereza",
+    "ongea kiingereza", "sema kiingereza", "tafadhali kiingereza",
+)
+
+SWITCH_TO_SW_PHRASES = (
+    "ongea kiswahili", "sema kiswahili", "tumia kiswahili",
+    "rudi kiswahili", "naomba kiswahili", "kiswahili tafadhali",
+    "swahili please", "speak swahili", "in swahili",
+    "switch to swahili", "back to swahili",
+)
+
+
+def detect_language_switch(text: Optional[str]) -> Optional[str]:
+    """Return ``"en"`` / ``"sw"`` if the recipient explicitly requested a
+    language switch, else ``None``. Mixed-language utterances do NOT count.
+    """
+    norm = _normalize(text)
+    if not norm:
+        return None
+    # Swahili request wins ties (the agent's default language).
+    if _contains_any(norm, SWITCH_TO_SW_PHRASES):
+        return "sw"
+    if _contains_any(norm, SWITCH_TO_EN_PHRASES):
+        return "en"
+    return None
+
 # ──────────────────────────────────────────────────────────────────
 # Intent + mood vocab (kept in sync with nuru_voice.md Phase 11).
 # ──────────────────────────────────────────────────────────────────
