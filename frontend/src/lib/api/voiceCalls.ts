@@ -6,6 +6,7 @@
  */
 import type { ApiResponse } from "./types";
 import { get, post, patch, del, buildQueryString } from "./helpers";
+import { adminGet, adminPatch } from "./adminHelpers";
 
 export type VoicePurpose =
   | "rsvp"
@@ -253,16 +254,21 @@ export const voiceCallsApi = {
     );
   },
 
-  // Admin-controlled feature flag (on/off switch surfaced to web + mobile)
+  // Admin-controlled feature flag (on/off switch surfaced to web + mobile).
+  // Regular users read it with their access_token. Admins must use the
+  // dedicated admin_token to read (admin variant) and to update.
   getFeatureStatus() {
     return get<VoiceFeatureStatus>("/voice-calls/feature-status");
+  },
+  getFeatureStatusAdmin() {
+    return adminGet<VoiceFeatureStatus>("/voice-calls/feature-status");
   },
   updateFeatureStatus(payload: {
     enabled?: boolean;
     disabled_message_en?: string;
     disabled_message_sw?: string;
   }) {
-    return patch<VoiceFeatureStatus>("/voice-calls/admin/feature-status", payload);
+    return adminPatch<VoiceFeatureStatus>("/voice-calls/admin/feature-status", payload);
   },
 };
 

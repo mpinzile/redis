@@ -69,6 +69,25 @@ _TITLE_MAP = {
     "baba":  ("Baba",  "Baba"),
     "shekh": ("Shekh", "Sheikh"),
     "sheikh":("Shekh", "Sheikh"),
+    # Religious / professional titles common in Tanzania
+    "mchungaji": ("Mchungaji", "Pastor"),
+    "pst":       ("Mchungaji", "Pastor"),
+    "pastor":    ("Mchungaji", "Pastor"),
+    "mwinjilisti": ("Mwinjilisti", "Evangelist"),
+    "evangelist":  ("Mwinjilisti", "Evangelist"),
+    "askofu":  ("Askofu", "Bishop"),
+    "bishop":  ("Askofu", "Bishop"),
+    "padri":   ("Padri",  "Father"),
+    "father":  ("Padri",  "Father"),
+    "ustadhi": ("Ustadhi", "Ustadh"),
+    "ustadh":  ("Ustadhi", "Ustadh"),
+    "mwalimu": ("Mwalimu", "Teacher"),
+    "mw":      ("Mwalimu", "Teacher"),
+    "eng":     ("Mhandisi", "Eng."),
+    "engineer":("Mhandisi", "Eng."),
+    "mhandisi":("Mhandisi", "Eng."),
+    "hon":     ("Mh.",  "Hon."),
+    "mh":      ("Mh.",  "Hon."),
 }
 
 # Rotating Swahili greetings — natural Tanzanian speech, not "Shalom".
@@ -77,6 +96,33 @@ _SW_GREETINGS = (
     "Salama", "Hujambo", "Mambo vipi",
 )
 _EN_GREETINGS = ("Hello", "Hi", "Good day", "Good morning")
+
+
+# Tanzania is permanently on EAT (UTC+3, no DST). We compute the time-of-day
+# greeting from the server clock converted to EAT so it matches what the
+# recipient is actually experiencing locally.
+def time_of_day_greeting(*, is_sw: bool) -> str:
+    """Return a natural time-of-day opener for the current EAT hour.
+
+    Buckets mirror ``mobile/.../home_right_drawer.dart`` so the voice
+    assistant and the mobile UI greet at the same boundaries:
+      05-11  -> morning   (Habari ya asubuhi / Good morning)
+      12-16  -> afternoon (Habari ya mchana  / Good afternoon)
+      17-20  -> evening   (Habari ya jioni   / Good evening)
+      else   -> night     (Habari ya usiku   / Good evening — late)
+    """
+    from datetime import datetime, timezone, timedelta
+    eat = timezone(timedelta(hours=3))
+    hour = datetime.now(tz=eat).hour
+    if 5 <= hour < 12:
+        return "Habari ya asubuhi" if is_sw else "Good morning"
+    if 12 <= hour < 17:
+        return "Habari ya mchana" if is_sw else "Good afternoon"
+    if 17 <= hour < 21:
+        return "Habari ya jioni" if is_sw else "Good evening"
+    return "Habari ya usiku" if is_sw else "Good evening"
+
+
 
 
 def _address_for(recipient_name: str, *, is_sw: bool) -> Tuple[str, str]:
@@ -374,12 +420,16 @@ def build_rsvp_spec(job: Optional[VoiceCallJob], language: str) -> dict:
             "description": "Short description",
         })
 
+    tod_sw = time_of_day_greeting(is_sw=True)
+    tod_en = time_of_day_greeting(is_sw=False)
     if is_sw:
         opening_event = event_name_only if has_event_name else "tukio"
         opening = (
-            f"Habari, napiga kutoka Nuru kwa niaba ya mratibu wa tukio la {opening_event}. "
-            "Ningependa kuthibitisha kama utahudhuria."
+            f"{tod_sw} {recipient}, mambo vipi? Napiga kutoka Nuru kwa "
+            f"niaba ya mratibu wa tukio la {opening_event}. Ningependa "
+            f"kuthibitisha kama utahudhuria."
         )
+
         system_text = (
             "LUGHA (KIOO CHA MTEJA): Anza KISWAHILI CHA TANZANIA. KISHA "
             "Speak natural Tanzanian Swahili by default. Do not speak English unless "
@@ -509,9 +559,9 @@ def build_rsvp_spec(job: Optional[VoiceCallJob], language: str) -> dict:
         )
     else:
         opening = (
-            f"{greeting_en} {recipient}, I'm calling from Nuru on behalf "
-            f"of the organiser of {event_name_only}. I'd like to confirm "
-            "whether you'll attend."
+            f"{tod_en} {recipient}, how are you today? I'm calling from "
+            f"Nuru on behalf of the organiser of {event_name_only}. I'd "
+            f"like to confirm whether you'll attend."
         )
         system_text = (
             "LANGUAGE (MIRROR THE RECIPIENT): Start in English. From then "

@@ -203,10 +203,10 @@ class GeminiLiveBridge(AgentBridge):
             pass
         if skip_greeting and is_sw:
             text = (
-                f"MUHIMU: salamu ya kwanza ('Shalom {addressed}, habari ya leo. "
-                f"Mambo vipi? Naitwa Happyphania, napiga kutoka Nuru kuhusu mwaliko "
-                f"wako. Tafadhali subiri kidogo nikuunganishe.') TAYARI imechezwa "
-                f"kwenye simu. USIRUDIE 'Habari/Shalom/Naitwa Happyphania/Mambo vipi'. "
+                f"MUHIMU: salamu ya kwanza ('{addressed}, habari ya leo. "
+                f"Mambo vipi? Mimi ni Nuru Voice Assistant, napiga kutoka Nuru "
+                f"kuhusu mwaliko wako. Tafadhali subiri kidogo nikuunganishe.') "
+                f"TAYARI imechezwa kwenye simu. USIRUDIE salamu wala kujitambulisha tena. "
                 f"Endelea moja kwa moja kwa Kiswahili cha Tanzania kwa sentensi hii: "
                 f"'Nakupigia kwa niaba ya mratibu wa tukio la {event_name}. "
                 f"Ningependa kuthibitisha kama umepokea mwaliko wako.' "
@@ -223,46 +223,59 @@ class GeminiLiveBridge(AgentBridge):
         elif skip_greeting:
             text = (
                 f"IMPORTANT: the opening greeting ('Hello {addressed}, this is "
-                f"Happyphania from Nuru about your invitation. One moment please.') "
-                f"has ALREADY been played to the caller. DO NOT re-greet. Continue "
-                f"directly with: 'I'm calling on behalf of the organiser of "
-                f"{event_name}. I'd like to confirm whether you received your "
-                f"invitation.' Then follow the system_instruction call flow "
-                f"(invitation check → attendance → event facts → closing). "
+                f"the Nuru Voice Assistant calling from Nuru about your invitation. "
+                f"One moment please.') has ALREADY been played to the caller. "
+                f"DO NOT re-greet. Continue directly with: 'I'm calling on behalf "
+                f"of the organiser of {event_name}. I'd like to confirm whether "
+                f"you received your invitation.' Then follow the system_instruction "
+                f"call flow (invitation check → attendance → event facts → closing). "
                 f"Brisk, warm, natural phone pace. Mirror the recipient's "
                 f"language. End on 'bye'/'kwaheri' with 'Thank you, goodbye.'"
             )
         else:
+            # No pre-greeting played — Gemini MUST say the recipient's name
+            # and a time-of-day salutation as the very first words it speaks.
+            try:
+                from voice.agents.rsvp_agent import time_of_day_greeting  # local import
+                tod_sw = time_of_day_greeting(is_sw=True)
+                tod_en = time_of_day_greeting(is_sw=False)
+            except Exception:  # noqa: BLE001
+                tod_sw, tod_en = "Habari", "Hello"
             text = (
-                f"Anza simu SASA kwa KISWAHILI CHA TANZANIA kwa sentensi hii: "
-                f"'Habari, napiga kutoka Nuru kwa niaba ya mratibu wa tukio la {event_name}. "
-                f"Ningependa kuthibitisha kama utahudhuria.' Kisha uliza kama amepokea mwaliko "
-                f"kupitia WhatsApp au ujumbe wa kawaida. FUATA mtiririko wa "
-                f"simu uliopo kwenye system_instruction (mwanzo → uthibitisho "
-                f"wa mwaliko → swali la kuhudhuria → taarifa za tukio → "
-                f"kufunga). Ongea kwa kasi ya kawaida ya simu ya Mtanzania "
-                f"(haraka kidogo, siyo polepole), sauti ya joto na ya "
-                f"kibinadamu. LUGHA: anza Kiswahili, lakini IFUATE lugha ya "
-                f"mteja. Speak natural Tanzanian Swahili by default. Do not speak English unless "
-                f"the recipient explicitly asks for English. Akisema 'speak English', "
-                f"'sijakuelewa' / 'I don't understand' akiwa kwenye Kiingereza, BADILISHA Kiingereza "
-                f"mara moja na rudia jibu lako. Akirudi Kiswahili, rudi "
-                f"Kiswahili. Akisema 'kwaheri' / 'bye' / 'tutaonana', funga "
-                f"mara moja: 'Asante sana, kwaheri.' Usitumie 'rafiki' kama "
-                f"jina lipo, wala 'Shalom'."
+                f"Anza simu SASA kwa KISWAHILI CHA TANZANIA kwa sentensi hii "
+                f"HASA (jina ni LAZIMA): "
+                f"'{tod_sw} {addressed}, mambo vipi? Napiga kutoka Nuru kwa "
+                f"niaba ya mratibu wa tukio la {event_name}. Ningependa "
+                f"kuthibitisha kama utahudhuria.' Kisha uliza kama amepokea "
+                f"mwaliko kupitia WhatsApp au ujumbe wa kawaida. FUATA "
+                f"mtiririko wa simu uliopo kwenye system_instruction "
+                f"(mwanzo → uthibitisho wa mwaliko → swali la kuhudhuria → "
+                f"taarifa za tukio → kufunga). Ongea kwa kasi ya kawaida ya "
+                f"simu ya Mtanzania (haraka kidogo, siyo polepole), sauti ya "
+                f"joto na ya kibinadamu. LUGHA: anza Kiswahili, lakini "
+                f"IFUATE lugha ya mteja. Akisema 'speak English', "
+                f"'sijakuelewa' / 'I don't understand' akiwa kwenye "
+                f"Kiingereza, BADILISHA Kiingereza mara moja na rudia jibu "
+                f"lako. Akirudi Kiswahili, rudi Kiswahili. Akisema "
+                f"'kwaheri' / 'bye' / 'tutaonana', funga mara moja: "
+                f"'Asante sana, kwaheri.' Usitumie 'rafiki' kama jina lipo, "
+                f"wala 'Shalom'."
                 if is_sw else
-                f"Start the call NOW in English. Greet {addressed} in one "
-                f"short sentence, say you're calling from Nuru on behalf of "
-                f"the organiser, then ask if they received the invitation on "
-                f"WhatsApp or SMS. FOLLOW the call flow in the "
-                f"system_instruction (opening → invitation check → attendance "
-                f"→ event facts → closing). Use a brisk, natural phone pace, "
-                f"warm human tone. LANGUAGE: start in English but MIRROR the "
-                f"recipient — if they speak a full sentence in Swahili or say "
-                f"'sijakuelewa' / 'I don't understand', switch to Swahili "
-                f"immediately and repeat your last sentence. If they return "
-                f"to English, switch back. End on 'bye' / 'kwaheri' with "
-                f"'Thank you, goodbye.'"
+                f"Start the call NOW in English with this EXACT opening "
+                f"(the name is REQUIRED): "
+                f"'{tod_en} {addressed}, how are you today? I'm calling "
+                f"from Nuru on behalf of the organiser of {event_name}. "
+                f"I'd like to confirm whether you'll attend.' Then ask if "
+                f"they received the invitation on WhatsApp or SMS. FOLLOW "
+                f"the call flow in the system_instruction (opening → "
+                f"invitation check → attendance → event facts → closing). "
+                f"Use a brisk, natural phone pace, warm human tone. "
+                f"LANGUAGE: start in English but MIRROR the recipient — if "
+                f"they speak a full sentence in Swahili or say 'sijakuelewa' "
+                f"/ 'I don't understand', switch to Swahili immediately and "
+                f"repeat your last sentence. If they return to English, "
+                f"switch back. End on 'bye' / 'kwaheri' with 'Thank you, "
+                f"goodbye.'"
             )
         try:
             await self._ws.send(json.dumps({

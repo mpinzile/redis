@@ -39,7 +39,7 @@ GREETING_MIME = f"audio/pcm;rate={GREETING_SAMPLE_RATE}"
 
 # Caller persona — kept in code (not env) so the recipient always hears the
 # same human name regardless of which speaker config is active.
-CALLER_PERSONA_NAME = "Happyphania"
+CALLER_PERSONA_NAME = "Nuru Voice Assistant"
 
 _TTS_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -84,26 +84,31 @@ def _event_name(job: VoiceCallJob, db) -> Optional[str]:
 def compose_greeting_text(job: VoiceCallJob, *, event_name: Optional[str] = None) -> str:
     """Return the personalised Swahili greeting that will be rendered to audio.
 
-    Long enough (~25 words, ~10-12 s spoken) to cover Gemini Live's
-    handshake without sounding rushed, but short enough that it ends
-    before the recipient gets impatient.
+    Opens with a time-of-day salutation computed in EAT (UTC+3, Tanzania
+    local time) so a 7am call says "Habari ya asubuhi" and a 9pm call
+    says "Habari ya usiku" — matches the recipient's local feel.
+    Always names the recipient (with title when present) so they hear
+    their name within the first second of the call.
     """
     name = _addressed_name(getattr(job, "recipient_name", "") or "")
-    # The greeting deliberately does NOT confirm the RSVP or mention the
-    # event date — Gemini Live owns the rest of the conversation. It only
-    # buys us connection time and warms the recipient up.
+    try:
+        from voice.agents.rsvp_agent import time_of_day_greeting  # local import to avoid cycle
+        tod = time_of_day_greeting(is_sw=True)
+    except Exception:  # noqa: BLE001
+        tod = "Habari"
     if event_name:
         return (
-            f"Shalom {name}, habari ya leo. Mambo vipi? "
+            f"{tod} {name}, mambo vipi? "
             f"Naitwa {CALLER_PERSONA_NAME}, napiga kutoka Nuru kuhusu "
             f"mwaliko wako wa tukio la {event_name}. "
             f"Tafadhali subiri kidogo nikuunganishe."
         )
     return (
-        f"Shalom {name}, habari ya leo. Mambo vipi? "
+        f"{tod} {name}, mambo vipi? "
         f"Naitwa {CALLER_PERSONA_NAME}, napiga kutoka Nuru kuhusu mwaliko wako. "
         f"Tafadhali subiri kidogo nikuunganishe."
     )
+
 
 
 # ──────────────────────────────────────────────────────────────────

@@ -307,7 +307,7 @@ function FeatureToggleCard() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await voiceCallsApi.getFeatureStatus();
+    const res = await voiceCallsApi.getFeatureStatusAdmin();
     if (res.success && res.data) {
       setFeature(res.data);
       setMsgEn(res.data.disabled_message_en);
