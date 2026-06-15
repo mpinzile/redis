@@ -59,10 +59,12 @@ SystemBuilder = Callable[[Optional[VoiceCallJob], str], dict]
 def _default_system_builder(job: Optional[VoiceCallJob], language: str) -> dict:
     """Tiny safe default until ``voice.agents.rsvp_agent`` plugs in."""
     name = (job.recipient_name if job else None) or "rafiki"
-    lang_name = "Swahili" if (language or "sw").lower().startswith("sw") else "English"
+    lang_name = "English" if (language or "sw").lower().startswith("en") else "Swahili"
     text = (
         f"You are the Nuru Voice Assistant calling {name} to confirm their RSVP. "
-        f"Speak {lang_name}. Be polite, short, and natural. Confirm attendance, "
+        "Speak natural Tanzanian Swahili by default. Do not speak English unless "
+        "the recipient explicitly asks for English. "
+        f"Selected call language: {lang_name}. Be polite, short, and natural. Confirm attendance, "
         "then end the call gracefully."
     )
     return {"system_text": text, "tools": []}
@@ -177,19 +179,25 @@ class GeminiLiveBridge(AgentBridge):
             addressed, _ = _address_for(raw_name, is_sw=is_sw)
         except Exception:  # noqa: BLE001
             addressed = raw_name or ("mgeni" if is_sw else "the guest")
+        event_name = "tukio"
+        try:
+            from voice.agents.rsvp_agent import _event_name_for_job  # local import to avoid cycle
+            event_name = _event_name_for_job(job) or event_name
+        except Exception:  # noqa: BLE001
+            pass
         text = (
-            f"Anza simu SASA kwa KISWAHILI CHA TANZANIA. Tumia salamu fupi "
-            f"ya Kitanzania (Habari / Habari za leo / Salama / Hujambo) "
-            f"ukimuita '{addressed}', kisha sema 'napiga kutoka Nuru kwa "
-            f"niaba ya mratibu wa tukio', kisha uliza kama amepokea mwaliko "
+            f"Anza simu SASA kwa KISWAHILI CHA TANZANIA kwa sentensi hii: "
+            f"'Habari, napiga kutoka Nuru kwa niaba ya mratibu wa tukio la {event_name}. "
+            f"Ningependa kuthibitisha kama utahudhuria.' Kisha uliza kama amepokea mwaliko "
             f"kupitia WhatsApp au ujumbe wa kawaida. FUATA mtiririko wa "
             f"simu uliopo kwenye system_instruction (mwanzo → uthibitisho "
             f"wa mwaliko → swali la kuhudhuria → taarifa za tukio → "
             f"kufunga). Ongea kwa kasi ya kawaida ya simu ya Mtanzania "
             f"(haraka kidogo, siyo polepole), sauti ya joto na ya "
             f"kibinadamu. LUGHA: anza Kiswahili, lakini IFUATE lugha ya "
-            f"mteja — akiongea Kiingereza sentensi nzima au akisema "
-            f"'sijakuelewa' / 'I don't understand', BADILISHA Kiingereza "
+            f"mteja. Speak natural Tanzanian Swahili by default. Do not speak English unless "
+            f"the recipient explicitly asks for English. Akisema 'speak English', "
+            f"'sijakuelewa' / 'I don't understand' akiwa kwenye Kiingereza, BADILISHA Kiingereza "
             f"mara moja na rudia jibu lako. Akirudi Kiswahili, rudi "
             f"Kiswahili. Akisema 'kwaheri' / 'bye' / 'tutaonana', funga "
             f"mara moja: 'Asante sana, kwaheri.' Usitumie 'rafiki' kama "
@@ -226,7 +234,7 @@ class GeminiLiveBridge(AgentBridge):
             await self._events.put(AgentEvent(kind="end"))
             return
 
-        lang = (language or config.VOICE_DEFAULT_LANGUAGE or "sw").strip()
+        lang = "en-US" if (language or "").strip().lower().startswith("en") else "sw-TZ"
         spec = _system_builder(job, lang) or {}
         system_text = (spec.get("system_text") or "").strip()
         tools = spec.get("tools") or []

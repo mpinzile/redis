@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 
 from core import config
 from core.database import SessionLocal
-from models import VoiceCallJob, VoiceCallLog
+from models import Event, VoiceCampaign, VoiceCallJob, VoiceCallLog
 from voice.audio import (
     GEMINI_INPUT_RATE,
     GEMINI_OUTPUT_RATE,
@@ -394,6 +394,33 @@ def _resolve_job(job_id: Optional[str]) -> Optional[VoiceCallJob]:
         db.close()
 
 
+def _resolve_start_language(job_id: Optional[str]) -> tuple[str, str, Optional[VoiceCallJob]]:
+    """Resolve call-start language from stored backend state, not stream params."""
+    try:
+        uuid.UUID(str(job_id))
+    except (TypeError, ValueError):
+        from voice.language import resolve_voice_language, to_bcp47
+        lang, source = resolve_voice_language()
+        return to_bcp47(lang), source, None
+
+    db: Session = SessionLocal()
+    try:
+        job = db.query(VoiceCallJob).filter(VoiceCallJob.id == job_id).first()
+        campaign = None
+        event = None
+        if job is not None and job.campaign_id:
+            campaign = db.query(VoiceCampaign).filter(
+                VoiceCampaign.id == job.campaign_id
+            ).first()
+            if campaign is not None and campaign.event_id:
+                event = db.query(Event).filter(Event.id == campaign.event_id).first()
+        from voice.language import resolve_voice_language, to_bcp47
+        lang, source = resolve_voice_language(job=job, campaign=campaign, event=event)
+        return to_bcp47(lang), source, job
+    finally:
+        db.close()
+
+
 async def handle_twilio_stream(ws: WebSocket) -> None:
     """Main entry point for the FastAPI WebSocket route.
 
@@ -441,16 +468,14 @@ async def handle_twilio_stream(ws: WebSocket) -> None:
                 session.call_sid = start.get("callSid")
                 params = start.get("customParameters") or {}
                 session.job_id = params.get("job_id") or session.job_id
-                session.language = params.get("language") or session.language
-                # Force Swahili by default — only an explicit recipient/job
-                # override or upstream language=en customParameter switches.
-                _lang_lower = str(session.language or "").lower()
-                if not (_lang_lower.startswith("sw") or _lang_lower.startswith("en")):
-                    session.language = "sw-TZ"
+                session.language, _language_source, job = _resolve_start_language(session.job_id)
                 _sel = "en" if str(session.language).lower().startswith("en") else "sw"
+                logger.info("Smart RSVP env default language: %s",
+                            config.VOICE_DEFAULT_LANGUAGE or "sw")
+                logger.info("Smart RSVP resolved language source: %s job=%s",
+                            _language_source, session.job_id)
                 logger.info("Smart RSVP language selected: %s job=%s",
                             _sel, session.job_id)
-                job = _resolve_job(session.job_id)
                 _t_connect = asyncio.get_event_loop().time()
                 await bridge.start(job=job, language=session.language)  # type: ignore[arg-type]
                 session.gemini_connected_at = asyncio.get_event_loop().time()

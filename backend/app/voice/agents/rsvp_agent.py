@@ -274,6 +274,27 @@ def _event_brief(event: Optional[Event], *, is_sw: bool = True) -> str:
     return " ".join(parts).strip()
 
 
+def _event_name_for_job(job: Optional[VoiceCallJob]) -> str:
+    """Return the event name for a live-call greeting, or a safe Swahili fallback."""
+    if job is None or not getattr(job, "campaign_id", None):
+        return "tukio"
+    db = SessionLocal()
+    try:
+        from models import VoiceCampaign  # local import to avoid cycle
+        camp = db.query(VoiceCampaign).filter(
+            VoiceCampaign.id == job.campaign_id
+        ).first()
+        if camp is not None and camp.event_id:
+            ev = db.query(Event).filter(Event.id == camp.event_id).first()
+            name = (getattr(ev, "name", None) or "").strip() if ev is not None else ""
+            return name or "tukio"
+    except Exception:  # noqa: BLE001
+        logger.exception("Failed to load event name for job=%s", getattr(job, "id", None))
+    finally:
+        db.close()
+    return "tukio"
+
+
 
 def build_rsvp_spec(job: Optional[VoiceCallJob], language: str) -> dict:
     """Return ``{system_text, tools}`` for the Gemini Live setup frame."""
@@ -354,20 +375,15 @@ def build_rsvp_spec(job: Optional[VoiceCallJob], language: str) -> dict:
         })
 
     if is_sw:
-        if has_event_name:
-            opening = (
-                f"{greeting_sw} {recipient}, napiga kutoka Nuru kwa niaba "
-                f"ya mratibu wa tukio la {event_name_only}. "
-                "Ningependa kuthibitisha kama utahudhuria."
-            )
-        else:
-            opening = (
-                f"{greeting_sw} {recipient}, napiga kutoka Nuru kwa niaba "
-                "ya mratibu wa tukio. "
-                "Ningependa kuthibitisha kama utahudhuria."
-            )
+        opening_event = event_name_only if has_event_name else "tukio"
+        opening = (
+            f"Habari, napiga kutoka Nuru kwa niaba ya mratibu wa tukio la {opening_event}. "
+            "Ningependa kuthibitisha kama utahudhuria."
+        )
         system_text = (
             "LUGHA (KIOO CHA MTEJA): Anza KISWAHILI CHA TANZANIA. KISHA "
+            "Speak natural Tanzanian Swahili by default. Do not speak English unless "
+            "the recipient explicitly asks for English. "
             "lugha yako lazima IFUATE lugha ya mteja kila wakati: \n"
             "  • Mteja akiongea Kiingereza kwa sentensi nzima, badilisha "
             "    Kiingereza mara moja kuanzia jibu lako linalofuata.\n"

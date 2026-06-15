@@ -685,6 +685,11 @@ def add_jobs(
             except (TypeError, ValueError):
                 ref_uuid = None
 
+        recipient_language = (recipient.language or "").strip() or None
+        extra = dict(recipient.extra or {})
+        if recipient_language:
+            extra["language_source"] = "recipient_preference"
+
         job = VoiceCallJob(
             campaign_id=c.id,
             recipient_type=recipient.recipient_type or "guest",
@@ -693,10 +698,10 @@ def add_jobs(
             phone_e164=verdict.phone_e164 or recipient.phone,
             country=verdict.country,
             timezone=verdict.timezone or recipient.timezone,
-            language=recipient.language or c.language,
+            language=recipient_language,
             scheduled_at=recipient.scheduled_at,
             max_attempts=recipient.max_attempts or max_attempts_default,
-            extra=recipient.extra,
+            extra=extra or None,
         )
 
         if verdict.allowed:
@@ -1230,18 +1235,35 @@ async def twilio_webhook(
     resolved_job_id = job_id or form.get("job_id")
     call_sid = form.get("CallSid") or request.query_params.get("CallSid")
 
-    from voice.language import get_voice_language, to_bcp47
+    from voice.language import resolve_voice_language, to_bcp47
 
     # Resolve language cheaply. Default Swahili; load job only if id present.
     short_lang = "sw"
+    language_source = "env_default"
     job = None
+    campaign = None
+    event = None
     if resolved_job_id:
         try:
             jid = uuid.UUID(str(resolved_job_id))
             job = db.query(VoiceCallJob).filter(VoiceCallJob.id == jid).first()
-            short_lang = get_voice_language(job=job, request=request)
+            if job is not None and job.campaign_id:
+                campaign = db.query(VoiceCampaign).filter(
+                    VoiceCampaign.id == job.campaign_id
+                ).first()
+                if campaign is not None and campaign.event_id:
+                    event = db.query(Event).filter(Event.id == campaign.event_id).first()
+            short_lang, language_source = resolve_voice_language(
+                job=job, campaign=campaign, event=event,
+            )
         except (TypeError, ValueError):
             job = None
+            short_lang, language_source = resolve_voice_language()
+    else:
+        short_lang, language_source = resolve_voice_language()
+    _TWILIO_LOG.info("Smart RSVP env default language: %s", config.VOICE_DEFAULT_LANGUAGE or "sw")
+    _TWILIO_LOG.info("Smart RSVP resolved language source: %s", language_source)
+    _TWILIO_LOG.info("Smart RSVP language selected: %s", short_lang)
     language = to_bcp47(short_lang)
 
     # Defer non-critical DB writes so webhook returns TwiML immediately.
