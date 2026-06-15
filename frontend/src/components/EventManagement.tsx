@@ -784,8 +784,27 @@ const EventManagement = () => {
 
 
         <TabsContent value="rsvp" className="space-y-6">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Smart RSVP Calls</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Let the Nuru Voice Assistant call your pending guests in Swahili and write outcomes back here.
+                  </p>
+                </div>
+              </div>
+              <Button size="sm" onClick={() => navigate(`/voice-calls?event_id=${id || ''}`)}>
+                Open Smart RSVP Calls
+              </Button>
+            </CardContent>
+          </Card>
           <EventRSVP eventId={id || ''} eventTitle={eventTitle} permissions={permissions} />
         </TabsContent>
+
 
         <TabsContent value="schedule" className="space-y-6">
           <EventSchedule eventId={id!} />

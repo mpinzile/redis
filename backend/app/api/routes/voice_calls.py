@@ -50,6 +50,7 @@ from models import (
 )
 from utils.auth import get_current_user
 from utils.helpers import standard_response
+from utils.event_owner import user_can_manage_event
 from voice.safety import check_can_call
 from voice import twilio_client
 from voice.realtime import handle_twilio_stream
@@ -279,8 +280,9 @@ def create_campaign(
         event = db.query(Event).filter(Event.id == event_uuid).first()
         if not event:
             raise HTTPException(404, detail="Event not found")
-        if event.event_owner_user_id and event.event_owner_user_id != current_user.id and not _is_admin(current_user):
+        if not user_can_manage_event(event, current_user) and not _is_admin(current_user):
             raise HTTPException(403, detail="Not the event owner")
+
 
     campaign = VoiceCampaign(
         event_id=event_uuid,

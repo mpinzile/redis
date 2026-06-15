@@ -29,6 +29,7 @@ import 'widgets/event_rsvp_tab.dart';
 import 'widgets/event_checkin_tab.dart';
 import 'widgets/event_tickets_tab.dart';
 import 'event_invitation_screen.dart';
+import 'widgets/smart_rsvp_calls_screen.dart';
 import 'widgets/event_committee_tab.dart';
 import 'widgets/event_services_tab.dart';
 import 'widgets/event_sponsors_tab.dart';
@@ -1712,6 +1713,17 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       _QaItem('assets/icons/package-icon.svg', 'Services',
           () => _jumpToTab('services')),
       _QaItem('assets/icons/pen-icon.svg', 'Edit Event', _editEvent),
+      _QaItem('assets/icons/chat-icon.svg', 'Voice RSVP Calls', () {
+        Navigator.of(context).pop();
+        final id = (_event ?? {})['id']?.toString();
+        if (id == null || id.isEmpty) return;
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => SmartRsvpCallsScreen(
+            eventId: id,
+            eventTitle: extractStr((_event ?? {})['title']),
+          ),
+        ));
+      }),
       _QaItem('assets/icons/share-upload-icon.svg', 'Share Event', () {
         if (_event != null) ShareEventToFeedSheet.show(context, _event!);
       }),
