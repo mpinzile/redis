@@ -232,19 +232,6 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
 
     final added = await VoiceCallsService.addJobs(cid, recipients, enforceHours: true);
     await VoiceCallsService.startCampaign(cid);
-    // Backend has no auto-dialer worker yet — fan out place-call per job
-    // so the campaign actually rings, not just gets queued.
-    final data = added['data'];
-    final dialable = _itemsOfTopLevel(
-      (data is Map ? (data['accepted'] ?? data['jobs']) : null),
-    );
-    for (final j in dialable) {
-      if (j is Map && j['id'] != null) {
-        // Fire-and-forget so the UI isn't blocked by Twilio round-trips.
-        // ignore: unawaited_futures
-        VoiceCallsService.placeCall(j['id'].toString());
-      }
-    }
     await _loadCampaign();
     if (mounted) {
       setState(() => _busy = false);

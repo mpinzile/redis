@@ -27,11 +27,13 @@ _LOG_PATH = Path(__file__).resolve().parent.parent / "log.txt"
 # names (or their children) is captured by the file handler.
 _TARGET_LOGGERS = (
     "nuru.voice.twilio",
+    "nuru.voice.twilio_route",
     "nuru.voice.gemini",
     "nuru.voice.gemini.text",
     "nuru.voice.gemini.live",
     "nuru.voice.dispatch",
     "nuru.voice.realtime",
+    "nuru.voice.rsvp_agent",
 )
 
 

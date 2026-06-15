@@ -135,7 +135,7 @@ def build_twiml(
     *,
     job_id: str,
     greeting: Optional[str] = None,
-    language: str = "sw-KE",
+    language: str = "sw-TZ",
 ) -> str:
     """Build the TwiML that bridges the answered call into our AI stream.
 
@@ -145,24 +145,27 @@ def build_twiml(
     to our realtime WebSocket (Phase 5).
     """
     stream_url = (config.VOICE_AI_STREAM_URL or "").strip()
+    is_en = (language or "").lower().startswith("en")
+    fallback_text = (
+        "Samahani, kuna changamoto ya kiufundi. Tutakutumia ujumbe kupitia WhatsApp. Asante."
+        if not is_en else
+        "Sorry, we're having a technical issue. We'll send you a WhatsApp message. Thank you."
+    )
     if not stream_url:
-        # Fallback: just speak the greeting and hang up gracefully.
-        spoken = xml_escape(greeting or "Habari. Asante kwa kupokea simu hii.")
+        spoken = xml_escape(greeting or fallback_text)
+        logger.warning("VOICE_AI_STREAM_URL missing; returning Twilio Say fallback for job=%s", job_id)
         return (
             '<?xml version="1.0" encoding="UTF-8"?>'
             f'<Response><Say language="{xml_escape(language)}">{spoken}</Say></Response>'
         )
 
-    greeting_text = xml_escape(
-        greeting or "Habari. Hii ni Msaidizi wa Sauti wa Nuru."
-    )
     safe_lang = xml_escape(language)
     safe_job = xml_escape(str(job_id))
 
+    logger.info("Returning Twilio Media Stream TwiML job=%s stream=%s", job_id, stream_url)
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
         "<Response>"
-        f'<Say language="{safe_lang}">{greeting_text}</Say>'
         "<Connect>"
         f'<Stream url="{xml_escape(stream_url)}">'
         f'<Parameter name="job_id" value="{safe_job}"/>'

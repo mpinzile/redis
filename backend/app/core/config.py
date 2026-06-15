@@ -80,15 +80,58 @@ def _voice_env_float(name: str, default: float) -> float:
 
 
 # --- Gemini ---
+# All Gemini model + voice selection is BACKEND-CONTROLLED. These values are
+# never exposed to public APIs, mobile/web clients, or campaign request
+# bodies. To change the speaker or model, set the env var and restart.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.5-flash")
 GEMINI_LIVE_MODEL = os.getenv(
-    "GEMINI_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"
+    "GEMINI_LIVE_MODEL", "gemini-3.1-flash-live-preview"
 )
 GEMINI_LIVE_MODEL_FALLBACK = os.getenv(
-    "GEMINI_LIVE_MODEL_FALLBACK", "gemini-2.5-flash-native-audio-preview-09-2025"
+    "GEMINI_LIVE_MODEL_FALLBACK", "gemini-2.5-flash-native-audio-preview-12-2025"
 )
-GEMINI_VOICE_NAME = os.getenv("GEMINI_VOICE_NAME", "default")
+# Non-realtime TTS model — used only for developer voice tests / fallback TTS.
+# MUST NOT be used as the main realtime call model.
+GEMINI_TTS_MODEL = os.getenv("GEMINI_TTS_MODEL", "gemini-3.1-flash-tts-preview")
+# Reserved for future live-translation features. NOT used for normal RSVP calls
+# — those speak natural Tanzanian Swahili directly.
+GEMINI_LIVE_TRANSLATE_MODEL = os.getenv(
+    "GEMINI_LIVE_TRANSLATE_MODEL", "gemini-3.5-live-translate-preview"
+)
+GEMINI_VOICE_NAME = os.getenv("GEMINI_VOICE_NAME", "Zephyr")
+GEMINI_VOICE_LANGUAGE = os.getenv("GEMINI_VOICE_LANGUAGE", "sw")
+GEMINI_VOICE_STYLE = os.getenv("GEMINI_VOICE_STYLE", "calm")
+GEMINI_VOICE_SPEAKING_RATE = os.getenv("GEMINI_VOICE_SPEAKING_RATE", "normal")
+
+
+def get_gemini_model_config() -> dict:
+    """Return the backend-controlled Gemini model selection.
+
+    Never exposed to public APIs or clients. Use this everywhere instead of
+    reading the individual env vars so the source of truth stays in one place.
+    """
+    return {
+        "text_model": GEMINI_TEXT_MODEL,
+        "live_model": GEMINI_LIVE_MODEL,
+        "live_model_fallback": GEMINI_LIVE_MODEL_FALLBACK,
+        "tts_model": GEMINI_TTS_MODEL,
+        "live_translate_model": GEMINI_LIVE_TRANSLATE_MODEL,
+    }
+
+
+def get_gemini_voice_config() -> dict:
+    """Return the backend-controlled Gemini speaker config.
+
+    Speaker selection controls voice SOUND only, NOT language. Smart RSVP
+    calls remain Swahili-first regardless of the speaker name.
+    """
+    return {
+        "voice_name": GEMINI_VOICE_NAME,
+        "language": GEMINI_VOICE_LANGUAGE,
+        "style": GEMINI_VOICE_STYLE,
+        "speaking_rate": GEMINI_VOICE_SPEAKING_RATE,
+    }
 
 # --- Voice language ---
 VOICE_DEFAULT_LANGUAGE = os.getenv("VOICE_DEFAULT_LANGUAGE", "sw")

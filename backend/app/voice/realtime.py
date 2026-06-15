@@ -144,7 +144,7 @@ class StreamSession:
     job_id: Optional[str] = None
     stream_sid: Optional[str] = None
     call_sid: Optional[str] = None
-    language: str = "sw-KE"
+    language: str = "sw-TZ"
     started_at: datetime = field(default_factory=datetime.utcnow)
     transcript_user: list[str] = field(default_factory=list)
     transcript_assistant: list[str] = field(default_factory=list)
@@ -161,19 +161,22 @@ class StreamSession:
     conversation_quality: Optional[str] = None
     final_confidence: Optional[float] = None
     human_follow_up_reason: Optional[str] = None
-    # transient: was the AI mid-utterance when the user started talking?
+    # transient state for barge-in + latency metrics
     assistant_speaking: bool = False
+    last_user_speech_at: Optional[float] = None
+    first_ai_audio_at: Optional[float] = None
+    ws_accept_at: Optional[float] = None
+    gemini_connected_at: Optional[float] = None
 
     def add_user_text(self, text: str) -> None:
         if not text:
             return
         self.transcript_user.append(text)
+        self.last_user_speech_at = asyncio.get_event_loop().time()
         # Barge-in: user speech arrived while assistant was speaking.
         if self.assistant_speaking:
             self.interruption_count += 1
             self.assistant_speaking = False
-        # Cheap heuristic backstop for noise/clarification cues, in case
-        # the AI never calls log_conversation_quality.
         try:
             from voice.agents.conversation import classify
             turn = classify(text)
@@ -222,6 +225,19 @@ async def _send_mark(ws: WebSocket, stream_sid: str, name: str) -> None:
         "streamSid": stream_sid,
         "mark": {"name": name},
     }))
+
+
+async def _send_clear(ws: WebSocket, stream_sid: str) -> None:
+    """Ask Twilio to flush buffered outbound audio (barge-in)."""
+    if not stream_sid:
+        return
+    try:
+        await ws.send_text(json.dumps({
+            "event": "clear",
+            "streamSid": stream_sid,
+        }))
+    except Exception:  # noqa: BLE001
+        pass
 
 
 async def _persist_session(session: StreamSession) -> None:
@@ -291,6 +307,15 @@ async def _pump_agent_events(
             if stop_event.is_set():
                 break
             if evt.kind == "audio" and evt.audio_pcm16:
+                if session.first_ai_audio_at is None:
+                    session.first_ai_audio_at = asyncio.get_event_loop().time()
+                    if session.gemini_connected_at is not None:
+                        ms = int((session.first_ai_audio_at - session.gemini_connected_at) * 1000)
+                        logger.info("[perf] first_ai_audio_ms=%d job=%s", ms, session.job_id)
+                    if session.last_user_speech_at is not None:
+                        rt_ms = int((session.first_ai_audio_at - session.last_user_speech_at) * 1000)
+                        logger.info("[perf] user_speech_to_ai_response_ms=%d job=%s", rt_ms, session.job_id)
+                session.assistant_speaking = True
                 payload = pcm16_to_mulaw_b64(evt.audio_pcm16,
                                              source_rate=evt.sample_rate)
                 await _send_media(session.websocket, session.stream_sid or "", payload)
@@ -360,12 +385,17 @@ async def handle_twilio_stream(ws: WebSocket) -> None:
     The route accepts the socket; we own the rest of the lifecycle.
     """
     session = StreamSession(websocket=ws)
+    session.ws_accept_at = asyncio.get_event_loop().time()
     bridge = _new_bridge()
     stop_event = asyncio.Event()
     pump_task: Optional[asyncio.Task] = None
     started = False
     max_seconds = max(15, int(config.VOICE_MAX_CALL_SECONDS or 60))
     deadline = asyncio.get_event_loop().time() + max_seconds
+
+    # Cheap inbound-energy barge-in state.
+    voiced_frames = 0
+    last_barge_in_at = 0.0
 
     try:
         while True:
@@ -398,7 +428,15 @@ async def handle_twilio_stream(ws: WebSocket) -> None:
                 session.job_id = params.get("job_id") or session.job_id
                 session.language = params.get("language") or session.language
                 job = _resolve_job(session.job_id)
+                _t_connect = asyncio.get_event_loop().time()
                 await bridge.start(job=job, language=session.language)  # type: ignore[arg-type]
+                session.gemini_connected_at = asyncio.get_event_loop().time()
+                logger.info(
+                    "[perf] gemini_connect_ms=%d ws_accept_to_start_ms=%d job=%s",
+                    int((session.gemini_connected_at - _t_connect) * 1000),
+                    int((session.gemini_connected_at - (session.ws_accept_at or _t_connect)) * 1000),
+                    session.job_id,
+                )
                 pump_task = asyncio.create_task(
                     _pump_agent_events(session, bridge, stop_event)
                 )
@@ -409,6 +447,34 @@ async def handle_twilio_stream(ws: WebSocket) -> None:
                 payload = (frame.get("media") or {}).get("payload") or ""
                 pcm = mulaw_b64_to_pcm16(payload, target_rate=GEMINI_INPUT_RATE)
                 if pcm:
+                    # Cheap voice-activity check for barge-in. PCM16 little-endian.
+                    if session.assistant_speaking and len(pcm) >= 64:
+                        try:
+                            # Sample a few values; avoid full RMS on hot path.
+                            import struct
+                            n = min(len(pcm) // 2, 80)
+                            samples = struct.unpack(f"<{n}h", pcm[: n * 2])
+                            peak = max(abs(s) for s in samples)
+                        except Exception:
+                            peak = 0
+                        if peak > 2500:  # ~ -22 dBFS
+                            voiced_frames += 1
+                        else:
+                            voiced_frames = max(0, voiced_frames - 1)
+                        _now = asyncio.get_event_loop().time()
+                        if voiced_frames >= 3 and (_now - last_barge_in_at) > 0.8:
+                            last_barge_in_at = _now
+                            voiced_frames = 0
+                            session.interruption_count += 1
+                            session.assistant_speaking = False
+                            session.last_user_speech_at = _now
+                            session.first_ai_audio_at = None  # restart RT clock
+                            await _send_clear(session.websocket, session.stream_sid or "")
+                            try:
+                                await bridge.signal_end_of_user_speech()
+                            except Exception:
+                                pass
+                            logger.info("[perf] barge_in job=%s", session.job_id)
                     await bridge.push_audio(pcm, sample_rate=GEMINI_INPUT_RATE)
                 continue
 
