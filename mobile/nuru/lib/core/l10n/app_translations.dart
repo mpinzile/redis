@@ -1728,6 +1728,7 @@ class AppTranslations {
     'voice_pause': {'en': 'Pause', 'sw': 'Pumzika'},
     'voice_resume': {'en': 'Resume', 'sw': 'Endelea'},
     'voice_cancel': {'en': 'Cancel', 'sw': 'Sitisha'},
+    'voice_start_new_campaign': {'en': 'Start new campaign', 'sw': 'Anza kampeni mpya'},
     'voice_cancel_title': {'en': 'Cancel campaign?', 'sw': 'Sitisha campaign?'},
     'voice_cancel_body': {
       'en': 'Pending calls will be removed. This cannot be undone.',

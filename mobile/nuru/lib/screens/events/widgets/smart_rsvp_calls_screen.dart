@@ -318,7 +318,7 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
                     const SizedBox(height: 20),
                     _sectionLabel(_vt(context, 'voice_section_recipients')),
                     const SizedBox(height: 8),
-                    ..._jobs.map(_jobTile),
+                    ..._jobs.map((j) => _jobTile(j, _campaignStatus())),
                     if (_jobs.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
@@ -623,51 +623,81 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _busy ? null : _pauseOrResume,
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.border),
-                    foregroundColor: AppColors.textPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+          if (status == 'cancelled' || status == 'completed')
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _busy
+                    ? null
+                    : () async {
+                        setState(() {
+                          _campaign = null;
+                          _jobs = [];
+                        });
+                        await _createAndQueue();
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    (status == 'running' || status == 'queued')
-                        ? _vt(context, 'voice_pause')
-                        : _vt(context, 'voice_resume'),
+                ),
+                child: Text(_vt(context, 'voice_start_new_campaign'),
                     style: GoogleFonts.inter(
-                        fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
+                        fontSize: 14, fontWeight: FontWeight.w600)),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _busy ? null : _cancel,
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.error.withOpacity(0.4)),
-                    foregroundColor: AppColors.error,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : _pauseOrResume,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.border),
+                      foregroundColor: AppColors.textPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      (status == 'running' || status == 'queued')
+                          ? _vt(context, 'voice_pause')
+                          : _vt(context, 'voice_resume'),
+                      style: GoogleFonts.inter(
+                          fontSize: 14, fontWeight: FontWeight.w600),
                     ),
                   ),
-                  child: Text(_vt(context, 'voice_cancel'),
-                      style: GoogleFonts.inter(
-                          fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : _cancel,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppColors.error.withOpacity(0.4)),
+                      foregroundColor: AppColors.error,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(_vt(context, 'voice_cancel'),
+                        style: GoogleFonts.inter(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
   }
+
+  String _campaignStatus() => (_campaign?['status'] ?? '').toString();
 
   Widget _statusPill(String status) {
     final (bg, fg, key) = switch (status) {
@@ -718,10 +748,16 @@ class _SmartRsvpCallsScreenState extends State<SmartRsvpCallsScreen> {
             )),
       );
 
-  Widget _jobTile(Map<String, dynamic> j) {
+  Widget _jobTile(Map<String, dynamic> j, [String campaignStatus = '']) {
     final name = (j['recipient_name'] ?? '').toString();
     final phone = (j['phone_e164'] ?? '').toString();
-    final status = (j['status'] ?? 'pending').toString();
+    var status = (j['status'] ?? 'pending').toString();
+    // If the whole campaign is cancelled, any still-open job should reflect
+    // that to the organiser instead of pretending it's still waiting.
+    if (campaignStatus == 'cancelled' &&
+        (status == 'pending' || status == 'queued' || status == 'in_progress')) {
+      status = 'cancelled';
+    }
     final outcome = (j['ai_outcome'] ?? '').toString();
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

@@ -265,7 +265,7 @@ BUDGET FORMAT (when generating):
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -309,14 +309,14 @@ BUDGET FORMAT (when generating):
               child: Wrap(spacing: 8, runSpacing: 8, children: [
                 if (_generatedBudgetContent.isNotEmpty && _extractedItems.isNotEmpty)
                   _actionChip(
-                    icon: Icons.picture_as_pdf_rounded,
+                    iconAsset: 'assets/icons/file-pdf-icon.svg',
                     label: _exportingPdf ? 'Preparing PDF...' : 'Preview PDF',
                     color: const Color(0xFFDC2626),
                     onTap: _exportingPdf ? () {} : _previewEstimatedBudgetPdf,
                   ),
                 if (_extractedTotal != null && widget.onSaveBudget != null)
                   _actionChip(
-                    icon: Icons.savings_rounded,
+                    iconAsset: 'assets/icons/wallet-icon.svg',
                     label: 'Set Budget: ${getActiveCurrency()} ${_extractedTotal}',
                     color: _green,
                     onTap: () {
@@ -326,7 +326,7 @@ BUDGET FORMAT (when generating):
                   ),
                 if (_extractedItems.isNotEmpty && widget.onImportItems != null)
                   _actionChip(
-                    icon: Icons.download_rounded,
+                    iconAsset: 'assets/icons/download-icon.svg',
                     label: 'Import ${_extractedItems.length} Items',
                     color: AppColors.primary,
                     onTap: () {
@@ -378,7 +378,14 @@ BUDGET FORMAT (when generating):
                           padding: EdgeInsets.all(12),
                           child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textTertiary),
                         )
-                      : const Icon(Icons.send_rounded, size: 20, color: Colors.white),
+                      : Center(
+                          child: SvgPicture.asset(
+                            'assets/icons/send-icon.svg',
+                            width: 20,
+                            height: 20,
+                            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                          ),
+                        ),
                 ),
               ),
             ]),
@@ -429,7 +436,7 @@ BUDGET FORMAT (when generating):
     );
   }
 
-  Widget _actionChip({required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+  Widget _actionChip({required String iconAsset, required String label, required Color color, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -440,7 +447,12 @@ BUDGET FORMAT (when generating):
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 16, color: color),
+          SvgPicture.asset(
+            iconAsset,
+            width: 16,
+            height: 16,
+            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+          ),
           const SizedBox(width: 6),
           Text(label, style: appText(size: 12, weight: FontWeight.w600, color: color)),
         ]),
