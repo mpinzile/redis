@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import sys
 import importlib
+from types import SimpleNamespace
 
 import pytest
 
@@ -48,6 +49,59 @@ def test_fallback_env_does_not_override_default(monkeypatch):
     assert lang_mod.get_voice_language() == "sw"
 
 
+def test_no_campaign_language_means_swahili(monkeypatch):
+    monkeypatch.setenv("VOICE_DEFAULT_LANGUAGE", "sw")
+    monkeypatch.setenv("VOICE_FALLBACK_LANGUAGE", "en")
+    from voice import language as lang_mod
+    importlib.reload(lang_mod)
+    lang, source = lang_mod.resolve_voice_language(campaign=SimpleNamespace(language=None))
+    assert lang == "sw"
+    assert source == "env_default"
+
+
+def test_no_event_language_means_swahili(monkeypatch):
+    monkeypatch.setenv("VOICE_DEFAULT_LANGUAGE", "sw")
+    from voice import language as lang_mod
+    importlib.reload(lang_mod)
+    lang, source = lang_mod.resolve_voice_language(event=SimpleNamespace(language=""))
+    assert lang == "sw"
+    assert source == "env_default"
+
+
+def test_no_recipient_preference_means_swahili(monkeypatch):
+    monkeypatch.setenv("VOICE_DEFAULT_LANGUAGE", "sw")
+    from voice import language as lang_mod
+    importlib.reload(lang_mod)
+    lang, source = lang_mod.resolve_voice_language(
+        job=SimpleNamespace(language=None, extra={}),
+        campaign=SimpleNamespace(language=None),
+        event=SimpleNamespace(language=None),
+    )
+    assert lang == "sw"
+    assert source == "env_default"
+
+
+def test_campaign_english_does_not_start_english(monkeypatch):
+    monkeypatch.setenv("VOICE_DEFAULT_LANGUAGE", "sw")
+    from voice import language as lang_mod
+    importlib.reload(lang_mod)
+    lang, source = lang_mod.resolve_voice_language(campaign=SimpleNamespace(language="en"))
+    assert lang == "sw"
+    assert source == "env_default"
+
+
+def test_only_explicit_recipient_english_preference_starts_english(monkeypatch):
+    monkeypatch.setenv("VOICE_DEFAULT_LANGUAGE", "sw")
+    from voice import language as lang_mod
+    importlib.reload(lang_mod)
+    lang, source = lang_mod.resolve_voice_language(
+        job=SimpleNamespace(language="en", extra={"language_source": "recipient_preference"}),
+        campaign=SimpleNamespace(language="sw"),
+    )
+    assert lang == "en"
+    assert source == "recipient_preference"
+
+
 def test_initial_greeting_is_swahili():
     from voice.agents.rsvp_agent import build_rsvp_spec
     spec = build_rsvp_spec(None, "sw")
@@ -66,7 +120,7 @@ def test_no_hardcoded_english_in_swahili_prompt():
     # The Swahili system prompt mentions banned English words *inside quotes*
     # as instructions ("usitumie 'Hello'…"). What it must NOT contain is the
     # bot SPEAKING those phrases — i.e. an opening line in English.
-    opening_block = text.split("UJUMBE WA KUFUNGUA")[1].split("\n\n")[0]
+    opening_block = text.split("1) MWANZO")[1].split("2) UTHIBITISHO")[0]
     for banned in ("Hello", "Hi ", "Okay", "Sure", "Thank you", "Processing"):
         assert banned not in opening_block, (
             f"Swahili opening should not contain English phrase {banned!r}"

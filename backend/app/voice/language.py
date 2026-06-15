@@ -10,7 +10,7 @@ English because one layer fell back to the system locale.
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 from core import config
 
@@ -26,44 +26,88 @@ def _normalize(value: Optional[str]) -> str:
     return v
 
 
-def get_voice_language(
+def _pick_language(obj: Any, *attrs: str) -> str:
+    if obj is None:
+        return ""
+    for attr in attrs:
+        v = _normalize(getattr(obj, attr, None))
+        if v in ("sw", "en"):
+            return v
+    return ""
+
+
+def _extra_language_source(job: Any) -> str:
+    try:
+        extra = getattr(job, "extra", None) or {}
+        if isinstance(extra, dict):
+            return str(extra.get("language_source") or "").strip().lower()
+    except Exception:  # noqa: BLE001
+        return ""
+    return ""
+
+
+def resolve_voice_language(
     event: Any = None,
     recipient: Any = None,
     job: Any = None,
+    campaign: Any = None,
     request: Any = None,
-) -> str:
-    """Return ``"sw"`` or ``"en"`` for one Smart RSVP call.
+) -> Tuple[str, str]:
+    """Return ``(language, source)`` for one Smart RSVP call.
 
     Resolution order (first explicit hit wins):
-      1. Recipient/job-level override (``recipient.language`` /
-         ``job.language``) — set when the recipient previously asked us to
-         continue in English.
-      2. Event-level override (``event.voice_language``) — organiser pref.
-      3. Per-request override on the HTTP request (``?language=``).
+      1. Recipient/job-level preference — the only startup source allowed
+         to select English.
+      2. Campaign language, but only Swahili is honoured at call start.
+      3. Event language, but only Swahili is honoured at call start.
       4. ``VOICE_DEFAULT_LANGUAGE`` from env (defaults to ``sw``).
 
     The function never returns ``en`` by accident: every English answer
     must come from an *explicit* opt-in upstream.
     """
-    for src in (recipient, job):
-        v = _normalize(getattr(src, "language", None))
-        if v in ("sw", "en"):
-            return v
-
-    v = _normalize(getattr(event, "voice_language", None))
+    v = _pick_language(
+        recipient,
+        "language_preference", "voice_language_preference",
+        "preferred_language", "language",
+    )
     if v in ("sw", "en"):
-        return v
+        return v, "recipient_preference"
 
-    if request is not None:
-        try:
-            v = _normalize(request.query_params.get("language"))
-            if v in ("sw", "en"):
-                return v
-        except Exception:  # noqa: BLE001
-            pass
+    v = _pick_language(job, "language_preference", "voice_language_preference")
+    if v in ("sw", "en"):
+        return v, "recipient_preference"
+
+    v = _pick_language(job, "language")
+    if v in ("sw", "en") and _extra_language_source(job) == "recipient_preference":
+        return v, "recipient_preference"
+
+    v = _pick_language(campaign, "language")
+    if v == "sw":
+        return "sw", "campaign"
+
+    v = _pick_language(event, "language", "voice_language")
+    if v == "sw":
+        return "sw", "event"
 
     default = _normalize(getattr(config, "VOICE_DEFAULT_LANGUAGE", "sw")) or "sw"
-    return "sw" if default not in ("sw", "en") else default
+    # VOICE_FALLBACK_LANGUAGE is intentionally ignored for call startup.
+    if default == "en":
+        return "sw", "env_default"
+    return (default if default == "sw" else "sw"), "env_default"
+
+
+def get_voice_language(
+    event: Any = None,
+    recipient: Any = None,
+    job: Any = None,
+    campaign: Any = None,
+    request: Any = None,
+) -> str:
+    """Return ``"sw"`` or ``"en"`` for backwards-compatible callers."""
+    language, _source = resolve_voice_language(
+        event=event, recipient=recipient, job=job, campaign=campaign, request=request,
+    )
+    return language
 
 
 def to_bcp47(lang: str) -> str:
