@@ -401,10 +401,18 @@ class _MyPhotoLibrariesScreenState extends State<MyPhotoLibrariesScreen> {
               _header(),
               Expanded(
                 child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
+                    ? ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                        children: [
+                          if (_canCreate) const _LibInfoSkeleton(),
+                          if (_canCreate) const SizedBox(height: 16),
+                          const _LibSearchSkeleton(),
+                          const SizedBox(height: 16),
+                          for (int i = 0; i < 5; i++) ...[
+                            const _LibraryCardSkeleton(),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
                       )
                     : NuruRefreshIndicator(
                         onRefresh: _load,
@@ -1382,4 +1390,96 @@ class _NotificationsRouteState extends State<_NotificationsRoute> {
       ),
     );
   }
+}
+
+// ─── Skeleton loaders matching the real library list layout ──────────────────
+class _SkBox extends StatelessWidget {
+  final double? width;
+  final double height;
+  final double radius;
+  const _SkBox({this.width, required this.height, this.radius = 8});
+  @override
+  Widget build(BuildContext context) => Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEEF0F3),
+          borderRadius: BorderRadius.circular(radius),
+        ),
+      );
+}
+
+class _LibInfoSkeleton extends StatelessWidget {
+  const _LibInfoSkeleton();
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppColors.subtleShadow,
+        ),
+        child: Row(children: const [
+          _SkBox(width: 40, height: 40, radius: 10),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SkBox(width: 140, height: 12),
+                SizedBox(height: 8),
+                _SkBox(width: 200, height: 10),
+              ],
+            ),
+          ),
+        ]),
+      );
+}
+
+class _LibSearchSkeleton extends StatelessWidget {
+  const _LibSearchSkeleton();
+  @override
+  Widget build(BuildContext context) => const _SkBox(height: 44, radius: 14);
+}
+
+class _LibraryCardSkeleton extends StatelessWidget {
+  const _LibraryCardSkeleton();
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppColors.subtleShadow,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            _SkBox(width: 64, height: 64, radius: 12),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SkBox(width: 160, height: 13),
+                  SizedBox(height: 8),
+                  Row(children: [
+                    _SkBox(width: 70, height: 10),
+                    SizedBox(width: 8),
+                    _SkBox(width: 50, height: 14, radius: 99),
+                  ]),
+                  SizedBox(height: 10),
+                  Row(children: [
+                    _SkBox(width: 80, height: 16, radius: 99),
+                    SizedBox(width: 10),
+                    _SkBox(width: 100, height: 10),
+                  ]),
+                ],
+              ),
+            ),
+            SizedBox(width: 8),
+            _SkBox(width: 18, height: 18, radius: 4),
+          ],
+        ),
+      );
 }

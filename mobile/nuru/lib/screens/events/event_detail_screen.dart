@@ -28,7 +28,7 @@ import 'widgets/event_expenses_tab.dart';
 import 'widgets/event_rsvp_tab.dart';
 import 'widgets/event_checkin_tab.dart';
 import 'widgets/event_tickets_tab.dart';
-import 'event_invitation_screen.dart';
+
 import 'widgets/smart_rsvp_calls_screen.dart';
 import 'widgets/event_committee_tab.dart';
 import 'widgets/event_services_tab.dart';
@@ -2404,30 +2404,6 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 _openMeetingsScreen();
               },
             ),
-            if (_permissions?['can_send_invitations'] == true || isCreator)
-              _svgActionTile(
-                'assets/icons/send-icon.svg',
-                'Create Invitation',
-                () {
-                  Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EventInvitationScreen(
-                        eventId: widget.eventId,
-                        eventTypeKey: (_event?['event_type'] is Map
-                                ? (_event!['event_type']['key'] ??
-                                    _event!['event_type']['name'])
-                                : null)
-                            ?.toString()
-                            .toLowerCase(),
-                        themeColorHex: _event?['theme_color']?.toString(),
-                        eventTitle: extractStr(_event?['title']),
-                      ),
-                    ),
-                  );
-                },
-              ),
             if (isCreator)
               _svgActionTile(
                 'assets/icons/photos-icon.svg',
