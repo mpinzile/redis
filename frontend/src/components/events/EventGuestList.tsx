@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { 
   UserPlus, Send, Search, Filter, CheckCircle, Clock, X,
-  QrCode, Mail, Phone, MoreVertical, Trash, Loader2, BookUser, Download, Image as ImageIcon, Upload
+  Mail, Phone, MoreVertical, Trash, Loader2, BookUser, Download, Image as ImageIcon, Upload
 } from 'lucide-react';
+import SvgIcon from '@/components/ui/svg-icon';
+import QrIcon from '@/assets/icons/qr-icon.svg';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -352,7 +354,7 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-2">
                         {getStatusBadge(guest.rsvp_status)}
-                        {guest.checked_in && <Badge className="bg-blue-100 text-blue-800 whitespace-nowrap"><QrCode className="w-3 h-3 mr-1" />Checked In</Badge>}
+                        {guest.checked_in && <Badge className="bg-blue-100 text-blue-800 whitespace-nowrap"><SvgIcon src={QrIcon} alt="QR" className="w-3 h-3 mr-1" />Checked In</Badge>}
                       </div>
                       {guest.checked_in && (guest as any).checked_in_by?.full_name && (
                         <p className="text-[10px] text-muted-foreground text-right">

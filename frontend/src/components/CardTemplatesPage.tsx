@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, Eye, Loader2, Sparkles } from "lucide-react";
+import { ChevronLeft, Eye, Loader2 } from "lucide-react";
+import SvgIcon from "@/components/ui/svg-icon";
+import CardIcon from "@/assets/icons/card-icon.svg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -126,7 +128,7 @@ const CardTemplatesPage = () => {
       <div className="relative overflow-hidden rounded-xl border border-border bg-muted/20 p-5">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4.5 h-4.5 text-primary" />
+            <SvgIcon src={CardIcon} alt="" className="w-4.5 h-4.5 text-primary" />
           </div>
           <div className="space-y-1">
             <h3 className="font-semibold text-foreground text-sm">

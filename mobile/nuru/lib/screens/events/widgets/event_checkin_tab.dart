@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -7,6 +8,7 @@ import '../../../core/services/events_service.dart';
 import '../../../core/services/scan_resolve_service.dart';
 import '../checkin_success_screen.dart';
 import '../checkin_failed_screen.dart';
+import '../../../core/widgets/self_scrolling_pills.dart';
 
 /// Premium full-screen Guest / Ticket Check-In scanner.
 ///
@@ -50,6 +52,7 @@ class _EventCheckinTabState extends State<EventCheckinTab>
   bool _torchOn = false;
   CameraFacing _facing = CameraFacing.back;
   bool _processing = false;
+  bool _resultOpen = false;
   String? _lastCode;
   DateTime? _lastAt;
 
@@ -65,6 +68,7 @@ class _EventCheckinTabState extends State<EventCheckinTab>
   bool _loadingStats = true;
   String? _resolvedTitle;
   bool _showingAllRecent = false;
+  int _previewScenario = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -119,13 +123,31 @@ class _EventCheckinTabState extends State<EventCheckinTab>
   }
 
   void _onBarcode(BarcodeCapture cap) {
+    if (_resultOpen || _processing) return;
     final raw = cap.barcodes.firstOrNull?.rawValue;
     if (raw == null || raw.trim().isEmpty) return;
     _process(raw.trim());
   }
 
+  /// Push a result screen, block further scans until it's dismissed, and
+  /// auto-pop after 5 seconds so a guest holding the QR up doesn't cause
+  /// the scanner to stack multiple result pages.
+  Future<void> _pushResult(WidgetBuilder builder) async {
+    _resultOpen = true;
+    Timer? autoClose;
+    final route = MaterialPageRoute(builder: builder);
+    autoClose = Timer(const Duration(seconds: 5), () {
+      if (route.isCurrent) Navigator.of(context).maybePop();
+    });
+    await Navigator.of(context).push(route);
+    autoClose.cancel();
+    _resultOpen = false;
+    _lastCode = null;
+    _lastAt = null;
+  }
+
   Future<void> _process(String raw) async {
-    if (_processing) return;
+    if (_processing || _resultOpen) return;
     final now = DateTime.now();
     if (_lastCode == raw && _lastAt != null && now.difference(_lastAt!) < const Duration(seconds: 3)) {
       return;
@@ -150,7 +172,7 @@ class _EventCheckinTabState extends State<EventCheckinTab>
     if (route == 'checkin_code') {
       blockMessage = 'This is a Check-In Team access code. Tap the QR icon on My Events to redeem it.';
     } else if (route == 'contribution_pay' || route == 'contribution_receipt') {
-      blockMessage = '${resolvedMsg.isEmpty ? 'Contribution link detected' : resolvedMsg} — not a pass for this event.';
+      blockMessage = '${resolvedMsg.isEmpty ? 'Contribution link detected' : resolvedMsg} is not a pass for this event.';
     } else if (crossEvent) {
       final otherName = (r['event'] is Map) ? (r['event']['name'] ?? '').toString() : '';
       blockMessage = otherName.isNotEmpty
@@ -163,14 +185,12 @@ class _EventCheckinTabState extends State<EventCheckinTab>
     if (blockMessage != null) {
       if (!mounted) return;
       setState(() => _processing = false);
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => CheckinFailedScreen(
-          data: r,
-          message: blockMessage!,
-          onScanAgain: () {},
-          onManualCheckIn: () => _showManualEntry(),
-        ),
-      ));
+      await _pushResult((_) => CheckinFailedScreen(
+            data: r,
+            message: blockMessage!,
+            onScanAgain: () {},
+            onManualCheckIn: () => _showManualEntry(),
+          ));
       return;
     }
 
@@ -187,23 +207,21 @@ class _EventCheckinTabState extends State<EventCheckinTab>
 
     if (res['success'] == true) {
       setState(() {});
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => CheckinSuccessScreen(
-          data: data,
-          onScanNext: () {},
-        ),
-      ));
+      await _pushResult((_) => CheckinSuccessScreen(
+            data: data,
+            onScanNext: () {},
+          ));
       _loadStats();
     } else {
       setState(() {});
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => CheckinFailedScreen(
-          data: data,
-          message: (res['message'] ?? resolvedMsg.isNotEmpty ? resolvedMsg : 'Check-in failed').toString(),
-          onScanAgain: () {},
-          onManualCheckIn: () => _showManualEntry(),
-        ),
-      ));
+      await _pushResult((_) => CheckinFailedScreen(
+            data: data,
+            message: ((res['message'] ?? '').toString().isNotEmpty
+                ? res['message'].toString()
+                : (resolvedMsg.isNotEmpty ? resolvedMsg : 'Check-in failed')),
+            onScanAgain: () {},
+            onManualCheckIn: () => _showManualEntry(),
+          ));
     }
   }
 
@@ -425,12 +443,11 @@ class _EventCheckinTabState extends State<EventCheckinTab>
                         width: 38, height: 38,
                         decoration: BoxDecoration(color: Colors.black.withOpacity(0.55), shape: BoxShape.circle),
                         child: Center(
-                          child: Icon(
-                            _facing == CameraFacing.front
-                                ? Icons.camera_front_rounded
-                                : Icons.camera_rear_rounded,
-                            size: 20,
-                            color: Colors.white,
+                          child: SvgPicture.asset(
+                            'assets/icons/camera-icon.svg',
+                            width: 20,
+                            height: 20,
+                            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                           ),
                         ),
                       ),
@@ -527,8 +544,9 @@ class _EventCheckinTabState extends State<EventCheckinTab>
                       color: AppColors.primary.withOpacity(0.08),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.qr_code_scanner_rounded,
-                        size: 22, color: AppColors.primary),
+                    child: SvgPicture.asset('assets/icons/qr-icon.svg',
+                        width: 22, height: 22,
+                        colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn)),
                   ),
                   const SizedBox(height: 10),
                   Text('No scans yet',
@@ -545,11 +563,311 @@ class _EventCheckinTabState extends State<EventCheckinTab>
               }),
             );
           }),
+          const SizedBox(height: 18),
+          _testPreviewSection(),
           const SizedBox(height: 24),
         ],
       ),
     );
   }
+
+  Widget _testPreviewSection() {
+    final scenarios = <_PreviewScenario>[
+      const _PreviewScenario(
+        label: 'Guest checked in', kind: 'success',
+        title: 'Check in successful!', subtitle: 'Guest verified and admitted.',
+        name: 'Amani Mushi', ticketType: 'Guest Pass',
+        code: 'NRU-GST-1942', checkedInAt: '17 Jun 2026, 7:32 PM',
+      ),
+      const _PreviewScenario(
+        label: 'Ticket checked in', kind: 'success',
+        title: 'Check in successful!', subtitle: 'Ticket verified and admitted.',
+        name: 'Neema Kileo', ticketType: 'VIP',
+        code: 'NRU-T7-92K1', checkedInAt: '17 Jun 2026, 7:45 PM',
+      ),
+      const _PreviewScenario(
+        label: 'Already checked in', kind: 'warning',
+        title: 'Already Checked In', subtitle: 'Checked in earlier at 2:22 PM.',
+        name: 'Baraka Mwakasege', ticketType: 'Guest Pass',
+        code: 'NRU-GST-2048', checkedInAt: '17 Jun 2026, 2:22 PM',
+      ),
+      const _PreviewScenario(
+        label: 'Not recognised', kind: 'error',
+        title: "We couldn't check in this guest",
+        subtitle: "We couldn't match this QR to any guest or ticket for this event.",
+        name: 'Unknown', code: 'UNMATCHED-QR',
+        reasonLabel: 'Not Recognised',
+        whatThisMeans: 'The code may belong to another event, or the guest is not on the list.',
+      ),
+      const _PreviewScenario(
+        label: 'Wrong event', kind: 'error',
+        title: "We couldn't check in this guest",
+        subtitle: 'This QR code belongs to a different event.',
+        name: 'Joseph Kimaro', code: 'NRU-GST-7711',
+        reasonLabel: 'Wrong Event',
+        whatThisMeans: 'Switch to the correct event in the scanner and try again.',
+      ),
+      const _PreviewScenario(
+        label: 'Awaiting payment', kind: 'error',
+        title: "We couldn't check in this guest",
+        subtitle: "This ticket hasn't been paid for yet.",
+        name: 'Halima Said', code: 'NRU-T7-55C2',
+        reasonLabel: 'Awaiting Payment',
+        whatThisMeans: 'The buyer must complete payment before this ticket can be used.',
+      ),
+      const _PreviewScenario(
+        label: 'Event ended', kind: 'warning',
+        title: 'Check-In Closed', subtitle: 'This event has already ended.',
+        name: 'Amani Mushi', ticketType: 'Guest Pass',
+        code: 'NRU-GST-1942', checkedInAt: '17 Jun 2026, 7:32 PM',
+        reasonLabel: 'Event Ended',
+        whatThisMeans: 'Reopen check-in from event settings if guests are still arriving.',
+      ),
+    ];
+    final idx = _previewScenario.clamp(0, scenarios.length - 1);
+    final s = scenarios[idx];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 34, height: 34,
+            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.10), borderRadius: BorderRadius.circular(11)),
+            child: Center(child: SvgPicture.asset('assets/icons/qr-icon.svg', width: 17, height: 17,
+                colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn))),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Scan Previews', style: appText(size: 14, weight: FontWeight.w800)),
+            Text('Preview every scan result.', style: appText(size: 11.5, color: AppColors.textTertiary)),
+          ])),
+        ]),
+        const SizedBox(height: 12),
+        SelfScrollingPills(
+          activeIndex: idx,
+          height: 34,
+          children: List.generate(scenarios.length, (i) {
+            final selected = i == idx;
+            return GestureDetector(
+              onTap: () => setState(() => _previewScenario = i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.primary : AppColors.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: selected ? AppColors.primary : AppColors.borderLight),
+                ),
+                child: Text(scenarios[i].label, style: appText(
+                  size: 11.5, weight: FontWeight.w700,
+                  color: selected ? Colors.white : AppColors.textSecondary,
+                )),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 12),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          child: Container(
+            key: ValueKey(s.label),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.borderLight),
+              color: Colors.white,
+            ),
+            child: s.kind == 'error' ? _previewError(s) : _previewSuccessOrWarning(s),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _previewSuccessOrWarning(_PreviewScenario s) {
+    final tone = s.kind == 'warning' ? const Color(0xFFB7791F) : AppColors.success;
+    final iconAsset = s.kind == 'warning'
+        ? 'assets/icons/secure-shield-icon.svg'
+        : 'assets/icons/verified-icon.svg';
+    return Column(children: [
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [tone.withOpacity(0.18), tone.withOpacity(0.04)],
+            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Column(children: [
+          Container(
+            width: 76, height: 76,
+            decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+            child: Center(child: SvgPicture.asset(iconAsset, width: 38, height: 38,
+                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))),
+          ),
+          const SizedBox(height: 12),
+          Text(s.title, style: appText(size: 17, weight: FontWeight.w800, color: AppColors.textPrimary), textAlign: TextAlign.center),
+          const SizedBox(height: 4),
+          Text(s.subtitle, style: appText(size: 12.5, color: AppColors.textTertiary), textAlign: TextAlign.center),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Guest Details', style: appText(size: 13, weight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          _previewRow('assets/icons/user-icon.svg', 'Guest Name', s.name, tone: tone),
+          _previewRow('assets/icons/ticket-icon.svg', 'Ticket Type', s.ticketType ?? 'Guest Pass', tone: tone),
+          _previewRow('assets/icons/ticket-icon.svg', 'Ticket ID', s.code, tone: tone, mono: true),
+          _previewRow('assets/icons/clock-icon.svg', 'Checked In At', s.checkedInAt ?? '-', tone: tone, last: true),
+        ]),
+      ),
+      Container(
+        margin: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: tone.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: tone.withOpacity(0.22)),
+        ),
+        child: Row(children: [
+          SvgPicture.asset('assets/icons/secure-shield-icon.svg', width: 18, height: 18,
+              colorFilter: ColorFilter.mode(tone, BlendMode.srcIn)),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(s.kind == 'warning' ? 'Already on the list' : 'All good to go',
+                style: appText(size: 12.5, weight: FontWeight.w800)),
+            Text(s.kind == 'warning' ? 'No duplicate entry recorded.' : 'Enjoy the event!',
+                style: appText(size: 11.5, color: AppColors.textTertiary)),
+          ])),
+        ]),
+      ),
+    ]);
+  }
+
+  Widget _previewError(_PreviewScenario s) {
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        child: Column(children: [
+          Container(
+            width: 80, height: 80,
+            decoration: BoxDecoration(color: AppColors.error.withOpacity(0.08), shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: Container(
+              width: 58, height: 58,
+              decoration: BoxDecoration(color: AppColors.error.withOpacity(0.14), shape: BoxShape.circle),
+              child: Center(child: SvgPicture.asset('assets/icons/close-circle-icon.svg', width: 32, height: 32,
+                  colorFilter: const ColorFilter.mode(AppColors.error, BlendMode.srcIn))),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(s.title, style: appText(size: 16, weight: FontWeight.w800), textAlign: TextAlign.center),
+          const SizedBox(height: 4),
+          Text(s.subtitle, style: appText(size: 12, color: AppColors.textTertiary), textAlign: TextAlign.center),
+        ]),
+      ),
+      Container(
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Scan Details', style: appText(size: 13, weight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          _previewRow('assets/icons/clock-icon.svg', 'Scan Time', '17 Jun 2026, 7:32 PM', tone: AppColors.primary),
+          _previewRow('assets/icons/user-icon.svg', 'Guest', s.name, tone: AppColors.primary),
+          _previewRow('assets/icons/calendar-icon.svg', 'Event', 'Mlimani City Hall', tone: AppColors.primary),
+          _previewRow('assets/icons/ticket-icon.svg', 'Ticket / QR Code', s.code, tone: AppColors.primary, mono: true),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(children: [
+              Container(
+                width: 28, height: 28,
+                decoration: BoxDecoration(color: AppColors.error.withOpacity(0.10), shape: BoxShape.circle),
+                child: Center(child: SvgPicture.asset('assets/icons/info-icon.svg', width: 14, height: 14,
+                    colorFilter: const ColorFilter.mode(AppColors.error, BlendMode.srcIn))),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Reason', style: appText(size: 12.5, color: AppColors.textSecondary, weight: FontWeight.w500))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(color: AppColors.error.withOpacity(0.10), borderRadius: BorderRadius.circular(20)),
+                child: Text(s.reasonLabel ?? '-', style: appText(size: 11.5, weight: FontWeight.w700, color: AppColors.error)),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+      if ((s.whatThisMeans ?? '').isNotEmpty)
+        Container(
+          margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.error.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.error.withOpacity(0.18)),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('What this means', style: appText(size: 12.5, weight: FontWeight.w800, color: AppColors.error)),
+            const SizedBox(height: 3),
+            Text(s.whatThisMeans!, style: appText(size: 12, color: AppColors.textSecondary, weight: FontWeight.w500)),
+          ]),
+        ),
+    ]);
+  }
+
+  Widget _previewRow(String iconAsset, String label, String value, {required Color tone, bool last = false, bool mono = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: last ? null : Border(bottom: BorderSide(color: AppColors.borderLight.withOpacity(0.7))),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          width: 28, height: 28,
+          decoration: BoxDecoration(color: tone.withOpacity(0.12), shape: BoxShape.circle),
+          child: Center(child: SvgPicture.asset(iconAsset, width: 14, height: 14,
+              colorFilter: ColorFilter.mode(tone, BlendMode.srcIn))),
+        ),
+        const SizedBox(width: 10),
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(label, style: appText(size: 12.5, color: AppColors.textSecondary, weight: FontWeight.w500)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(value,
+                textAlign: TextAlign.right,
+                style: appText(
+                  size: mono ? 11.5 : 12.5,
+                  weight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  height: 1.35,
+                )),
+          ),
+        ),
+      ]),
+    );
+  }
+
+
+  Widget _miniPill(String text, {bool mono = false}) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(999), border: Border.all(color: AppColors.borderLight)),
+        child: Text(text, style: appText(size: mono ? 10.5 : 11, weight: FontWeight.w700, color: AppColors.textSecondary)),
+      );
 
   Widget _coverFallback() => Container(
         color: AppColors.primary.withOpacity(0.12),
@@ -689,7 +1007,8 @@ class _EventCheckinTabState extends State<EventCheckinTab>
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
               ),
-              child: const Icon(Icons.check_rounded, size: 11, color: Colors.white),
+              child: Center(child: SvgPicture.asset('assets/icons/check-icon.svg', width: 10, height: 10,
+                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))),
             ),
           ),
         ]),
@@ -700,8 +1019,9 @@ class _EventCheckinTabState extends State<EventCheckinTab>
                 style: appText(size: 14, weight: FontWeight.w800, color: AppColors.textPrimary)),
             const SizedBox(height: 3),
             Row(children: [
-              Icon(isTicket ? Icons.confirmation_number_rounded : Icons.mail_outline_rounded,
-                  size: 12, color: AppColors.textTertiary),
+              SvgPicture.asset(isTicket ? 'assets/icons/ticket-icon.svg' : 'assets/icons/email-icon.svg',
+                  width: 12, height: 12,
+                  colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn)),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(ref.isEmpty ? (isTicket ? 'Ticket' : 'Invitation') : '#$ref',
@@ -746,11 +1066,15 @@ class _EventCheckinTabState extends State<EventCheckinTab>
       ),
     );
 
+    Widget shimmerBox({double? w, required double h, double r = 12, Color? c}) =>
+        box(w: w, h: h, r: r, c: c);
+
     return Container(
       color: Colors.white,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Hero card placeholder
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -759,34 +1083,76 @@ class _EventCheckinTabState extends State<EventCheckinTab>
               border: Border.all(color: AppColors.borderLight),
             ),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              box(w: 76, h: 92, r: 12),
+              shimmerBox(w: 76, h: 92, r: 12),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                box(w: 180, h: 15, r: 4),
-                const SizedBox(height: 10),
-                box(w: 120, h: 11, r: 4),
+                shimmerBox(w: 180, h: 15, r: 4),
+                const SizedBox(height: 8),
+                shimmerBox(w: 120, h: 11, r: 4),
                 const SizedBox(height: 16),
                 Row(children: [
-                  Expanded(child: box(h: 42, r: 10)),
+                  Expanded(child: shimmerBox(h: 42, r: 10)),
                   const SizedBox(width: 8),
-                  Expanded(child: box(h: 42, r: 10)),
+                  Expanded(child: shimmerBox(h: 42, r: 10)),
                   const SizedBox(width: 8),
-                  Expanded(child: box(h: 42, r: 10)),
+                  Expanded(child: shimmerBox(h: 42, r: 10)),
                 ]),
               ])),
             ]),
           ),
           const SizedBox(height: 14),
-          AspectRatio(aspectRatio: 1, child: box(h: 1, r: 20, c: Colors.black)),
+          // Camera viewfinder placeholder with corner brackets + pill
+          AspectRatio(
+            aspectRatio: 1,
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Stack(alignment: Alignment.center, children: [
+                Positioned(
+                  top: 14,
+                  child: Container(
+                    width: 150, height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                ),
+                Positioned(top: 14, left: 14, child: Container(width: 38, height: 38, decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), shape: BoxShape.circle))),
+                Positioned(top: 14, right: 14, child: Container(width: 38, height: 38, decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), shape: BoxShape.circle))),
+                _frame(),
+              ]),
+            ),
+          ),
           const SizedBox(height: 16),
-          Row(children: [Expanded(child: Divider(color: AppColors.borderLight)), const SizedBox(width: 10), box(w: 18, h: 10, r: 4), const SizedBox(width: 10), Expanded(child: Divider(color: AppColors.borderLight))]),
+          // "or" divider
+          Row(children: [
+            Expanded(child: Divider(color: AppColors.borderLight, thickness: 1)),
+            const SizedBox(width: 10),
+            shimmerBox(w: 14, h: 10, r: 4),
+            const SizedBox(width: 10),
+            Expanded(child: Divider(color: AppColors.borderLight, thickness: 1)),
+          ]),
           const SizedBox(height: 12),
-          box(h: 50, r: 14),
+          // Manual entry button placeholder
+          Container(
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.borderLight),
+            ),
+            child: Center(child: shimmerBox(w: 160, h: 14, r: 4)),
+          ),
           const SizedBox(height: 22),
-          Row(children: [box(w: 110, h: 15, r: 4), const Spacer(), box(w: 58, h: 12, r: 4)]),
+          // Recent Scans header
+          Row(children: [shimmerBox(w: 110, h: 15, r: 4), const Spacer(), shimmerBox(w: 58, h: 12, r: 4)]),
           const SizedBox(height: 10),
           for (int i = 0; i < 3; i++) ...[
-            box(h: 72, r: 16),
+            shimmerBox(h: 72, r: 16),
             const SizedBox(height: 10),
           ],
         ],
@@ -802,3 +1168,30 @@ class _EventCheckinTabState extends State<EventCheckinTab>
     return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
   }
 }
+
+class _PreviewScenario {
+  final String label;
+  final String kind; // success | warning | error
+  final String title;
+  final String subtitle;
+  final String name;
+  final String code;
+  final String? ticketType;
+  final String? checkedInAt;
+  final String? reasonLabel;
+  final String? whatThisMeans;
+
+  const _PreviewScenario({
+    required this.label,
+    required this.kind,
+    required this.title,
+    required this.subtitle,
+    required this.name,
+    required this.code,
+    this.ticketType,
+    this.checkedInAt,
+    this.reasonLabel,
+    this.whatThisMeans,
+  });
+}
+

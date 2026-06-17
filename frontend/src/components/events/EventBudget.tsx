@@ -33,7 +33,8 @@ import type { EventPermissions } from '@/hooks/useEventPermissions';
 import type { EventBudgetItem } from '@/lib/api/types';
 import writeXlsxFile from 'write-excel-file';
 import ServiceProviderSearch from '@/components/events/ServiceProviderSearch';
-import aiIcon from '@/assets/icons/ai-icon.svg';
+import SvgIcon from '@/components/ui/svg-icon';
+import PackageIcon from '@/assets/icons/package-icon.svg';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 // Module-level import state so it survives unmount/remount
@@ -479,7 +480,7 @@ const EventBudget = ({ eventId, eventTitle, eventBudget, eventType, eventTypeNam
         )}
         {canManage && (
           <Button size="sm" variant="outline" onClick={() => setAiAssistantOpen(true)} className="gap-1.5">
-            <img src={aiIcon} alt="" className="w-4 h-4 dark:invert" />
+            <SvgIcon src={PackageIcon} alt="" className="w-4 h-4" />
             AI Budget
           </Button>
         )}

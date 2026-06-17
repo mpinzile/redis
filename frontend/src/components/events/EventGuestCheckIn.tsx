@@ -1,8 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Loader2, CheckCircle2, ShieldCheck, AlertTriangle, Users, Calendar, MapPin, Keyboard, UserCheck, Scan } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldCheck, AlertTriangle, Users, Keyboard, UserCheck, Scan } from "lucide-react";
 import SvgIcon from "@/components/ui/svg-icon";
 import CameraIcon from "@/assets/icons/camera-icon.svg";
 import ScanIcon from "@/assets/icons/scan-icon.svg";
+import CalendarIcon from "@/assets/icons/calendar-icon.svg";
+import LocationIcon from "@/assets/icons/location-icon.svg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -88,7 +90,7 @@ const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLoc
           return;
         }
         if (r.route === 'contribution_pay' || r.route === 'contribution_receipt') {
-          setScanError(`${r.message || 'Contribution link detected'} — not a guest pass for this event.`);
+          setScanError(`${r.message || 'Contribution link detected'} is not a guest pass for this event.`);
           return;
         }
         if (r.payload?.cross_event) {
@@ -418,7 +420,7 @@ const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLoc
                           transition={{ delay: 0.3 }}
                           className="text-emerald-600 dark:text-emerald-400 font-bold text-lg"
                         >
-                          Welcome In! 🎉
+                          Welcome In
                         </motion.p>
                         <motion.p
                           initial={{ y: 10, opacity: 0 }}
@@ -447,7 +449,7 @@ const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLoc
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-foreground truncate text-lg">{scannedGuest.name || 'Guest'}</p>
                   {scannedGuest.table_number && (
-                    <Badge variant="secondary" className="text-xs mt-1">🪑 Table {scannedGuest.table_number}</Badge>
+                    <Badge variant="secondary" className="text-xs mt-1">Table {scannedGuest.table_number}</Badge>
                   )}
                 </div>
               </motion.div>
@@ -464,12 +466,12 @@ const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLoc
                     {eventTitle && <p className="font-semibold text-sm text-foreground">{eventTitle}</p>}
                     {eventDate && (
                       <p className="text-xs text-muted-foreground flex items-center gap-2">
-                        <Calendar className="w-3.5 h-3.5" />{eventDate}
+                        <SvgIcon src={CalendarIcon} alt="" className="w-3.5 h-3.5" />{eventDate}
                       </p>
                     )}
                     {eventLocation && (
                       <p className="text-xs text-muted-foreground flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5" />{eventLocation}
+                        <SvgIcon src={LocationIcon} alt="" className="w-3.5 h-3.5" />{eventLocation}
                       </p>
                     )}
                   </div>

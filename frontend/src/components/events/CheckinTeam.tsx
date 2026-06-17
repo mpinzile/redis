@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShieldCheck, KeyRound, Copy, RefreshCw, Trash2, UserPlus, Search,
+  ShieldCheck, Copy, RefreshCw, Trash2, UserPlus, Search,
   Loader2, X, AlertTriangle, ScanLine, Users,
 } from "lucide-react";
+import SvgIcon from "@/components/ui/svg-icon";
+import KeySquareIcon from "@/assets/icons/key-square-icon.svg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -168,7 +170,7 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <KeyRound className="w-5 h-5 text-primary" />
+                <SvgIcon src={KeySquareIcon} alt="" className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">Event Access Code</p>

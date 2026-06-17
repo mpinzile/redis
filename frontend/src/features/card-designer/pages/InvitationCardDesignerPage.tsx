@@ -12,9 +12,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   ArrowLeft, Undo2, Redo2, Save, Eye, Star, Type, Square, Circle as CircleIcon,
-  Minus, ImageIcon, QrCode, Trash2, Copy, Lock, Unlock, EyeOff, Eye as EyeOn,
+  Minus, ImageIcon, Trash2, Copy, Lock, Unlock, EyeOff, Eye as EyeOn,
   ChevronUp, ChevronDown,
 } from "lucide-react";
+import SvgIcon from "@/components/ui/svg-icon";
+import QrIcon from "@/assets/icons/qr-icon.svg";
 import { invitationTemplatesApi, type CardDesignDoc, type CardLayer } from "@/lib/api/invitationTemplates";
 import { blankDoc, newLayers, smartStarterDoc, useDesigner } from "../state/useDesigner";
 import { applyPlaceholders, SAMPLE_CONTEXT } from "../render/placeholders";
@@ -251,7 +253,7 @@ export default function InvitationCardDesignerPage() {
               <Button variant="outline" className="w-full justify-start" onClick={() => ed.add(newLayers.rect())}><Square className="w-4 h-4 mr-2" /> Rectangle</Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => ed.add(newLayers.circle())}><CircleIcon className="w-4 h-4 mr-2" /> Circle</Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => ed.add(newLayers.line())}><Minus className="w-4 h-4 mr-2" /> Line</Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => ed.add(newLayers.qr())}><QrCode className="w-4 h-4 mr-2" /> QR Code</Button>
+              <Button variant="outline" className="w-full justify-start" onClick={() => ed.add(newLayers.qr())}><SvgIcon src={QrIcon} alt="QR" className="w-4 h-4 mr-2" /> QR Code</Button>
               <label className="block">
                 <input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); e.currentTarget.value = ""; }} />
                 <span className="block">

@@ -226,7 +226,7 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.qr_code_2_rounded, size: 22, color: Colors.black87),
+                  SvgPicture.asset('assets/icons/qr-icon.svg', width: 22, height: 22, colorFilter: const ColorFilter.mode(Colors.black87, BlendMode.srcIn)),
                   const SizedBox(width: 10),
                   Text('View Your Ticket',
                     style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black87)),

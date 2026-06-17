@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import SvgIcon from '@/components/ui/svg-icon';
 import closeIcon from '@/assets/icons/close-icon.svg';
-import aiIcon from '@/assets/icons/ai-icon.svg';
+import PackageIcon from '@/assets/icons/package-icon.svg';
 import { generateBudgetReportHtml } from '@/utils/generateBudgetReport';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
@@ -289,11 +289,11 @@ const BudgetAssistant: React.FC<BudgetAssistantProps> = ({
             <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-background/10 flex items-center justify-center backdrop-blur-sm">
-                  <img src={aiIcon} alt="AI" className="w-5 h-5 invert" />
+                  <SvgIcon src={PackageIcon} alt="" className="w-5 h-5" forceWhite />
                 </div>
                 <div>
                   <h2 className="text-sm font-semibold text-background">Nuru Budget Assistant</h2>
-                  <p className="text-[10px] text-background/60">AI-powered budget planning</p>
+                  <p className="text-[10px] text-background/60">Budget planning</p>
                 </div>
               </div>
               <DialogPrimitive.Close className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-background/10 transition-colors">
@@ -434,7 +434,7 @@ const BudgetAssistant: React.FC<BudgetAssistantProps> = ({
                   onClick={handleSaveBudget}
                   className="flex-1 h-9 rounded-xl text-xs gap-1.5 bg-foreground text-background hover:bg-foreground/90"
                 >
-                  <img src={aiIcon} alt="" className="w-4 h-4 dark:invert" />
+                  <SvgIcon src={PackageIcon} alt="" className="w-4 h-4" />
                    Save TZS {parseInt(extractedTotal).toLocaleString()}
                 </Button>
               )}

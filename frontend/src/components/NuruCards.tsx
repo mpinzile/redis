@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { CreditCard, Check, Sparkles, Zap, Shield, Gift, QrCode, Users, Clock, Star, Printer, Download, Loader2, Phone, Package } from 'lucide-react';
+import { CreditCard, Check, Zap, Shield, Gift, Users, Clock, Star, Printer, Download, Loader2, Phone, Package, Award } from 'lucide-react';
+import QrIcon from '@/assets/icons/qr-icon.svg';
 import SvgIcon from '@/components/ui/svg-icon';
+const QrCode = ({ className }: { className?: string }) => <SvgIcon src={QrIcon} alt="QR" className={className} />;
 import LocationIcon from '@/assets/icons/location-icon.svg';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -209,7 +211,7 @@ const NuruCards = () => {
     { icon: Star, text: 'Priority Support' },
     { icon: Gift, text: 'Exclusive Perks' },
     { icon: Zap, text: 'Early Bird Invites' },
-    { icon: Sparkles, text: 'Premium Badge' }
+    { icon: Award, text: 'Premium Badge' }
   ];
 
   const templates = orderType === 'premium'
@@ -318,7 +320,7 @@ const NuruCards = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 Premium Card
-                <Sparkles className="w-5 h-5 text-primary" />
+                <Award className="w-5 h-5 text-primary" />
               </CardTitle>
               <CardDescription>Exclusive benefits and VIP access</CardDescription>
             </CardHeader>
@@ -430,7 +432,7 @@ const NuruCards = () => {
                 {qrValue ? (
                   <QRCodeSVG value={qrValue} size={160} level="H" includeMargin={false} />
                 ) : (
-                  <QrCode className="w-24 h-24 text-muted-foreground" />
+                  <SvgIcon src={QrIcon} alt="QR" className="w-24 h-24 opacity-40" />
                 )}
               </div>
               <div className="flex-1">
@@ -438,7 +440,7 @@ const NuruCards = () => {
                   <h2 className="text-2xl font-bold">{isPremium ? 'Premium' : 'Regular'} Nuru Card</h2>
                   {isPremium && (
                     <Badge className="bg-gradient-to-r from-nuru-yellow to-primary text-foreground">
-                      <Sparkles className="w-3 h-3 mr-1" />PREMIUM
+                      <Award className="w-3 h-3 mr-1" />PREMIUM
                     </Badge>
                   )}
                 </div>
@@ -467,7 +469,7 @@ const NuruCards = () => {
                 </div>
                 {!isPremium && (
                   <Button onClick={handleUpgrade} className="bg-gradient-to-r from-nuru-yellow to-primary hover:opacity-90">
-                    <Sparkles className="w-4 h-4 mr-2" />Upgrade to Premium
+                    <Award className="w-4 h-4 mr-2" />Upgrade to Premium
                   </Button>
                 )}
               </div>

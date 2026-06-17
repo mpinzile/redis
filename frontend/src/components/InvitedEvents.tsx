@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Clock, CheckCircle, XCircle, HelpCircle, Loader2, Timer, QrCode } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, HelpCircle, Loader2, Timer } from 'lucide-react';
+import QrIcon from '@/assets/icons/qr-icon.svg';
 import SvgIcon from '@/components/ui/svg-icon';
 import CalendarIcon from '@/assets/icons/calendar-icon.svg';
 import LocationIcon from '@/assets/icons/location-icon.svg';
@@ -280,7 +281,7 @@ const InvitedEvents = () => {
                           }}
                           className="gap-1.5"
                         >
-                          <QrCode className="w-4 h-4" />
+                          <SvgIcon src={QrIcon} alt="QR" className="w-4 h-4" />
                           View Invitation
                         </Button>
                       )}

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/nuru_skeleton.dart';
 import '../../../core/widgets/video_thumbnail_image.dart';
 
 
@@ -66,6 +67,28 @@ class GlimpsesRail extends StatelessWidget {
             seenCount: seenCount,
           );
         },
+      ),
+    );
+  }
+
+  Widget _loadingRail() {
+    return NuruSkeletonGroup(
+      child: SizedBox(
+        height: 96,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          itemCount: 6,
+          separatorBuilder: (_, __) => const SizedBox(width: 14),
+          itemBuilder: (_, i) => SizedBox(
+            width: 72,
+            child: Column(children: [
+              NuruSkeleton.circle(size: 64),
+              const SizedBox(height: 8),
+              NuruSkeleton.text(width: i == 0 ? 62 : 44, height: 10),
+            ]),
+          ),
+        ),
       ),
     );
   }

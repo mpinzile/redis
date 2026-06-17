@@ -880,6 +880,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final filtered = isGlimpsesTab ? const <dynamic>[] : _filteredFeed;
     final glimpseGroups = isGlimpsesTab ? _glimpses : const <dynamic>[];
     final listLen = isGlimpsesTab ? glimpseGroups.length : filtered.length;
+    final showContentPlaceholder = listLen == 0;
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification is ScrollEndNotification &&
@@ -899,14 +900,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: ListView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-          itemCount: listLen + 4 + (_feedLoadingMore && !isGlimpsesTab ? 1 : 0) + (!_feedLoading && _feedFallbackTried && listLen == 0 && !isGlimpsesTab ? 1 : 0),
+          itemCount: listLen + 4 + (showContentPlaceholder ? 1 : 0) + (_feedLoadingMore && !isGlimpsesTab ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == 0) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: GlimpsesRail(
                   glimpses: _glimpses,
-                  loading: false,
+                  loading: _glimpsesLoading,
                   myAvatar: (_profile?['avatar'] as String?),
                   onCreateTap: _openCreateGlimpse,
                   onAuthorTap: _openGlimpseViewer,
@@ -957,7 +958,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 }
                 if (listLen == 0) {
                   return const EmptyState(
-                    icon: Icons.auto_awesome_rounded,
+                    iconAsset: 'assets/icons/photos-icon.svg',
                     title: 'No glimpses in your circle yet',
                     subtitle: 'When you or people you follow share a moment, it will appear here for 24 hours.',
                   );
@@ -981,7 +982,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 );
               } else if (listLen == 0) {
                 return EmptyState(
-                  icon: Icons.dynamic_feed_rounded,
+                  iconAsset: _feedTab == 2 ? 'assets/icons/calendar-icon.svg' : 'assets/icons/image-icon.svg',
                   title: _feedTab == 1
                       ? 'No moments yet'
                       : _feedTab == 2
@@ -1093,7 +1094,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         child: Padding(
                           padding: const EdgeInsets.all(9),
                           child: SvgPicture.asset(
-                            'assets/icons/check-in-reception-icon.svg',
+                            'assets/icons/qr-icon.svg',
                             width: 20,
                             height: 20,
                             colorFilter: const ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn),

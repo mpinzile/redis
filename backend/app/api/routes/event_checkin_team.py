@@ -124,6 +124,66 @@ def _resolve_event(db: Session, event_id: str) -> Optional[Event]:
     return db.query(Event).filter(Event.id == eid).first()
 
 
+def _ensure_active_code_plain(db: Session, event: Event, created_by) -> Optional[str]:
+    """Return the plain access code for `event`, generating one if missing.
+
+    Existing codes created before `code_plain` was added (only the hash is
+    stored) cannot be recovered, so in that case we rotate to a fresh code.
+    """
+    code = db.query(EventCheckinCode).filter(
+        EventCheckinCode.event_id == event.id,
+        EventCheckinCode.status == "active",
+    ).first()
+    if code and code.code_plain:
+        return code.code_plain
+
+    # Either no active code, or legacy code without plain → rotate.
+    if code:
+        code.status = "revoked"
+        code.revoked_at = _now()
+        code.updated_at = _now()
+    plain, prefix = _generate_code()
+    new_code = EventCheckinCode(
+        event_id=event.id,
+        code_hash=_hash_code(plain),
+        code_prefix=prefix,
+        code_plain=plain,
+        status="active",
+        created_by_user_id=created_by,
+    )
+    db.add(new_code)
+    db.commit()
+    return plain
+
+
+def _notify_team_member(db: Session, event: Event, member: User, added_by: User) -> None:
+    """Send the active access code to a newly added team member via
+    WhatsApp first, with SMS fallback for Tanzanian numbers.
+    """
+    phone = (getattr(member, "phone", None) or "").strip()
+    if not phone:
+        return
+    try:
+        code = _ensure_active_code_plain(db, event, added_by.id)
+        if not code:
+            return
+        organizer_name = (
+            f"{added_by.first_name or ''} {added_by.last_name or ''}".strip()
+            or added_by.email
+            or "The organizer"
+        )
+        event_name = event.name or "an event"
+        msg = (
+            f"You've been added to the Nuru check-in team for {event_name} by {organizer_name}.\n\n"
+            f"Access code: {code}\n\n"
+            "Open the Nuru app, tap the QR icon on My Events, and paste the code to start scanning."
+        )
+        from utils.notify_channels import notify_user_wa_sms
+        notify_user_wa_sms(phone, msg)
+    except Exception as e:
+        print(f"[checkin_team] notify failed for {phone}: {e}")
+
+
 # ──────────────────────────────────────────────
 # Team management
 # ──────────────────────────────────────────────
@@ -206,6 +266,7 @@ def add_checkin_team_member(
         existing.added_by_user_id = current_user.id
         existing.updated_at = _now()
         db.commit()
+        _notify_team_member(db, event, target, current_user)
         return standard_response(True, "Re-added to the team", {"id": str(existing.id)})
 
     member = EventCheckinTeamMember(
@@ -217,6 +278,7 @@ def add_checkin_team_member(
     db.add(member)
     db.commit()
     db.refresh(member)
+    _notify_team_member(db, event, target, current_user)
     return standard_response(True, "Added to the team", {"id": str(member.id)})
 
 
@@ -289,6 +351,7 @@ def generate_checkin_code(event_id: str, db: Session = Depends(get_db), current_
         event_id=event.id,
         code_hash=_hash_code(plain),
         code_prefix=prefix,
+        code_plain=plain,
         status="active",
         created_by_user_id=current_user.id,
     )

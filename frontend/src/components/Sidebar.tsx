@@ -4,7 +4,6 @@ import {
   Briefcase,
   AlertTriangle,
   LucideIcon,
-  Sparkles,
   BookOpen,
   Wallet,
   HandCoins,
@@ -16,6 +15,7 @@ import {
   MessageSquare,
   Activity,
   PhoneCall,
+  RotateCcw,
 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
@@ -463,7 +463,7 @@ const Sidebar = ({ onNavigate, onReplayTour, inDrawer = false }: SidebarProps) =
               onClick={onReplayTour}
               className={cn('w-full flex items-center gap-3 py-2 rounded-md font-medium text-sm text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground transition-colors', inDrawer ? 'px-2.5 justify-start' : 'px-2.5 lg:px-2.5 md:px-0 md:justify-center lg:justify-start')}
             >
-              <Sparkles className="w-[18px] h-[18px] flex-shrink-0" />
+              <RotateCcw className="w-[18px] h-[18px] flex-shrink-0" />
               <span className={showLabel}>{t('replay_tour')}</span>
             </button>
           </div>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Loader2, QrCode, X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
+import SvgIcon from '@/components/ui/svg-icon';
+import QrIcon from '@/assets/icons/qr-icon.svg';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -71,7 +73,7 @@ const InvitationQRDialog = ({ eventId, open, onClose }: InvitationQRDialogProps)
             {/* Header */}
             <div className="w-full bg-gradient-to-br from-primary to-primary/80 px-6 pt-8 pb-6 text-center">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-foreground/20 mb-3">
-                <QrCode className="w-6 h-6 text-primary-foreground" />
+                <SvgIcon src={QrIcon} alt="QR" forceWhite className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-primary-foreground">{eventTitle}</h3>
               {guestName && (

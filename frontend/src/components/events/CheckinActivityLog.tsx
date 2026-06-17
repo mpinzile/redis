@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, RefreshCw, Activity, QrCode, Ticket, UserCheck } from "lucide-react";
+import { Loader2, RefreshCw, Activity, Ticket, UserCheck } from "lucide-react";
+import SvgIcon from "@/components/ui/svg-icon";
+import QrIcon from "@/assets/icons/qr-icon.svg";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -110,7 +112,7 @@ const CheckinActivityLog = ({ eventId }: Props) => {
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-medium text-sm text-foreground truncate">{e.name}</span>
                       <Badge variant="secondary" className="text-[9px] tracking-[1.5px] uppercase shrink-0">
-                        {e.kind === "ticket" ? <Ticket className="w-2.5 h-2.5 mr-1" /> : <QrCode className="w-2.5 h-2.5 mr-1" />}
+                        {e.kind === "ticket" ? <Ticket className="w-2.5 h-2.5 mr-1" /> : <SvgIcon src={QrIcon} alt="QR" className="w-2.5 h-2.5 mr-1" />}
                         {e.kind}
                       </Badge>
                     </div>

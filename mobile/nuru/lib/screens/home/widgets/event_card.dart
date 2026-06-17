@@ -140,10 +140,11 @@ class EventCard extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(
-                                  Icons.qr_code_2_rounded,
-                                  size: 12,
-                                  color: Colors.white,
+                                SvgPicture.asset(
+                                  'assets/icons/qr-icon.svg',
+                                  width: 12,
+                                  height: 12,
+                                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(

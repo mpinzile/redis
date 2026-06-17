@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CheckCircle, XCircle, Clock, Sparkles } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Package } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -147,7 +147,7 @@ const SponsorRequestsTab = () => {
       <Card>
         <CardContent className="p-10 text-center">
           <div className="mx-auto w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
-            <Sparkles className="w-6 h-6 text-muted-foreground" />
+            <Package className="w-6 h-6 text-muted-foreground" />
           </div>
           <h3 className="font-semibold mb-1">No sponsorship requests</h3>
           <p className="text-sm text-muted-foreground">

@@ -5,7 +5,7 @@ import type { TicketClass as TicketClassType } from "@/lib/api/ticketing";
 import { X, ChevronLeft, Upload } from "lucide-react";
 import SvgIcon from '@/components/ui/svg-icon';
 import CalendarIcon from '@/assets/icons/calendar-icon.svg';
-import aiIcon from '@/assets/icons/ai-icon.svg';
+import PackageIcon from '@/assets/icons/package-icon.svg';
 import MapLocationPicker from "@/components/MapLocationPicker";
 import VenueMapPreview from "@/components/VenueMapPreview";
 import { Button } from "@/components/ui/button";
@@ -861,8 +861,8 @@ const CreateEvent: React.FC = () => {
                   className="gap-1.5 text-xs h-8 rounded-lg border-foreground/20 hover:bg-foreground hover:text-background transition-colors"
                   onClick={() => setBudgetAssistantOpen(true)}
                 >
-                  <img src={aiIcon} alt="" className="w-4 h-4 dark:invert" />
-                  {t('ai_budget_assistant')}
+                  <SvgIcon src={PackageIcon} alt="" className="w-4 h-4" />
+                  Budget Assistant
                 </Button>
               </div>
               <FormattedNumberInput

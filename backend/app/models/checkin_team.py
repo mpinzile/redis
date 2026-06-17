@@ -12,6 +12,10 @@ class EventCheckinCode(Base):
     event_id = Column(UUID(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
     code_hash = Column(Text, nullable=False)
     code_prefix = Column(Text, nullable=False)
+    # Plain value is retained server-side so the organizer can re-share the
+    # active access code with newly added team members via WhatsApp/SMS
+    # without having to rotate it. Never returned in list responses.
+    code_plain = Column(Text, nullable=True)
     status = Column(Text, nullable=False, default="active")  # active | revoked | expired
     created_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
     revoked_at = Column(DateTime)

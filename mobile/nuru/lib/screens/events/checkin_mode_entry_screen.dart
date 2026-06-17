@@ -2,11 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/checkin_session.dart';
 import '../../core/services/checkin_team_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import 'checkin_mode_screen.dart';
+
+const _kLastCheckinCodeKey = 'checkin_last_code_v1';
 
 /// Entry screen for the **Check-In Mode** flow.
 ///
@@ -32,12 +35,27 @@ class _CheckinModeEntryScreenState extends State<CheckinModeEntryScreen> {
   void initState() {
     super.initState();
     // If a session is already live, jump straight into Check-In Mode.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (CheckinSession.isActive && mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const CheckinModeScreen()),
         );
+        return;
       }
+      // Prefill the last code the user redeemed so ending a session
+      // doesn't force them to retype the same access code.
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final saved = prefs.getString(_kLastCheckinCodeKey);
+        if (!mounted || saved == null || saved.isEmpty) return;
+        final cleaned = saved.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+        final trimmed = cleaned.startsWith('NRU') ? cleaned.substring(3) : cleaned;
+        final chars = trimmed.split('').take(8).toList();
+        for (var i = 0; i < 8; i++) {
+          _ctrls[i].text = i < chars.length ? chars[i] : '';
+        }
+        if (mounted) setState(() {});
+      } catch (_) {}
     });
   }
 
@@ -78,6 +96,12 @@ class _CheckinModeEntryScreenState extends State<CheckinModeEntryScreen> {
         event: event.isEmpty ? null : event,
         permissions: data['permissions'] is Map ? Map<String, dynamic>.from(data['permissions'] as Map) : null,
       );
+      // Remember the code so the next time they open the entry screen
+      // (e.g. after ending a session) it is already filled in.
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_kLastCheckinCodeKey, _code);
+      } catch (_) {}
       if (!mounted) return;
       HapticFeedback.mediumImpact();
       Navigator.of(context).pushReplacement(
@@ -157,7 +181,7 @@ class _CheckinModeEntryScreenState extends State<CheckinModeEntryScreen> {
                   ),
                   child: Center(
                     child: SvgPicture.asset(
-                      'assets/icons/check-in-reception-icon.svg',
+                      'assets/icons/key-square-icon.svg',
                       width: 24,
                       height: 24,
                       colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
@@ -208,7 +232,7 @@ class _CheckinModeEntryScreenState extends State<CheckinModeEntryScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(children: [
-                  const Icon(Icons.error_outline_rounded, color: Color(0xFFD32F2F), size: 18),
+                  SvgPicture.asset('assets/icons/warning-icon.svg', width: 18, height: 18, colorFilter: const ColorFilter.mode(Color(0xFFD32F2F), BlendMode.srcIn)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(_error!,
@@ -248,7 +272,7 @@ class _CheckinModeEntryScreenState extends State<CheckinModeEntryScreen> {
                   final t = data?.text?.trim();
                   if (t != null && t.isNotEmpty) _pasteCode(t);
                 },
-                icon: const Icon(Icons.content_paste_rounded, size: 16, color: AppColors.textSecondary),
+                icon: SvgPicture.asset('assets/icons/document-text-icon.svg', width: 16, height: 16, colorFilter: const ColorFilter.mode(AppColors.textSecondary, BlendMode.srcIn)),
                 label: Text('Paste from clipboard',
                     style: appText(size: 13, weight: FontWeight.w600, color: AppColors.textSecondary)),
               ),
@@ -264,11 +288,11 @@ class _CheckinModeEntryScreenState extends State<CheckinModeEntryScreen> {
                 border: Border.all(color: AppColors.borderLight),
               ),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Icon(Icons.lightbulb_outline_rounded, size: 18, color: AppColors.textSecondary),
+                SvgPicture.asset('assets/icons/info-icon.svg', width: 18, height: 18, colorFilter: const ColorFilter.mode(AppColors.textSecondary, BlendMode.srcIn)),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'You will only be able to scan guests or tickets for the event tied to this code. You will not gain access to the organizer account.',
+                    'You will only be able to scan guests or tickets for the event tied to this code.',
                     style: appText(size: 12, color: AppColors.textSecondary, weight: FontWeight.w500, height: 1.4),
                   ),
                 ),

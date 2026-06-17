@@ -195,7 +195,7 @@ class CheckinFailedScreen extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.borderLight.withOpacity(0.7))),
       ),
-      child: Row(children: [
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           width: 34, height: 34,
           decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.10), shape: BoxShape.circle),
@@ -205,16 +205,23 @@ class CheckinFailedScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Expanded(child: Text(label, style: appText(size: 13, color: AppColors.textSecondary, weight: FontWeight.w500))),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(label, style: appText(size: 13, color: AppColors.textSecondary, weight: FontWeight.w500)),
+        ),
         const SizedBox(width: 10),
-        Flexible(
-          child: Text(value,
-              textAlign: TextAlign.right,
-              style: appText(
-                size: mono ? 12 : 13,
-                weight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              )),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(value,
+                textAlign: TextAlign.right,
+                style: appText(
+                  size: mono ? 12 : 13,
+                  weight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  height: 1.35,
+                )),
+          ),
         ),
       ]),
     );
