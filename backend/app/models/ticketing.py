@@ -67,4 +67,5 @@ class EventTicket(Base):
     # Relationships
     ticket_class = relationship("EventTicketClass", back_populates="tickets")
     event = relationship("Event", back_populates="tickets")
-    buyer = relationship("User")
+    buyer = relationship("User", foreign_keys=[buyer_user_id])
+    checked_in_by = relationship("User", foreign_keys=[checked_in_by_user_id])
