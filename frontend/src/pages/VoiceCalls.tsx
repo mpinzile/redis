@@ -108,7 +108,7 @@ export default function VoiceCalls() {
       page_size: 50,
       ...(scopedEventId ? { event_id: scopedEventId } : {}),
     });
-    if (res.success) setCampaigns(res.data || []);
+    if (res.success) setCampaigns(Array.isArray(res.data) ? res.data : ((res.data as any)?.items ?? []));
     else showApiErrors(res);
     setLoading(false);
   }
@@ -399,15 +399,6 @@ function CreateCampaignDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Event ID (optional)</label>
-            <Input
-              autoComplete="off"
-              value={eventId}
-              onChange={(e) => setEventId(e.target.value)}
-              placeholder="Paste the event UUID to scope this campaign"
-            />
           </div>
           <div>
             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notes</label>
@@ -790,7 +781,7 @@ function OptOutsPanel() {
   async function load() {
     setLoading(true);
     const res = await voiceCallsApi.listOptOuts({ page: 1, page_size: 200 });
-    if (res.success) setItems(res.data || []);
+    if (res.success) setItems(Array.isArray(res.data) ? res.data : ((res.data as any)?.items ?? []));
     else showApiErrors(res);
     setLoading(false);
   }

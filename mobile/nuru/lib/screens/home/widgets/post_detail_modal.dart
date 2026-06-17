@@ -573,8 +573,8 @@ class _PostDetailModalState extends State<PostDetailModal> {
                 style: GoogleFonts.inter(fontSize: 13, color: AppColors.textTertiary, height: 1.4)),
             ],
             const SizedBox(height: 10),
-            if (date.isNotEmpty) _evtMeta(Icons.calendar_today_outlined, date),
-            if (loc.isNotEmpty) _evtMeta(Icons.place_outlined, loc),
+            if (date.isNotEmpty) _evtMeta('assets/icons/calendar-icon.svg', date),
+            if (loc.isNotEmpty) _evtMeta('assets/icons/location-icon.svg', loc),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
@@ -600,11 +600,16 @@ class _PostDetailModalState extends State<PostDetailModal> {
     );
   }
 
-  Widget _evtMeta(IconData icon, String text) {
+  Widget _evtMeta(String svgAsset, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(children: [
-        Icon(icon, size: 14, color: AppColors.textTertiary),
+        SvgPicture.asset(
+          svgAsset,
+          width: 14,
+          height: 14,
+          colorFilter: const ColorFilter.mode(AppColors.textTertiary, BlendMode.srcIn),
+        ),
         const SizedBox(width: 6),
         Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis,
           style: GoogleFonts.inter(fontSize: 12, color: AppColors.textTertiary))),

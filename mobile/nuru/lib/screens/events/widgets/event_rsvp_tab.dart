@@ -34,6 +34,7 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
   bool _loading = true;
   bool _generating = false;
   String _filter = 'all'; // all | confirmed | pending | declined | maybe
+  String _reportStatus = 'all';
   final _searchCtrl = TextEditingController();
 
   @override
@@ -557,63 +558,112 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
   }
 
   void _showReportOptions() {
+    String localStatus = _reportStatus;
+    const options = [
+      ['all', 'All'],
+      ['confirmed', 'Confirmed'],
+      ['maybe', 'Maybe'],
+      ['pending', 'Pending'],
+      ['declined', 'Declined'],
+    ];
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Center(child: Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 16),
-          Text('Download RSVP Report', style: appText(size: 18, weight: FontWeight.w700)),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () { Navigator.pop(ctx); _generateReport('pdf'); },
-                icon: const AppIcon('pdf-file-type', size: 18),
-                label: Text('PDF', style: appText(size: 13, weight: FontWeight.w600)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textPrimary,
-                  side: const BorderSide(color: AppColors.borderLight),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 40, height: 4,
+                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Download RSVP Report', style: appText(size: 18, weight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text('Pick which statuses to include.', style: appText(size: 12, color: AppColors.textTertiary)),
+            const SizedBox(height: 14),
+            Wrap(spacing: 8, runSpacing: 8, children: options.map((o) {
+              final selected = localStatus == o[0];
+              return GestureDetector(
+                onTap: () => setSt(() => localStatus = o[0]),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: selected ? AppColors.textPrimary : Colors.white,
+                    border: Border.all(color: selected ? AppColors.textPrimary : AppColors.borderLight),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(o[1], style: appText(
+                    size: 12, weight: FontWeight.w600,
+                    color: selected ? Colors.white : AppColors.textPrimary,
+                  )),
+                ),
+              );
+            }).toList()),
+            const SizedBox(height: 18),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () { _reportStatus = localStatus; Navigator.pop(ctx); _generateReport('pdf'); },
+                  icon: const AppIcon('pdf-file-type', size: 18),
+                  label: Text('PDF', style: appText(size: 13, weight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.borderLight),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () { Navigator.pop(ctx); _generateReport('xlsx'); },
-                icon: const AppIcon('excel-document', size: 18),
-                label: Text('Excel', style: appText(size: 13, weight: FontWeight.w600)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textPrimary,
-                  side: const BorderSide(color: AppColors.borderLight),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () { _reportStatus = localStatus; Navigator.pop(ctx); _generateReport('xlsx'); },
+                  icon: const AppIcon('excel-document', size: 18),
+                  label: Text('Excel', style: appText(size: 13, weight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.borderLight),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
               ),
-            ),
+            ]),
+            const SizedBox(height: 12),
           ]),
-          const SizedBox(height: 12),
-        ]),
+        ),
       ),
     );
   }
+
+  List<dynamic> _reportGuests() {
+    final src = _allGuests.isNotEmpty ? _allGuests : _guests;
+    if (_reportStatus == 'all') return src;
+    return src.where((g) {
+      final s = ((g is Map ? g['rsvp_status'] : null) ?? 'pending').toString();
+      if (_reportStatus == 'confirmed') return s == 'confirmed' || s == 'attending';
+      return s == _reportStatus;
+    }).toList();
+  }
+
 
   Future<void> _generateReport(String format) async {
     setState(() => _generating = true);
     AppSnackbar.success(context, 'Generating ${format == 'xlsx' ? 'Excel' : 'PDF'} report...');
     // We already hold every guest in memory - feed them straight to the report.
+    final filtered = _reportGuests();
+    final statusLabel = {
+      'all': 'All', 'confirmed': 'Confirmed', 'maybe': 'Maybe',
+      'pending': 'Pending', 'declined': 'Declined',
+    }[_reportStatus] ?? 'All';
     final res = await ReportGenerator.generateRsvpReport(
       widget.eventId,
       format: format,
-      guests: _allGuests.isNotEmpty ? _allGuests : _guests,
+      guests: filtered,
+      eventTitle: statusLabel == 'All' ? null : 'Filter: $statusLabel',
     );
     if (!mounted) return;
     setState(() => _generating = false);
@@ -621,7 +671,7 @@ class _EventRsvpTabState extends State<EventRsvpTab> with AutomaticKeepAliveClie
       if (format == 'pdf' && res['bytes'] != null) {
         Navigator.push(context, MaterialPageRoute(
           builder: (_) => ReportPreviewScreen(
-            title: 'RSVP Report',
+            title: 'RSVP Report · $statusLabel',
             pdfBytes: res['bytes'] as Uint8List,
             filePath: res['path'] as String?,
           ),

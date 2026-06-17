@@ -6,6 +6,7 @@ import 'package:http_parser/http_parser.dart';
 import 'secure_token_storage.dart';
 import 'api_config.dart';
 import 'rate_limit_notifier.dart';
+import 'checkin_session.dart';
 
 void _checkRateLimit(http.Response res, String endpoint) {
   if (res.statusCode != 429) return;
@@ -91,6 +92,13 @@ class ApiBase {
       final token = await SecureTokenStorage.getToken();
       if (token != null) h['Authorization'] = 'Bearer $token';
     }
+    // Scanner team members operate inside a scoped Check-In Mode session.
+    // Forward the session token so the backend can audit scans to the team
+    // member and enforce per-session permissions (guests / tickets / both).
+    final cs = CheckinSession.token;
+    if (cs != null && cs.isNotEmpty) {
+      h['X-Checkin-Session'] = cs;
+    }
     return h;
   }
 
@@ -98,6 +106,10 @@ class ApiBase {
     final h = <String, String>{'Accept': 'application/json'};
     final token = await SecureTokenStorage.getToken();
     if (token != null) h['Authorization'] = 'Bearer $token';
+    final cs = CheckinSession.token;
+    if (cs != null && cs.isNotEmpty) {
+      h['X-Checkin-Session'] = cs;
+    }
     return h;
   }
 

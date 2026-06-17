@@ -12,7 +12,7 @@ from typing import List, Optional
 
 import httpx
 import pytz
-from fastapi import APIRouter, Depends, File, Form, UploadFile, Body, Query
+from fastapi import APIRouter, Depends, File, Form, UploadFile, Body, Query, Header
 from fastapi.responses import Response
 from sqlalchemy import func as sa_func, or_
 from sqlalchemy.orm import Session
@@ -34,6 +34,7 @@ from models import (
 )
 from utils.auth import get_current_user
 from utils.helpers import format_price, standard_response, format_phone_display
+from utils.checkin_scan import authorize_scan, stamp_audit, idempotent
 from api.routes.rsvp import generate_rsvp_code
 from utils.validation_functions import validate_phone_number
 from utils.event_owner import get_event_owner_display_name, user_can_manage_event
@@ -3042,16 +3043,23 @@ def resend_invitation(event_id: str, guest_id: str, body: dict = Body(default={}
 
 
 @router.post("/{event_id}/guests/{guest_id}/checkin")
-def checkin_guest(event_id: str, guest_id: str, body: dict = Body(default={}), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def checkin_guest(
+    event_id: str,
+    guest_id: str,
+    body: dict = Body(default={}),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    x_checkin_session: Optional[str] = Header(default=None),
+):
     try:
         eid = uuid.UUID(event_id)
         gid = uuid.UUID(guest_id)
     except ValueError:
         return standard_response(False, "Invalid ID format.")
 
-    event, err = _verify_event_access(db, eid, current_user, "can_check_in_guests")
-    if err:
-        return err
+    event, scan_session, perm_err = authorize_scan(db, eid, current_user, x_checkin_session)
+    if perm_err:
+        return standard_response(False, perm_err)
 
     att = db.query(EventAttendee).filter(EventAttendee.id == gid, EventAttendee.event_id == eid).first()
     if not att:
@@ -3061,10 +3069,16 @@ def checkin_guest(event_id: str, guest_id: str, body: dict = Body(default={}), d
         return standard_response(False, "Guest already checked in", {"checked_in_at": att.checked_in_at.isoformat() if att.checked_in_at else None})
 
     now = datetime.now(EAT)
+    actor = current_user
+    if scan_session and scan_session.user_id:
+        bound = db.query(User).filter(User.id == scan_session.user_id).first()
+        if bound:
+            actor = bound
     att.checked_in = True
     att.checked_in_at = now
     att.rsvp_status = RSVPStatusEnum.confirmed
     att.updated_at = now
+    stamp_audit(att, user=actor, session=scan_session, device_ref=(body or {}).get("device_ref"))
     db.commit()
 
     name = _resolve_guest_name(db, att)
@@ -3186,6 +3200,8 @@ def get_scan_stats(event_id: str, limit: int = Query(10, ge=1, le=100), db: Sess
             EventTicket.created_at.desc(),
         ).limit(limit).all()
         buyer_ids = {t.buyer_user_id for t in rows if t.buyer_user_id}
+        performer_ids = {getattr(t, "checked_in_by_user_id", None) for t in rows}
+        performer_ids.discard(None)
         avatars = {}
         if buyer_ids:
             for uid, pic in db.query(UserProfile.user_id, UserProfile.profile_picture_url).filter(
@@ -3193,6 +3209,10 @@ def get_scan_stats(event_id: str, limit: int = Query(10, ge=1, le=100), db: Sess
             ).all():
                 if pic:
                     avatars[uid] = pic
+        performer_map = {}
+        if performer_ids:
+            for uid in performer_ids:
+                performer_map[uid] = _performer_brief(db, uid)
         for t in rows:
             recent.append({
                 "kind": "ticket",
@@ -3200,6 +3220,7 @@ def get_scan_stats(event_id: str, limit: int = Query(10, ge=1, le=100), db: Sess
                 "ref": t.ticket_code,
                 "avatar": avatars.get(t.buyer_user_id),
                 "checked_in_at": t.checked_in_at.isoformat() if t.checked_in_at else None,
+                "checked_in_by": performer_map.get(getattr(t, "checked_in_by_user_id", None)),
                 "status": "checked_in" if t.checked_in else "pending",
             })
     else:
@@ -3212,6 +3233,8 @@ def get_scan_stats(event_id: str, limit: int = Query(10, ge=1, le=100), db: Sess
             EventAttendee.updated_at.desc(),
         ).limit(limit).all()
         user_ids = {att.user_id for att in rows if getattr(att, 'user_id', None)}
+        performer_ids = {getattr(att, "checked_in_by_user_id", None) for att in rows}
+        performer_ids.discard(None)
         avatars = {}
         if user_ids:
             for uid, pic in db.query(UserProfile.user_id, UserProfile.profile_picture_url).filter(
@@ -3219,6 +3242,10 @@ def get_scan_stats(event_id: str, limit: int = Query(10, ge=1, le=100), db: Sess
             ).all():
                 if pic:
                     avatars[uid] = pic
+        performer_map = {}
+        if performer_ids:
+            for uid in performer_ids:
+                performer_map[uid] = _performer_brief(db, uid)
         for att in rows:
             recent.append({
                 "kind": "guest",
@@ -3226,8 +3253,10 @@ def get_scan_stats(event_id: str, limit: int = Query(10, ge=1, le=100), db: Sess
                 "ref": str(att.id)[:8].upper(),
                 "avatar": avatars.get(getattr(att, 'user_id', None)),
                 "checked_in_at": att.checked_in_at.isoformat() if att.checked_in_at else None,
+                "checked_in_by": performer_map.get(getattr(att, "checked_in_by_user_id", None)),
                 "status": "checked_in" if att.checked_in else "pending",
             })
+
 
     return standard_response(True, "Scan stats", {
         "title": title,
@@ -3245,6 +3274,20 @@ def get_scan_stats(event_id: str, limit: int = Query(10, ge=1, le=100), db: Sess
     })
 
 
+def _performer_brief(db: Session, user_id) -> dict | None:
+    if not user_id:
+        return None
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        return None
+    prof = db.query(UserProfile).filter(UserProfile.user_id == u.id).first()
+    return {
+        "id": str(u.id),
+        "full_name": f"{u.first_name or ''} {u.last_name or ''}".strip() or u.email,
+        "avatar": getattr(prof, "profile_picture_url", None) if prof else None,
+    }
+
+
 def _ticket_payload(db: Session, ticket: EventTicket, event: Event, *, reason: str | None = None) -> dict:
     tc = db.query(EventTicketClass).filter(EventTicketClass.id == ticket.ticket_class_id).first()
     return {
@@ -3259,6 +3302,7 @@ def _ticket_payload(db: Session, ticket: EventTicket, event: Event, *, reason: s
         "quantity": ticket.quantity or 1,
         "checked_in": ticket.checked_in,
         "checked_in_at": ticket.checked_in_at.isoformat() if ticket.checked_in_at else None,
+        "checked_in_by": _performer_brief(db, getattr(ticket, "checked_in_by_user_id", None)),
         "event": {
             "id": str(event.id),
             "name": event.name,
@@ -3285,6 +3329,7 @@ def _attendee_payload(db: Session, att: EventAttendee, event: Event, *, reason: 
         "rsvp_status": att.rsvp_status.value if hasattr(att.rsvp_status, "value") else att.rsvp_status,
         "checked_in": att.checked_in,
         "checked_in_at": att.checked_in_at.isoformat() if att.checked_in_at else None,
+        "checked_in_by": _performer_brief(db, getattr(att, "checked_in_by_user_id", None)),
         "event": {
             "id": str(event.id),
             "name": event.name,
@@ -3295,8 +3340,15 @@ def _attendee_payload(db: Session, att: EventAttendee, event: Event, *, reason: 
     }
 
 
+
 @router.post("/{event_id}/guests/checkin-qr")
-def checkin_guest_qr(event_id: str, body: dict = Body(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def checkin_guest_qr(
+    event_id: str,
+    body: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    x_checkin_session: Optional[str] = Header(default=None),
+):
     """Unified scanner: checks in either an event guest (invitation/attendee)
     OR a paid ticket. Returns a rich payload that the mobile success/failed
     screens render verbatim, plus refreshed aggregate stats.
@@ -3306,9 +3358,17 @@ def checkin_guest_qr(event_id: str, body: dict = Body(...), db: Session = Depend
     except ValueError:
         return standard_response(False, "Invalid event ID format.")
 
-    event, err = _verify_event_access(db, eid, current_user, "can_check_in_guests")
-    if err:
-        return err
+    event, scan_session, perm_err = authorize_scan(db, eid, current_user, x_checkin_session)
+    if perm_err:
+        return standard_response(False, perm_err)
+
+    # Idempotency: a duplicate scan within 10s with the same client_scan_id
+    # returns the exact prior response (no double-stamping).
+    client_scan_id = (body.get("client_scan_id") or "").strip() or None
+    idem_key = f"{eid}:{client_scan_id}" if client_scan_id else None
+    cached, store_idem = idempotent(idem_key)
+    if cached is not None:
+        return cached
 
     now = datetime.now(EAT)
     stats = _scan_event_aggregates(db, event)
@@ -3420,13 +3480,22 @@ def checkin_guest_qr(event_id: str, body: dict = Body(...), db: Session = Depend
             return standard_response(False, "This ticket has already been used to check in",
                                      _base_payload("already_used"))
 
+        actor = current_user
+        if scan_session and scan_session.user_id:
+            bound = db.query(User).filter(User.id == scan_session.user_id).first()
+            if bound:
+                actor = bound
         ticket.checked_in = True
         ticket.checked_in_at = now
+        stamp_audit(ticket, user=actor, session=scan_session, device_ref=(body or {}).get("device_ref"))
         db.commit()
         stats = _scan_event_aggregates(db, event)
         payload = _ticket_payload(db, ticket, event)
         payload.update({"scan_time": now.isoformat(), "stats": stats})
-        return standard_response(True, "Ticket checked in successfully", payload)
+        resp = standard_response(True, "Ticket checked in successfully", payload)
+        if store_idem:
+            store_idem(resp)
+        return resp
 
     # ── 7. GUEST branch.
     if att.checked_in:
@@ -3439,15 +3508,24 @@ def checkin_guest_qr(event_id: str, body: dict = Body(...), db: Session = Depend
         return standard_response(False, "This guest declined the invitation",
                                  _base_payload("rsvp_declined"))
 
+    actor = current_user
+    if scan_session and scan_session.user_id:
+        bound = db.query(User).filter(User.id == scan_session.user_id).first()
+        if bound:
+            actor = bound
     att.checked_in = True
     att.checked_in_at = now
     att.rsvp_status = RSVPStatusEnum.checked_in
     att.updated_at = now
+    stamp_audit(att, user=actor, session=scan_session, device_ref=(body or {}).get("device_ref"))
     db.commit()
     stats = _scan_event_aggregates(db, event)
     payload = _attendee_payload(db, att, event)
     payload.update({"scan_time": now.isoformat(), "stats": stats})
-    return standard_response(True, "Guest checked in successfully", payload)
+    resp = standard_response(True, "Guest checked in successfully", payload)
+    if store_idem:
+        store_idem(resp)
+    return resp
 
 
 

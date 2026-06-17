@@ -1733,6 +1733,22 @@ def build_event_attendee_dicts(db: Session, attendees: list) -> List[Dict]:
         for inv in db.query(EventInvitation).filter(EventInvitation.id.in_(list(invitation_ids))).all():
             inv_map[inv.id] = inv
 
+    # Bulk checked-in-by users (audit surfacing for guest list)
+    performer_ids = {getattr(a, "checked_in_by_user_id", None) for a in attendees}
+    performer_ids.discard(None)
+    performer_map: Dict[Any, dict] = {}
+    if performer_ids:
+        pf_users = db.query(User).filter(User.id.in_(list(performer_ids))).all()
+        pf_profiles = {p.user_id: p for p in db.query(UserProfile).filter(UserProfile.user_id.in_(list(performer_ids))).all()}
+        for u in pf_users:
+            prof = pf_profiles.get(u.id)
+            performer_map[u.id] = {
+                "id": str(u.id),
+                "full_name": f"{u.first_name or ''} {u.last_name or ''}".strip() or u.email,
+                "avatar": getattr(prof, "profile_picture_url", None) if prof else None,
+            }
+
+
     # Bulk plus-ones — one query for all attendees
     plus_ones_map: Dict[Any, list] = defaultdict(list)
     if att_ids:
@@ -1793,6 +1809,7 @@ def build_event_attendee_dicts(db: Session, attendees: list) -> List[Dict]:
             "invitation_method": invitation.sent_via if invitation else None,
             "checked_in": att.checked_in,
             "checked_in_at": att.checked_in_at.isoformat() if att.checked_in_at else None,
+            "checked_in_by": performer_map.get(getattr(att, "checked_in_by_user_id", None)),
             "created_at": att.created_at.isoformat() if att.created_at else None,
             "qr_payload": qr_payload,
         })
