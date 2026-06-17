@@ -349,8 +349,18 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-auto sm:ml-0">
-                    {getStatusBadge(guest.rsvp_status)}
-                    {guest.checked_in && <Badge className="bg-blue-100 text-blue-800 whitespace-nowrap"><QrCode className="w-3 h-3 mr-1" />Checked In</Badge>}
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(guest.rsvp_status)}
+                        {guest.checked_in && <Badge className="bg-blue-100 text-blue-800 whitespace-nowrap"><QrCode className="w-3 h-3 mr-1" />Checked In</Badge>}
+                      </div>
+                      {guest.checked_in && (guest as any).checked_in_by?.full_name && (
+                        <p className="text-[10px] text-muted-foreground text-right">
+                          by {(guest as any).checked_in_by.full_name}
+                          {guest.checked_in_at ? ` · ${new Date(guest.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                        </p>
+                      )}
+                    </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">

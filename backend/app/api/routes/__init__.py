@@ -66,6 +66,8 @@ from .meeting_redirect import router as meeting_redirect_router
 from .event_cards import router as event_cards_router
 from .whatsapp_logs import router as whatsapp_logs_router
 from .voice_calls import router as voice_calls_router
+from .event_checkin_team import router as event_checkin_team_router, redeem_router as checkin_redeem_router
+from .scan_resolve import router as scan_resolve_router
 
 # All routers to be included in main app
 all_routers = [
@@ -133,6 +135,9 @@ all_routers = [
     event_cards_router,                 # /cards/... + /events/.../cards/...
     whatsapp_logs_router,               # /whatsapp/logs/...
     voice_calls_router,                 # /voice-calls/... (Nuru Voice Assistant)
+    event_checkin_team_router,          # /user-events/.../checkin-team + /checkin-code
+    checkin_redeem_router,              # /checkin/redeem + /checkin/session/*
+    scan_resolve_router,                # /scan/resolve  (universal QR dispatcher)
 ]
 
 __all__ = [

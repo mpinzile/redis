@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/services/events_service.dart';
+import '../../../core/services/scan_resolve_service.dart';
 import '../checkin_success_screen.dart';
 import '../checkin_failed_screen.dart';
 
@@ -133,6 +134,46 @@ class _EventCheckinTabState extends State<EventCheckinTab>
     _lastAt = now;
     setState(() => _processing = true);
 
+    // 1. Universal resolver — figure out what this QR is BEFORE mutating.
+    final resolved = await ScanResolveService.resolve(raw, eventId: widget.eventId);
+    final r = (resolved['data'] is Map)
+        ? Map<String, dynamic>.from(resolved['data'] as Map)
+        : <String, dynamic>{};
+    final route = (r['route'] ?? 'unknown').toString();
+    final payload = (r['payload'] is Map)
+        ? Map<String, dynamic>.from(r['payload'] as Map)
+        : <String, dynamic>{};
+    final crossEvent = payload['cross_event'] == true;
+    final resolvedMsg = (r['message'] ?? '').toString();
+
+    String? blockMessage;
+    if (route == 'checkin_code') {
+      blockMessage = 'This is a Check-In Team access code. Tap the QR icon on My Events to redeem it.';
+    } else if (route == 'contribution_pay' || route == 'contribution_receipt') {
+      blockMessage = '${resolvedMsg.isEmpty ? 'Contribution link detected' : resolvedMsg} — not a pass for this event.';
+    } else if (crossEvent) {
+      final otherName = (r['event'] is Map) ? (r['event']['name'] ?? '').toString() : '';
+      blockMessage = otherName.isNotEmpty
+          ? 'This pass belongs to "$otherName". Open that event to check it in.'
+          : 'This pass belongs to a different event.';
+    } else if (route == 'unknown') {
+      blockMessage = resolvedMsg.isEmpty ? 'We could not recognize this QR code.' : resolvedMsg;
+    }
+
+    if (blockMessage != null) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => CheckinFailedScreen(
+          data: r,
+          message: blockMessage!,
+          onScanAgain: () {},
+          onManualCheckIn: () => _showManualEntry(),
+        ),
+      ));
+      return;
+    }
+
     final res = await EventsService.checkinByQR(widget.eventId, raw);
     if (!mounted) return;
     setState(() => _processing = false);
@@ -158,7 +199,7 @@ class _EventCheckinTabState extends State<EventCheckinTab>
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => CheckinFailedScreen(
           data: data,
-          message: (res['message'] ?? 'Check-in failed').toString(),
+          message: (res['message'] ?? resolvedMsg.isNotEmpty ? resolvedMsg : 'Check-in failed').toString(),
           onScanAgain: () {},
           onManualCheckIn: () => _showManualEntry(),
         ),

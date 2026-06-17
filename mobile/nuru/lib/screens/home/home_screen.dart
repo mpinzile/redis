@@ -53,6 +53,8 @@ import '../onboarding/country_confirm_sheet.dart';
 import '../migration/migration_welcome_sheet.dart';
 import '../../providers/migration_provider.dart';
 import '../events/create_event_screen.dart';
+import '../events/checkin_mode_entry_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'home_tab_controller.dart';
 import '../../core/utils/notification_center.dart';
 import '../../core/widgets/global_transfers_badge.dart';
@@ -72,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Map<String, dynamic>? _profile;
   List<dynamic> _feedPosts = [];
   bool _feedLoading = true;
+  bool _feedRefreshing = false; // silent refresh in-flight; drives tab-switch skeleton
   bool _feedFallbackTried = false;
   bool _feedLoadingMore = false;
   int _feedPage = 1;
@@ -383,6 +386,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() {
         if (_feedPosts.isEmpty) _feedLoading = true;
         _feedFallbackTried = false;
+        _feedRefreshing = true;
         _feedPage = 1;
       });
     }
@@ -427,9 +431,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_feedPosts.isEmpty && refresh && !_feedFallbackTried && !silent) {
       _feedFallbackTried = true;
       await _loadTrendingFallback();
-      if (mounted) setState(() => _feedLoading = false);
+      if (mounted) setState(() { _feedLoading = false; _feedRefreshing = false; });
     } else if (_feedPosts.isEmpty && refresh && !silent) {
-      if (mounted) setState(() => _feedLoading = false);
+      if (mounted) setState(() { _feedLoading = false; _feedRefreshing = false; });
+    } else if (mounted) {
+      setState(() => _feedRefreshing = false);
     }
   }
 
@@ -925,10 +931,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   selected: _feedTab,
                   onChanged: (i) {
                     setState(() => _feedTab = i);
-                    // Silently refresh glimpses whenever the user lands on the
-                    // Glimpses tab so newly posted moments appear without a
-                    // manual pull-to-refresh.
-                    if (i == 3) _loadGlimpses(silent: true);
+                    // Silently refresh whenever the user lands on a tab so
+                    // the variant-specific skeleton shows realistic content
+                    // shape while fresh items load. Glimpses has its own
+                    // endpoint; the other tabs share the feed query.
+                    if (i == 3) {
+                      _loadGlimpses(silent: true);
+                    } else {
+                      _loadFeed(refresh: true, silent: true);
+                    }
                   },
                 ),
               );
@@ -951,7 +962,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     subtitle: 'When you or people you follow share a moment, it will appear here for 24 hours.',
                   );
                 }
-              } else if (_feedLoading || (_feedPosts.isEmpty && !_feedFallbackTried) || (listLen == 0 && !_feedFallbackTried)) {
+              } else if (
+                _feedLoading ||
+                (_feedPosts.isEmpty && !_feedFallbackTried) ||
+                (listLen == 0 && !_feedFallbackTried) ||
+                // Tab-switch case: we have posts but none match this tab and a
+                // silent refresh is in-flight. Render the variant skeleton so
+                // the page never goes blank between tab presses.
+                (listLen == 0 && _feedRefreshing)
+              ) {
                 return NuruSkeletonPostList(
                   itemCount: 4,
                   variant: _feedTab == 1
@@ -1041,11 +1060,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _UnderlineTabs(
-                  tabs: const ['My Events', 'Invited', 'Committee', 'My Contributions'],
-                  selected: _eventsSubTab,
-                  onChanged: (i) => setLocalState(() => _eventsSubTab = i),
-                ),
+                Row(children: [
+                  Expanded(
+                    child: _UnderlineTabs(
+                      tabs: const ['My Events', 'Invited', 'Committee', 'My Contributions'],
+                      selected: _eventsSubTab,
+                      onChanged: (i) => setLocalState(() => _eventsSubTab = i),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Quick entry into Check-In Mode for scanner team members.
+                  // They redeem an access code from the organizer and start
+                  // scanning guests / tickets without touching the organizer
+                  // account.
+                  Tooltip(
+                    message: 'Check-In Mode',
+                    child: Material(
+                      color: AppColors.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: AppColors.borderLight),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const CheckinModeEntryScreen()),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(9),
+                          child: SvgPicture.asset(
+                            'assets/icons/check-in-reception-icon.svg',
+                            width: 20,
+                            height: 20,
+                            colorFilter: const ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ]),
                 const SizedBox(height: 14),
                 if (_eventsSubTab == 0 && _eventsSearchOpen) ...[
                   SizedBox(width: double.infinity, child: _eventsSearchBar(setLocalState)),

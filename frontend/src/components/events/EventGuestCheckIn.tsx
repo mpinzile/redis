@@ -10,9 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { eventsApi } from "@/lib/api/events";
+import { scanApi } from "@/lib/api/scan";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import CheckinTeam from "@/components/events/CheckinTeam";
+import TestCheckinPreview from "@/components/events/TestCheckinPreview";
+import CheckinActivityLog from "@/components/events/CheckinActivityLog";
 
 interface EventGuestCheckInProps {
   eventId: string;
@@ -24,7 +28,7 @@ interface EventGuestCheckInProps {
   confirmedCount?: number;
 }
 
-const EventGuestCheckIn = ({ eventId, isCreator: _isCreator, eventTitle, eventDate, eventLocation, guestCount = 0, confirmedCount = 0 }: EventGuestCheckInProps) => {
+const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLocation, guestCount = 0, confirmedCount = 0 }: EventGuestCheckInProps) => {
   const { t } = useLanguage();
   const [scanOpen, setScanOpen] = useState(false);
   const [scanMode, setScanMode] = useState<'manual' | 'camera'>('manual');
@@ -73,8 +77,29 @@ const EventGuestCheckIn = ({ eventId, isCreator: _isCreator, eventTitle, eventDa
     setScannedGuest(null);
     setCheckInDone(false);
     try {
+      // 1. Universal resolver — figure out what this QR actually is.
+      const resolved = await scanApi.resolve({ code, event_id: eventId });
+      const r = resolved?.data as any;
+
+      if (r && r.route && r.route !== 'unknown') {
+        // Non-check-in QR types → surface a clear message, keep existing error UI.
+        if (r.route === 'checkin_code') {
+          setScanError('This is a Check-In Team access code. Open the Nuru mobile app and choose "Check-In Mode" to redeem it.');
+          return;
+        }
+        if (r.route === 'contribution_pay' || r.route === 'contribution_receipt') {
+          setScanError(`${r.message || 'Contribution link detected'} — not a guest pass for this event.`);
+          return;
+        }
+        if (r.payload?.cross_event) {
+          const otherName = r.event?.name ? ` "${r.event.name}"` : '';
+          setScanError(`This pass belongs to a different event${otherName}. Open that event to check it in.`);
+          return;
+        }
+        // Ticket / guest → fall through and run the mutation.
+      }
+
       const guestId = extractGuestId(code);
-      // Try QR check-in lookup first
       const res = await eventsApi.checkinGuestByQR(eventId, { qr_code: guestId });
       if (res.success && res.data) {
         const d = res.data as any;
@@ -84,13 +109,14 @@ const EventGuestCheckIn = ({ eventId, isCreator: _isCreator, eventTitle, eventDa
         setRecentCheckins(prev => [{ name: d.name || 'Guest', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }, ...prev].slice(0, 10));
         toast.success(`${d.name || 'Guest'} checked in!`);
       } else {
-        // Check if already checked in (backend returns data with checked_in flag)
         const resData = (res as any).data;
         if (resData && resData.checked_in) {
           setScannedGuest(resData);
-          setCheckInDone(false); // Not a new check-in
+          setCheckInDone(false);
         } else {
-          setScanError((res as any).message || 'Guest not found for this event');
+          // Use the resolver's nicer error message if available.
+          const fallback = (r && r.message) ? r.message : ((res as any).message || 'Guest not found for this event');
+          setScanError(fallback);
         }
       }
     } catch (err: any) {
@@ -251,6 +277,18 @@ const EventGuestCheckIn = ({ eventId, isCreator: _isCreator, eventTitle, eventDa
           <p className="text-sm text-muted-foreground mb-4">Tap the scan button above to start checking in guests</p>
         </div>
       )}
+
+      {/* Audit log — who scanned whom */}
+      <CheckinActivityLog eventId={eventId} />
+
+      {/* Check-In Team management */}
+      <CheckinTeam eventId={eventId} canManage={isCreator} />
+
+      {/* Test Check-In preview */}
+      <TestCheckinPreview />
+
+
+
 
       {/* Scan Dialog */}
       <Dialog open={scanOpen} onOpenChange={(open) => { setScanOpen(open); if (!open) resetScan(); }}>

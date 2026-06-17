@@ -127,3 +127,6 @@ from models.voice_calls import (
     VoiceCampaign, VoiceCallJob, VoiceCallLog, VoiceOptOut,
 )
 from models.voice_feature import VoiceFeatureSetting
+from models.checkin_team import (
+    EventCheckinCode, EventCheckinTeamMember, EventCheckinSession,
+)

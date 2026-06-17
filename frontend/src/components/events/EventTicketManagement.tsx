@@ -599,6 +599,11 @@ const EventTicketManagement = ({ eventId, isCreator }: EventTicketManagementProp
                       <p className="text-muted-foreground text-xs">
                         {scannedTicket.checked_in_at ? `Checked in at ${new Date(scannedTicket.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
                       </p>
+                      {scannedTicket.checked_in_by?.full_name && (
+                        <p className="text-[11px] text-muted-foreground">
+                          by <span className="text-foreground/80 font-medium">{scannedTicket.checked_in_by.full_name}</span>
+                        </p>
+                      )}
                     </motion.div>
                   ) : scannedIsValid ? (
                     <motion.div key="valid" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-1">

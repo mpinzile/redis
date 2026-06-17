@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { CheckCircle, X, Clock, Users, Mail, Phone, Search, Filter, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReportPreviewDialog from '@/components/ReportPreviewDialog';
@@ -38,6 +39,7 @@ const EventRSVP = ({ eventId, eventTitle, permissions }: EventRSVPProps) => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [reportStatus, setReportStatus] = useState<string>('all');
   const [showReport, setShowReport] = useState(false);
 
   const stats = {
@@ -98,13 +100,63 @@ const EventRSVP = ({ eventId, eventTitle, permissions }: EventRSVPProps) => {
     }
   };
 
+  const getReportGuests = () => {
+    const filtered = reportStatus === 'all'
+      ? guests
+      : guests.filter(g => (g.rsvp_status || 'pending') === reportStatus);
+    return [...filtered].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  };
+
+  const reportStatusLabel = () => {
+    switch (reportStatus) {
+      case 'confirmed': return 'Attending';
+      case 'pending': return 'Pending';
+      case 'declined': return 'Declined';
+      case 'maybe': return 'Maybe';
+      default: return 'All Statuses';
+    }
+  };
+
+  const handleDownloadExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const rows: any[][] = [
+      ['RSVP REPORT', eventTitle || ''],
+      ['Filter', reportStatusLabel()],
+      ['Generated', new Date().toLocaleString()],
+      [],
+      ['Attendance Summary'],
+      ['Total Invited', stats.total],
+      ['Attending', stats.attending],
+      ['Maybe', stats.maybe],
+      ['Pending', stats.pending],
+      ['Declined', stats.declined],
+      ['Checked In', stats.checked_in],
+      [],
+      ['#', 'Full Name', 'Phone', 'Status', 'Plus Ones'],
+    ];
+    const sorted = getReportGuests();
+    sorted.forEach((g, i) => {
+      rows.push([
+        i + 1,
+        g.name || '',
+        formatPhoneDisplay(g.phone) || '',
+        getStatusLabel(g.rsvp_status),
+        g.plus_ones > 0 ? `+${g.plus_ones}` : '',
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 6 }, { wch: 28 }, { wch: 18 }, { wch: 14 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'RSVP');
+    XLSX.writeFile(wb, `rsvp_report_${reportStatus}.xlsx`);
+  };
+
   const generateRsvpReportHtml = (): string => {
     const logoAbsoluteUrl = new URL(nuruLogoUrl, window.location.origin).href;
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-    const sortedGuests = [...guests].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const sortedGuests = getReportGuests();
 
     const guestRows = sortedGuests.map((g, i) => `
       <tr style="${i % 2 === 0 ? '' : 'background:#f8fafc'}">
@@ -136,6 +188,7 @@ const EventRSVP = ({ eventId, eventTitle, permissions }: EventRSVPProps) => {
         .stat-card { background: #f0f9ff; border-radius: 8px; padding: 14px 18px; flex: 1; min-width: 80px; text-align: center; border: 1px solid #e0f2fe; }
         .stat-card .num { font-size: 24px; font-weight: bold; color: #2563eb; }
         .stat-card .lbl { font-size: 11px; color: #64748b; margin-top: 4px; text-transform: uppercase; }
+        .chip { display:inline-block; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600; background:#eef2ff; color:#3730a3; margin-left:8px; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #1e293b; color: white; padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
         td { border-bottom: 1px solid #e5e7eb; }
@@ -156,25 +209,26 @@ const EventRSVP = ({ eventId, eventTitle, permissions }: EventRSVPProps) => {
         </div>
 
         <div class="section">
-          <div class="section-title">Attendance Summary</div>
+          <div class="section-title">Attendance Summary <span class="chip">${reportStatusLabel()}</span></div>
           <div class="stats-row">
             <div class="stat-card"><div class="num">${stats.total}</div><div class="lbl">Total Invited</div></div>
             <div class="stat-card"><div class="num" style="color:#16a34a">${stats.attending}</div><div class="lbl">Attending</div></div>
-            <div class="stat-card"><div class="num" style="color:#ca8a04">${stats.pending}</div><div class="lbl">Pending</div></div>
+            <div class="stat-card"><div class="num" style="color:#ca8a04">${stats.maybe}</div><div class="lbl">Maybe</div></div>
+            <div class="stat-card"><div class="num" style="color:#f97316">${stats.pending}</div><div class="lbl">Pending</div></div>
             <div class="stat-card"><div class="num" style="color:#dc2626">${stats.declined}</div><div class="lbl">Declined</div></div>
             <div class="stat-card"><div class="num" style="color:#2563eb">${stats.checked_in}</div><div class="lbl">Checked In</div></div>
           </div>
           ${stats.total > 0 ? `
             <div style="font-size:13px;color:#475569;line-height:1.8">
-              <strong>Attendance Rate:</strong> ${stats.total > 0 ? Math.round((stats.attending / stats.total) * 100) : 0}% of invited guests confirmed attendance.<br/>
-              <strong>Response Rate:</strong> ${stats.total > 0 ? Math.round(((stats.attending + stats.declined + (stats.maybe || 0)) / stats.total) * 100) : 0}% of guests have responded to the invitation.<br/>
+              <strong>Attendance Rate:</strong> ${Math.round((stats.attending / stats.total) * 100)}% of invited guests confirmed attendance.<br/>
+              <strong>Response Rate:</strong> ${Math.round(((stats.attending + stats.declined + stats.maybe) / stats.total) * 100)}% of guests have responded to the invitation.<br/>
               <strong>Pending Action:</strong> ${stats.pending} guest${stats.pending !== 1 ? 's' : ''} ${stats.pending === 1 ? 'has' : 'have'} not yet responded.
             </div>
           ` : ''}
         </div>
 
         <div class="section">
-          <div class="section-title">Guest List (${guests.length})</div>
+          <div class="section-title">Guest List (${sortedGuests.length}${reportStatus !== 'all' ? ' filtered' : ''})</div>
           <table>
             <thead>
               <tr>
@@ -196,18 +250,32 @@ const EventRSVP = ({ eventId, eventTitle, permissions }: EventRSVPProps) => {
     `;
   };
 
+
   if (loading) return <RSVPSkeletonLoader />;
 
   return (
     <div className="space-y-6">
       {/* Header with Report button */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h3 className="text-sm font-medium text-muted-foreground">RSVP Tracking</h3>
-        <Button variant="outline" size="sm" onClick={() => setShowReport(true)}>
-          <FileText className="w-4 h-4 mr-2" />
-          RSVP Report
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={reportStatus} onValueChange={setReportStatus}>
+            <SelectTrigger className="w-40 h-9 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="confirmed">Attending</SelectItem>
+              <SelectItem value="maybe">Maybe</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="declined">Declined</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={() => setShowReport(true)}>
+            <FileText className="w-4 h-4 mr-2" />
+            RSVP Report
+          </Button>
+        </div>
       </div>
+
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -283,9 +351,11 @@ const EventRSVP = ({ eventId, eventTitle, permissions }: EventRSVPProps) => {
       <ReportPreviewDialog
         open={showReport}
         onOpenChange={setShowReport}
-        title="RSVP Report"
+        title={`RSVP Report · ${reportStatusLabel()}`}
         html={showReport ? generateRsvpReportHtml() : ''}
+        onDownloadExcel={handleDownloadExcel}
       />
+
     </div>
   );
 };

@@ -282,6 +282,22 @@ def list_logs(
 @router.get("/stats")
 def stats(
     days: int = Query(7, ge=1, le=90),
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+    message_type: Optional[str] = None,
+    template_name: Optional[str] = None,
+    event_id: Optional[str] = None,
+    recipient: Optional[str] = None,
+    q: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    message_purpose: Optional[str] = None,
+    recipient_type: Optional[str] = None,
+    whatsapp_available: Optional[str] = None,
+    source_module: Optional[str] = None,
+    error_code: Optional[str] = None,
+    fallback_status: Optional[str] = None,
+    with_deleted: int = Query(0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -289,16 +305,29 @@ def stats(
     base = db.query(WAMessageLog.status, func.count(WAMessageLog.id))
     if not _is_admin(current_user):
         base = _scope_to_user(base, db, current_user)
-    base = base.filter(WAMessageLog.deleted_at.is_(None))
-    rows = (
-        base.filter(WAMessageLog.created_at >= since)
-            .group_by(WAMessageLog.status)
-            .all()
+    if not (_is_admin(current_user) and with_deleted):
+        base = base.filter(WAMessageLog.deleted_at.is_(None))
+    # Apply the same filters as list_logs so the dashboard stat tiles
+    # always reflect what the user is currently viewing.
+    base = _apply_filters(
+        base,
+        status=status, category=category, message_type=message_type,
+        template_name=template_name, event_id=event_id, recipient=recipient,
+        q=q, date_from=date_from, date_to=date_to,
+        message_purpose=message_purpose, recipient_type=recipient_type,
+        whatsapp_available=whatsapp_available, source_module=source_module,
+        error_code=error_code, fallback_status=fallback_status,
     )
+    # Apply the time window only when no explicit date filter is set so a
+    # date range from the user takes precedence over the default lookback.
+    if not date_from and not date_to:
+        base = base.filter(WAMessageLog.created_at >= since)
+    rows = base.group_by(WAMessageLog.status).all()
     counts = {s: int(c) for s, c in rows}
     total = sum(counts.values())
     counts["total"] = total
     return standard_response(True, "Stats", counts)
+
 
 
 @router.get("/events")

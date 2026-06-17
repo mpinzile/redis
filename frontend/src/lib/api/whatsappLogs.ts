@@ -100,8 +100,11 @@ export interface WaEventOption { event_id: string; event_name: string }
 export function listWhatsappLogs(params: WaLogQuery = {}): Promise<PaginatedResponse<WaLog>> {
   return get<WaLog[]>(`/whatsapp/logs${buildQueryString(params)}`) as unknown as Promise<PaginatedResponse<WaLog>>;
 }
-export function getWhatsappLogStats(days = 7): Promise<ApiResponse<Record<string, number>>> {
-  return get<Record<string, number>>(`/whatsapp/logs/stats?days=${days}`);
+export function getWhatsappLogStats(
+  daysOrParams: number | (WaLogQuery & { days?: number }) = 7,
+): Promise<ApiResponse<Record<string, number>>> {
+  const params = typeof daysOrParams === "number" ? { days: daysOrParams } : daysOrParams;
+  return get<Record<string, number>>(`/whatsapp/logs/stats${buildQueryString(params)}`);
 }
 export function getWhatsappLog(id: string): Promise<ApiResponse<WaLogDetail>> {
   return get<WaLogDetail>(`/whatsapp/logs/${id}`);

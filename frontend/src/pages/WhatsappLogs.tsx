@@ -203,10 +203,16 @@ export default function WhatsappLogs() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const r = await getWhatsappLogStats(7);
+      const r = await getWhatsappLogStats({
+        days: 7,
+        ...filters,
+        q: search || undefined,
+        recipient: recipient || undefined,
+        with_deleted: showDeleted ? 1 : 0,
+      });
       setStats((r?.data as any) ?? {});
     } catch {/* no-op */}
-  }, []);
+  }, [filters, search, recipient, showDeleted]);
 
   const fetchAux = useCallback(async () => {
     try {

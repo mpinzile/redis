@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/incoming_call_service.dart';
 import 'core/services/push_notification_service.dart';
+import 'core/services/checkin_session.dart';
 import 'providers/auth_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/wallet_provider.dart';
@@ -25,8 +26,13 @@ import 'screens/cards/public_card_view_screen.dart';
 import 'widgets/rate_limit_overlay.dart';
 import 'widgets/payment_verifier.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Restore an active Check-In Mode session (if any) before runApp so the
+  // very first API call already carries the `X-Checkin-Session` header.
+  // Fire-and-forget if shared_preferences is slow to come up.
+  // ignore: discarded_futures
+  CheckinSession.hydrate();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,

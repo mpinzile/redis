@@ -1,4 +1,5 @@
 import 'api_base.dart';
+import 'checkin_session.dart';
 
 class EventGuestsService {
   static Future<Map<String, dynamic>> getGuests(
@@ -60,7 +61,13 @@ class EventGuestsService {
   }
 
   static Future<Map<String, dynamic>> checkinByQR(String eventId, String qrCode) {
-    return ApiBase.post('/user-events/$eventId/guests/checkin-qr', {'qr_code': qrCode}, fallbackError: 'Unable to check in');
+    // `client_scan_id` lets the backend de-dupe identical retries from a
+    // flaky network or a double-tap within its idempotency window.
+    return ApiBase.post(
+      '/user-events/$eventId/guests/checkin-qr',
+      {'qr_code': qrCode, 'client_scan_id': CheckinSession.newScanId()},
+      fallbackError: 'Unable to check in',
+    );
   }
 
   /// Premium scanner header data (event card + aggregate stats + recent scans).
