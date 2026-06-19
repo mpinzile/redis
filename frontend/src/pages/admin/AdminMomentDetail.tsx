@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { adminApi } from "@/lib/api/admin";
 import { useAdminMeta } from "@/hooks/useAdminMeta";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { usePromptDialog } from "@/hooks/usePromptDialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getTimeAgo } from "@/utils/getTimeAgo";
@@ -15,6 +16,7 @@ export default function AdminMomentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+  const { prompt, PromptDialog } = usePromptDialog();
   const [moment, setMoment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [deletingEcho, setDeletingEcho] = useState<string | null>(null);
@@ -31,9 +33,14 @@ export default function AdminMomentDetail() {
 
   const handleRemove = async () => {
     if (!moment) return;
-    const reason = window.prompt("Reason for removing this moment? (Sent to the user)");
+    const reason = await prompt({
+      title: "Remove this moment?",
+      description: "Share the reason for removing it. The user will see this message with the takedown notice.",
+      placeholder: "e.g. Contains content that breaks our community guidelines",
+      confirmLabel: "Remove moment",
+    });
     if (reason === null) return;
-    const res = await adminApi.updateMomentStatus(moment.id, false, reason || "Policy violation");
+    const res = await adminApi.updateMomentStatus(moment.id, false, reason.trim() || "Policy violation");
     if (res.success) { toast.success("Moment removed"); load(); }
     else toast.error(res.message || "Failed");
   };
@@ -78,6 +85,7 @@ export default function AdminMomentDetail() {
   return (
     <div className="space-y-6">
       <ConfirmDialog />
+      <PromptDialog />
 
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/admin/moments")}>

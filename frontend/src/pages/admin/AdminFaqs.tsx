@@ -13,9 +13,11 @@ import { usePolling } from "@/hooks/usePolling";
 import { useAdminMeta } from "@/hooks/useAdminMeta";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 export default function AdminFaqs() {
   useAdminMeta("FAQs");
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const cache = adminCaches.faqs;
   const [faqs, setFaqs] = useState<any[]>(cache.data);
   const [loading, setLoading] = useState(!cache.loaded);
@@ -59,7 +61,13 @@ export default function AdminFaqs() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this FAQ?")) return;
+    const ok = await confirm({
+      title: "Delete this FAQ?",
+      description: "It will be removed from the public help center.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setDeletingId(id);
     const res = await adminApi.deleteFaq(id);
     if (res.success) { toast.success("FAQ deleted"); load(); }
@@ -71,6 +79,7 @@ export default function AdminFaqs() {
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground">FAQs</h2>

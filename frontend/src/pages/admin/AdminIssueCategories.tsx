@@ -13,10 +13,12 @@ import { useAdminMeta } from "@/hooks/useAdminMeta";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 export default function AdminIssueCategories() {
   useAdminMeta("Issue Categories");
   const navigate = useNavigate();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const initialLoad = useRef(true);
@@ -62,7 +64,13 @@ export default function AdminIssueCategories() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this category?")) return;
+    const ok = await confirm({
+      title: "Delete this category?",
+      description: "Existing issues will keep their current category. This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setDeletingId(id);
     const res = await adminApi.deleteIssueCategory(id);
     if (res.success) { toast.success("Category deleted"); load(); }
@@ -72,6 +80,7 @@ export default function AdminIssueCategories() {
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => navigate("/admin/issues")}>

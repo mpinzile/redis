@@ -3074,10 +3074,39 @@ def checkin_guest(
     if not att:
         return standard_response(False, "Guest not found")
 
-    if att.checked_in:
-        return standard_response(False, "Guest already checked in", {"checked_in_at": att.checked_in_at.isoformat() if att.checked_in_at else None})
-
     now = datetime.now(EAT)
+    name = _resolve_guest_name(db, att)
+
+    # Parity with QR scan validations (see checkin_guest_qr): event timing,
+    # rsvp_declined, already-checked-in. We surface the same reason codes so
+    # the UI can render consistent messages regardless of scan vs manual.
+    if hasattr(event, "start_date") and event.start_date:
+        from datetime import date as date_type, timedelta
+        event_date = event.start_date if isinstance(event.start_date, date_type) else (
+            event.start_date.date() if hasattr(event.start_date, "date") else None
+        )
+        if event_date:
+            today = now.date()
+            if event_date < today:
+                return standard_response(False, "This event has already ended — check-in is closed",
+                                         {"reason": "event_ended", "guest_id": str(att.id), "name": name})
+            if event_date > today + timedelta(days=1):
+                return standard_response(False, "This event hasn't started yet — check-in opens on event day",
+                                         {"reason": "event_not_started", "guest_id": str(att.id), "name": name})
+
+    if att.checked_in:
+        return standard_response(False, "This guest has already been checked in", {
+            "reason": "already_used",
+            "guest_id": str(att.id),
+            "name": name,
+            "checked_in_at": att.checked_in_at.isoformat() if att.checked_in_at else None,
+        })
+
+    # Declined guests are still allowed to be checked in (they may show up
+    # at the door anyway). Their rsvp_status is updated to "checked_in"
+    # below so the change is reflected on the guest list immediately.
+
+
     actor = current_user
     if scan_session and scan_session.user_id:
         bound = db.query(User).filter(User.id == scan_session.user_id).first()
@@ -3085,12 +3114,11 @@ def checkin_guest(
             actor = bound
     att.checked_in = True
     att.checked_in_at = now
-    att.rsvp_status = RSVPStatusEnum.confirmed
+    att.rsvp_status = RSVPStatusEnum.checked_in
     att.updated_at = now
     stamp_audit(att, user=actor, session=scan_session, device_ref=(body or {}).get("device_ref"))
     db.commit()
 
-    name = _resolve_guest_name(db, att)
     return standard_response(True, "Guest checked in successfully", {"guest_id": str(att.id), "name": name, "checked_in": True, "checked_in_at": now.isoformat()})
 
 
@@ -3511,11 +3539,9 @@ def checkin_guest_qr(
         return standard_response(False, "This guest has already been checked in",
                                  _base_payload("already_used"))
 
-    # Honour rsvp_status: declined guests shouldn't sneak past via QR.
-    rsvp_val = att.rsvp_status.value if hasattr(att.rsvp_status, "value") else att.rsvp_status
-    if rsvp_val == "declined":
-        return standard_response(False, "This guest declined the invitation",
-                                 _base_payload("rsvp_declined"))
+    # Declined guests are still allowed to be checked in (people change
+    # plans). Their rsvp_status is updated to "checked_in" below.
+
 
     actor = current_user
     if scan_session and scan_session.user_id:

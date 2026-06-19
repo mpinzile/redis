@@ -11,9 +11,11 @@ import { adminCaches } from "@/lib/api/adminCache";
 import { usePolling } from "@/hooks/usePolling";
 import { useAdminMeta } from "@/hooks/useAdminMeta";
 import { toast } from "sonner";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 export default function AdminEventTypes() {
   useAdminMeta("Event Types");
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const cache = adminCaches.eventTypes;
   const [types, setTypes] = useState<any[]>(cache.data);
   const [loading, setLoading] = useState(!cache.loaded);
@@ -63,7 +65,13 @@ export default function AdminEventTypes() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This may affect existing events.`)) return;
+    const ok = await confirm({
+      title: `Delete "${name}"?`,
+      description: "This event type will no longer be available when creating events. Existing events keep their current type.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setDeletingId(id);
     const res = await adminApi.deleteEventType(id);
     if (res.success) { toast.success("Event type deleted"); load(); }
@@ -73,6 +81,7 @@ export default function AdminEventTypes() {
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground">Event Types</h2>

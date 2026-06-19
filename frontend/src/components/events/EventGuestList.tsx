@@ -1,46 +1,77 @@
-import { useState } from 'react';
-import { 
-  UserPlus, Send, Search, Filter, CheckCircle, Clock, X,
-  Mail, Phone, MoreVertical, Trash, Loader2, BookUser, Download, Image as ImageIcon, Upload
-} from 'lucide-react';
-import SvgIcon from '@/components/ui/svg-icon';
-import QrIcon from '@/assets/icons/qr-icon.svg';
+import { useState } from "react";
+import {
+  UserPlus,
+  Send,
+  Search,
+  Filter,
+  CheckCircle,
+  Clock,
+  X,
+  Mail,
+  Phone,
+  MoreVertical,
+  Trash,
+  Loader2,
+  BookUser,
+  Download,
+  Image as ImageIcon,
+  Upload,
+} from "lucide-react";
+import SvgIcon from "@/components/ui/svg-icon";
+import QrIcon from "@/assets/icons/qr-icon.svg";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuSeparator,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuSeparator,
   DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useEventGuests } from '@/data/useEvents';
-import { usePolling } from '@/hooks/usePolling';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { toast } from 'sonner';
-import { showCaughtError } from '@/lib/api';
-import UserSearchInput from './UserSearchInput';
-import MemberImportDialog from './MemberImportDialog';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEventGuests } from "@/data/useEvents";
+import { usePolling } from "@/hooks/usePolling";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { toast } from "sonner";
+import { showCaughtError } from "@/lib/api";
+import UserSearchInput from "./UserSearchInput";
+import MemberImportDialog from "./MemberImportDialog";
 
-import ContributorSearchInput from './ContributorSearchInput';
-import GuestListSkeletonLoader from './GuestListSkeletonLoader';
-import { GUEST_FOLLOW_UP_LABELS, getGuestFollowUpLabel } from './guestFollowUpLabels';
-import type { EventGuest } from '@/lib/api/types';
-import type { SearchedUser } from '@/hooks/useUserSearch';
-import type { UserContributor } from '@/lib/api/contributors';
-import type { EventPermissions } from '@/hooks/useEventPermissions';
-import { useLanguage } from '@/lib/i18n/LanguageContext';
+import ContributorSearchInput from "./ContributorSearchInput";
+import GuestListSkeletonLoader from "./GuestListSkeletonLoader";
+import {
+  GUEST_FOLLOW_UP_LABELS,
+  getGuestFollowUpLabel,
+} from "./guestFollowUpLabels";
+import type { EventGuest } from "@/lib/api/types";
+import type { SearchedUser } from "@/hooks/useUserSearch";
+import type { UserContributor } from "@/lib/api/contributors";
+import type { EventPermissions } from "@/hooks/useEventPermissions";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 interface EventGuestListProps {
   eventId: string;
@@ -50,14 +81,28 @@ interface EventGuestListProps {
 const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
   const { t } = useLanguage();
   const canManage = permissions?.can_manage_guests || permissions?.is_creator;
-  const canSendInvites = permissions?.can_send_invitations || permissions?.is_creator;
-  const canCheckin = permissions?.can_check_in_guests || permissions?.is_creator;
-  const { guests, summary, loading, error, refetch, addGuest, updateGuest, deleteGuest, sendInvitation, checkinGuest, undoCheckinGuest } = useEventGuests(eventId);
-  
+  const canSendInvites =
+    permissions?.can_send_invitations || permissions?.is_creator;
+  const canCheckin =
+    permissions?.can_check_in_guests || permissions?.is_creator;
+  const {
+    guests,
+    summary,
+    loading,
+    error,
+    refetch,
+    addGuest,
+    updateGuest,
+    deleteGuest,
+    sendInvitation,
+    checkinGuest,
+    undoCheckinGuest,
+  } = useEventGuests(eventId);
+
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -65,17 +110,22 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
   const [selectedGuest, setSelectedGuest] = useState<EventGuest | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Tracks which invitation send button is in flight so only that one spins.
-  const [sendingMethod, setSendingMethod] = useState<null | 'email' | 'sms' | 'whatsapp' | 'card'>(null);
+  const [sendingMethod, setSendingMethod] = useState<
+    null | "email" | "sms" | "whatsapp" | "card"
+  >(null);
+  // Tracks the guest row currently being checked in (drives the
+  // "Checking in {name}…" progress toast + row disable state).
+  const [checkingInId, setCheckingInId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<SearchedUser | null>(null);
-  const [selectedContributor, setSelectedContributor] = useState<UserContributor | null>(null);
-  const [guestSourceTab, setGuestSourceTab] = useState<string>('user');
-  
+  const [selectedContributor, setSelectedContributor] =
+    useState<UserContributor | null>(null);
+  const [guestSourceTab, setGuestSourceTab] = useState<string>("user");
 
   const [newGuest, setNewGuest] = useState({
     plus_ones: 0,
-    dietary_requirements: '',
-    notes: '',
-    common_name: '',
+    dietary_requirements: "",
+    notes: "",
+    common_name: "",
   });
 
   // Pause polling when any dialog is open to prevent form disruption
@@ -85,20 +135,25 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
   const resetDialog = () => {
     setSelectedUser(null);
     setSelectedContributor(null);
-    setNewGuest({ plus_ones: 0, dietary_requirements: '', notes: '', common_name: '' });
+    setNewGuest({
+      plus_ones: 0,
+      dietary_requirements: "",
+      notes: "",
+      common_name: "",
+    });
   };
 
   const handleAddGuest = async () => {
-    if (guestSourceTab === 'contributor') {
+    if (guestSourceTab === "contributor") {
       if (!selectedContributor) {
-        toast.error('Please search and select a contributor');
+        toast.error("Please search and select a contributor");
         return;
       }
 
       setIsSubmitting(true);
       try {
         await addGuest({
-          guest_type: 'contributor',
+          guest_type: "contributor",
           contributor_id: selectedContributor.id,
           name: selectedContributor.name,
           phone: selectedContributor.phone || undefined,
@@ -106,13 +161,13 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
           common_name: newGuest.common_name.trim() || undefined,
           dietary_requirements: newGuest.dietary_requirements || undefined,
           notes: newGuest.notes || undefined,
-          rsvp_status: 'pending'
+          rsvp_status: "pending",
         });
-        toast.success('Contributor added as guest');
+        toast.success("Contributor added as guest");
         setAddDialogOpen(false);
         resetDialog();
       } catch (err: any) {
-        showCaughtError(err, 'Failed to add guest');
+        showCaughtError(err, "Failed to add guest");
       } finally {
         setIsSubmitting(false);
       }
@@ -120,14 +175,14 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
     }
 
     if (!selectedUser) {
-      toast.error('Please search and select a user');
+      toast.error("Please search and select a user");
       return;
     }
 
     setIsSubmitting(true);
     try {
       await addGuest({
-        guest_type: 'user',
+        guest_type: "user",
         user_id: selectedUser.id,
         name: `${selectedUser.first_name} ${selectedUser.last_name}`,
         email: selectedUser.email,
@@ -136,28 +191,32 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
         plus_ones: newGuest.plus_ones,
         dietary_requirements: newGuest.dietary_requirements || undefined,
         notes: newGuest.notes || undefined,
-        rsvp_status: 'pending'
+        rsvp_status: "pending",
       });
-      toast.success('Guest added successfully');
+      toast.success("Guest added successfully");
       setAddDialogOpen(false);
       resetDialog();
     } catch (err: any) {
-      showCaughtError(err, 'Failed to add guest');
+      showCaughtError(err, "Failed to add guest");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSendInvitation = async (method: "email" | "sms" | "whatsapp" | "whatsapp_text") => {
+  const handleSendInvitation = async (
+    method: "email" | "sms" | "whatsapp" | "whatsapp_text",
+  ) => {
     if (!selectedGuest) return;
-    setSendingMethod(method === 'whatsapp_text' ? 'whatsapp' : method);
+    setSendingMethod(method === "whatsapp_text" ? "whatsapp" : method);
     try {
       await sendInvitation(selectedGuest.id, method);
-      toast.success(`Invitation sent via ${method === 'whatsapp_text' ? 'WhatsApp' : method}`);
+      toast.success(
+        `Invitation sent via ${method === "whatsapp_text" ? "WhatsApp" : method}`,
+      );
       setInviteDialogOpen(false);
       setSelectedGuest(null);
     } catch (err: any) {
-      showCaughtError(err, 'Failed to send invitation');
+      showCaughtError(err, "Failed to send invitation");
     } finally {
       setSendingMethod(null);
     }
@@ -165,17 +224,17 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
 
   const handleSendInvitationCard = async () => {
     if (!selectedGuest?.phone) {
-      toast.error('Guest phone number is required');
+      toast.error("Guest phone number is required");
       return;
     }
-    setSendingMethod('card');
+    setSendingMethod("card");
     try {
-      await sendInvitation(selectedGuest.id, 'whatsapp');
-      toast.success('Invitation card sent via WhatsApp');
+      await sendInvitation(selectedGuest.id, "whatsapp");
+      toast.success("Invitation card sent via WhatsApp");
       setInviteDialogOpen(false);
       setSelectedGuest(null);
     } catch (err: any) {
-      showCaughtError(err, 'Failed to send invitation card');
+      showCaughtError(err, "Failed to send invitation card");
     } finally {
       setSendingMethod(null);
     }
@@ -185,142 +244,186 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
     // Manual check-in mirrors the QR-scan validation on the backend
     // (permissions + already-checked-in guard). We add a UX confirm step
     // when the RSVP is not Confirmed so organisers don't tap by mistake.
-    const needsConfirm = guest.rsvp_status !== 'confirmed';
+    const needsConfirm = guest.rsvp_status !== "confirmed";
     if (needsConfirm) {
       const labelMap: Record<string, string> = {
-        pending: 'has not replied yet',
-        declined: 'declined the invitation',
+        pending: "has not replied yet",
+        declined: "declined the invitation",
         maybe: 'replied "Maybe"',
       };
-      const reason = labelMap[guest.rsvp_status] || `is marked "${guest.rsvp_status}"`;
+      const reason =
+        labelMap[guest.rsvp_status] || `is marked "${guest.rsvp_status}"`;
       const ok = await confirm({
-        title: 'Check in this guest?',
-        description: `${guest.name || 'This guest'} ${reason}. Check them in anyway?`,
-        confirmLabel: 'Check In',
+        title: "Check in this guest?",
+        description: `${guest.name || "This guest"} ${reason}. Check them in anyway?`,
+        confirmLabel: "Check In",
       });
       if (!ok) return;
     }
+    const displayName = guest.name || "Guest";
+    setCheckingInId(guest.id);
+    const toastId = toast.loading(`Checking in ${displayName}…`);
     try {
       await checkinGuest(guest.id);
-      toast.success(`${guest.name || 'Guest'} checked in`, {
-        description: 'Welcome marked at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      toast.success(`${displayName} checked in`, {
+        id: toastId,
+        description:
+          "Welcome marked at " +
+          new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
         icon: <CheckCircle className="w-4 h-4 text-emerald-600" />,
       });
     } catch (err: any) {
-      showCaughtError(err, 'Failed to check in guest');
+      toast.dismiss(toastId);
+      // Backend now returns parity reasons (event_ended, event_not_started,
+      // rsvp_declined, already_used). showCaughtError surfaces the message.
+      showCaughtError(err, `Couldn't check in ${displayName}`);
+    } finally {
+      setCheckingInId(null);
     }
   };
 
   const handleUndoCheckin = async (guest: EventGuest) => {
     const ok = await confirm({
-      title: 'Undo check-in?',
-      description: `Remove the check-in for ${guest.name || 'this guest'}? They will appear as not arrived again.`,
-      confirmLabel: 'Undo check-in',
+      title: "Undo check-in?",
+      description: `Remove the check-in for ${guest.name || "this guest"}? They will appear as not arrived again.`,
+      confirmLabel: "Undo check-in",
       destructive: true,
     });
     if (!ok) return;
     try {
       await undoCheckinGuest(guest.id);
-      toast.success('Check-in reversed');
+      toast.success("Check-in reversed");
     } catch (err: any) {
-      showCaughtError(err, 'Failed to undo check-in');
+      showCaughtError(err, "Failed to undo check-in");
     }
   };
 
   const handleUpdateRsvp = async (
     guest: EventGuest,
-    status: 'confirmed' | 'pending' | 'declined' | 'maybe',
+    status: "confirmed" | "pending" | "declined" | "maybe",
   ) => {
     if (guest.rsvp_status === status) return;
     try {
-      await updateGuest(guest.id, { rsvp_status: status } as Partial<EventGuest>);
+      await updateGuest(guest.id, {
+        rsvp_status: status,
+      } as Partial<EventGuest>);
       const label =
-        status === 'confirmed' ? 'Confirmed' :
-        status === 'declined' ? 'Declined' :
-        status === 'maybe' ? 'Maybe' : 'Pending';
+        status === "confirmed"
+          ? "Confirmed"
+          : status === "declined"
+            ? "Declined"
+            : status === "maybe"
+              ? "Maybe"
+              : "Pending";
       toast.success(`RSVP updated to ${label}`);
     } catch (err: any) {
-      showCaughtError(err, 'Failed to update RSVP');
+      showCaughtError(err, "Failed to update RSVP");
     }
   };
 
-  const handleUpdateFollowUp = async (guest: EventGuest, slug: string | null) => {
+  const handleUpdateFollowUp = async (
+    guest: EventGuest,
+    slug: string | null,
+  ) => {
     if ((guest.follow_up_label || null) === slug) return;
     try {
-      await updateGuest(guest.id, { follow_up_label: slug } as Partial<EventGuest>);
-      toast.success(slug ? 'Follow-up label set' : 'Follow-up label cleared');
+      await updateGuest(guest.id, {
+        follow_up_label: slug,
+      } as Partial<EventGuest>);
+      toast.success(slug ? "Follow-up label set" : "Follow-up label cleared");
     } catch (err: any) {
-      showCaughtError(err, 'Failed to update follow-up label');
+      showCaughtError(err, "Failed to update follow-up label");
     }
   };
 
   const handleDeleteGuest = async (guestId: string) => {
     const confirmed = await confirm({
-      title: 'Remove Guest',
-      description: 'Are you sure you want to remove this guest? This action cannot be undone.',
-      confirmLabel: 'Remove',
+      title: "Remove Guest",
+      description:
+        "Are you sure you want to remove this guest? This action cannot be undone.",
+      confirmLabel: "Remove",
       destructive: true,
     });
     if (!confirmed) return;
     try {
       await deleteGuest(guestId);
-      toast.success('Guest removed');
+      toast.success("Guest removed");
     } catch (err: any) {
-      showCaughtError(err, 'Failed to remove guest');
+      showCaughtError(err, "Failed to remove guest");
     }
   };
 
-  const filteredGuests = guests.filter(guest => {
-    const name = guest.name || '';
-    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredGuests = guests.filter((guest) => {
+    const name = guest.name || "";
+    const matchesSearch =
+      name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       guest.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       guest.phone?.includes(searchQuery);
-    const matchesStatus = statusFilter === 'all' || guest.rsvp_status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" || guest.rsvp_status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const getStatusBadge = (status: string) => {
     const base = "rounded-full px-2.5 py-0.5 text-[11px] font-medium border";
     switch (status) {
-      case 'confirmed':
+      case "confirmed":
         return (
-          <Badge className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30`}>
-            <CheckCircle className="w-3 h-3 mr-1" />Confirmed
+          <Badge
+            className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30`}
+          >
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Confirmed
           </Badge>
         );
-      case 'pending':
+      case "pending":
         return (
-          <Badge className={`${base} bg-muted/60 text-muted-foreground border-border`}>
+          <Badge
+            className={`${base} bg-muted/60 text-muted-foreground border-border`}
+          >
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60 mr-1.5" />
             Awaiting reply
           </Badge>
         );
-      case 'declined':
+      case "declined":
         return (
-          <Badge className={`${base} bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/30`}>
-            <X className="w-3 h-3 mr-1" />Declined
+          <Badge
+            className={`${base} bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/30`}
+          >
+            <X className="w-3 h-3 mr-1" />
+            Declined
           </Badge>
         );
-      case 'maybe':
+      case "maybe":
         return (
-          <Badge className={`${base} bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30`}>
+          <Badge
+            className={`${base} bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30`}
+          >
             Maybe
           </Badge>
         );
       default:
-        return <Badge variant="outline" className={base}>{status}</Badge>;
+        return (
+          <Badge variant="outline" className={base}>
+            {status}
+          </Badge>
+        );
     }
   };
 
   const getInitials = (name: string) => {
-    const parts = (name || '').trim().split(/\s+/);
+    const parts = (name || "").trim().split(/\s+/);
     return parts.length >= 2
       ? `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase()
-      : (name || 'G').charAt(0).toUpperCase();
+      : (name || "G").charAt(0).toUpperCase();
   };
 
   if (loading) return <GuestListSkeletonLoader />;
-  if (error) return <div className="p-6 text-center text-destructive">{error}</div>;
+  if (error)
+    return <div className="p-6 text-center text-destructive">{error}</div>;
 
   return (
     <div className="space-y-6">
@@ -328,24 +431,71 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
 
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold">{summary.total}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-          <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-green-600">{summary.confirmed}</p><p className="text-xs text-muted-foreground">Confirmed</p></CardContent></Card>
-          <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-yellow-600">{summary.pending}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
-          <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-amber-600">{summary.maybe || 0}</p><p className="text-xs text-muted-foreground">Maybe</p></CardContent></Card>
-          <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-red-600">{summary.declined}</p><p className="text-xs text-muted-foreground">Declined</p></CardContent></Card>
-          <Card><CardContent className="p-4 text-center"><p className="text-base font-semibold text-blue-600">{summary.checked_in}</p><p className="text-xs text-muted-foreground">Checked In</p></CardContent></Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-base font-semibold">{summary.total}</p>
+              <p className="text-xs text-muted-foreground">Total</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-base font-semibold text-green-600">
+                {summary.confirmed}
+              </p>
+              <p className="text-xs text-muted-foreground">Confirmed</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-base font-semibold text-yellow-600">
+                {summary.pending}
+              </p>
+              <p className="text-xs text-muted-foreground">Pending</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-base font-semibold text-amber-600">
+                {summary.maybe || 0}
+              </p>
+              <p className="text-xs text-muted-foreground">Maybe</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-base font-semibold text-red-600">
+                {summary.declined}
+              </p>
+              <p className="text-xs text-muted-foreground">Declined</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-base font-semibold text-blue-600">
+                {summary.checked_in}
+              </p>
+              <p className="text-xs text-muted-foreground">Checked In</p>
+            </CardContent>
+          </Card>
         </div>
       )}
-
 
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search guests..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+            <Input
+              placeholder="Search guests..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40"><Filter className="w-4 h-4 mr-2" /><SelectValue placeholder={t("filter")} /></SelectTrigger>
+            <SelectTrigger className="w-40">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder={t("filter")} />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="confirmed">Confirmed</SelectItem>
@@ -357,171 +507,277 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
         </div>
         {canManage && (
           <Button variant="outline" onClick={() => setImportOpen(true)}>
-            <Upload className="w-4 h-4 mr-2" />Import
+            <Upload className="w-4 h-4 mr-2" />
+            Import
           </Button>
         )}
         {canManage && (
           <Button onClick={() => setAddDialogOpen(true)}>
-            <UserPlus className="w-4 h-4 mr-2" />Add Guest
+            <UserPlus className="w-4 h-4 mr-2" />
+            Add Guest
           </Button>
         )}
-
       </div>
 
       <Card>
         <CardContent className="p-0">
           <div className="divide-y">
             {filteredGuests.length === 0 ? (
-              <div className="p-6 text-center text-muted-foreground">No guests found</div>
+              <div className="p-6 text-center text-muted-foreground">
+                No guests found
+              </div>
             ) : (
               filteredGuests.map((guest) => {
                 const followUp = getGuestFollowUpLabel(guest.follow_up_label);
                 return (
-                <div key={guest.id} className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${followUp ? followUp.row + ' hover:brightness-[0.98] dark:hover:brightness-110' : 'hover:bg-muted/50'}`}>
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar className="flex-shrink-0">
-                      <AvatarImage src={guest.avatar || undefined} />
-                      <AvatarFallback>{getInitials(guest.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium truncate">{guest.name || 'Unknown'}</p>
-                        {guest.guest_type === 'contributor' && <Badge variant="outline" className="text-xs"><BookUser className="w-3 h-3 mr-1" />Contributor</Badge>}
-                        {guest.plus_ones > 0 && <Badge variant="outline" className="text-xs">+{guest.plus_ones}</Badge>}
-                      </div>
-                      {guest.common_name && (
-                        <p className="text-xs text-muted-foreground italic truncate">
-                          Card name: {guest.common_name}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                        {guest.email && <span className="flex items-center gap-1 truncate"><Mail className="w-3 h-3 flex-shrink-0" /><span className="truncate max-w-[150px]">{guest.email}</span></span>}
-                        {guest.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 flex-shrink-0" />{guest.phone}</span>}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-auto sm:ml-0">
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-2 flex-wrap justify-end">
-                        {getStatusBadge(guest.rsvp_status)}
-                        {followUp && (
-                          <Badge
-                            className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${followUp.badge}`}
-                            title="Follow-up label (visual only, not in reports)"
-                          >
-                            <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${followUp.dot}`} />
-                            {followUp.label}
-                          </Badge>
+                  <div
+                    key={guest.id}
+                    className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${followUp ? followUp.row + " hover:brightness-[0.98] dark:hover:brightness-110" : "hover:bg-muted/50"}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar className="flex-shrink-0">
+                        <AvatarImage src={guest.avatar || undefined} />
+                        <AvatarFallback>
+                          {getInitials(guest.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">
+                            {guest.name || "Unknown"}
+                          </p>
+                          {guest.guest_type === "contributor" && (
+                            <Badge variant="outline" className="text-xs">
+                              <BookUser className="w-3 h-3 mr-1" />
+                              Contributor
+                            </Badge>
+                          )}
+                          {guest.plus_ones > 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{guest.plus_ones}
+                            </Badge>
+                          )}
+                        </div>
+                        {guest.common_name && (
+                          <p className="text-xs text-muted-foreground italic truncate">
+                            Card name: {guest.common_name}
+                          </p>
                         )}
-                        {guest.checked_in && <Badge className="bg-blue-100 text-blue-800 whitespace-nowrap"><SvgIcon src={QrIcon} alt="QR" className="w-3 h-3 mr-1" />Checked In</Badge>}
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                          {guest.email && (
+                            <span className="flex items-center gap-1 truncate">
+                              <Mail className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate max-w-[150px]">
+                                {guest.email}
+                              </span>
+                            </span>
+                          )}
+                          {guest.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3 flex-shrink-0" />
+                              {guest.phone}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      {guest.checked_in && (guest as any).checked_in_by?.full_name && (
-                        <p className="text-[10px] text-muted-foreground text-right">
-                          by {(guest as any).checked_in_by.full_name}
-                          {guest.checked_in_at ? ` · ${new Date(guest.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
-                        </p>
-                      )}
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        {canManage && (
-                          <>
-                            <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                              Set RSVP
-                            </DropdownMenuLabel>
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Update RSVP status
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="w-48">
-                                <DropdownMenuItem
-                                  disabled={guest.rsvp_status === 'confirmed'}
-                                  onClick={() => handleUpdateRsvp(guest, 'confirmed')}
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-600" />
-                                  Confirmed
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  disabled={guest.rsvp_status === 'maybe'}
-                                  onClick={() => handleUpdateRsvp(guest, 'maybe')}
-                                >
-                                  <Clock className="w-4 h-4 mr-2 text-amber-600" />
-                                  Maybe
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  disabled={guest.rsvp_status === 'pending'}
-                                  onClick={() => handleUpdateRsvp(guest, 'pending')}
-                                >
-                                  <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
-                                  Pending
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  disabled={guest.rsvp_status === 'declined'}
-                                  onClick={() => handleUpdateRsvp(guest, 'declined')}
-                                >
-                                  <X className="w-4 h-4 mr-2 text-rose-600" />
-                                  Declined
-                                </DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
-                                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${followUp?.dot ?? 'bg-muted-foreground/40'}`} />
-                                Follow-up label
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="w-56">
-                                <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-normal">
-                                  Visual only · not in reports
-                                </DropdownMenuLabel>
-                                {GUEST_FOLLOW_UP_LABELS.map((opt) => (
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-auto sm:ml-0">
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                          {getStatusBadge(guest.rsvp_status)}
+                          {followUp && (
+                            <Badge
+                              className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${followUp.badge}`}
+                              title="Follow-up label"
+                            >
+                              <span
+                                className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${followUp.dot}`}
+                              />
+                              {followUp.label}
+                            </Badge>
+                          )}
+                          {guest.checked_in && (
+                            <Badge className="bg-blue-100 text-blue-800 whitespace-nowrap">
+                              <SvgIcon
+                                src={QrIcon}
+                                alt="QR"
+                                className="w-3 h-3 mr-1"
+                              />
+                              Checked In
+                            </Badge>
+                          )}
+                        </div>
+                        {guest.checked_in &&
+                          (guest as any).checked_in_by?.full_name && (
+                            <p className="text-[10px] text-muted-foreground text-right">
+                              by {(guest as any).checked_in_by.full_name}
+                              {guest.checked_in_at
+                                ? ` · ${new Date(guest.checked_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                                : ""}
+                            </p>
+                          )}
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          {canManage && (
+                            <>
+                              <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                                Set RSVP
+                              </DropdownMenuLabel>
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Update RSVP status
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent className="w-48">
                                   <DropdownMenuItem
-                                    key={opt.slug}
-                                    disabled={guest.follow_up_label === opt.slug}
-                                    onClick={() => handleUpdateFollowUp(guest, opt.slug)}
+                                    disabled={guest.rsvp_status === "confirmed"}
+                                    onClick={() =>
+                                      handleUpdateRsvp(guest, "confirmed")
+                                    }
                                   >
-                                    <span className={`inline-block w-2 h-2 rounded-full mr-2 ${opt.dot}`} />
-                                    {opt.label}
+                                    <CheckCircle className="w-4 h-4 mr-2 text-emerald-600" />
+                                    Confirmed
                                   </DropdownMenuItem>
-                                ))}
-                                {guest.follow_up_label && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => handleUpdateFollowUp(guest, null)}>
-                                      <X className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
-                                      Clear label
+                                  <DropdownMenuItem
+                                    disabled={guest.rsvp_status === "maybe"}
+                                    onClick={() =>
+                                      handleUpdateRsvp(guest, "maybe")
+                                    }
+                                  >
+                                    <Clock className="w-4 h-4 mr-2 text-amber-600" />
+                                    Maybe
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    disabled={guest.rsvp_status === "pending"}
+                                    onClick={() =>
+                                      handleUpdateRsvp(guest, "pending")
+                                    }
+                                  >
+                                    <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
+                                    Pending
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    disabled={guest.rsvp_status === "declined"}
+                                    onClick={() =>
+                                      handleUpdateRsvp(guest, "declined")
+                                    }
+                                  >
+                                    <X className="w-4 h-4 mr-2 text-rose-600" />
+                                    Declined
+                                  </DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <span
+                                    className={`inline-block w-2 h-2 rounded-full mr-2 ${followUp?.dot ?? "bg-muted-foreground/40"}`}
+                                  />
+                                  Follow-up label
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent className="w-56">
+                                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-normal">
+                                    Choose a label to help you follow up with
+                                    this guest later. You can also clear the
+                                    label if you no longer need it.
+                                  </DropdownMenuLabel>
+                                  {GUEST_FOLLOW_UP_LABELS.map((opt) => (
+                                    <DropdownMenuItem
+                                      key={opt.slug}
+                                      disabled={
+                                        guest.follow_up_label === opt.slug
+                                      }
+                                      onClick={() =>
+                                        handleUpdateFollowUp(guest, opt.slug)
+                                      }
+                                    >
+                                      <span
+                                        className={`inline-block w-2 h-2 rounded-full mr-2 ${opt.dot}`}
+                                      />
+                                      {opt.label}
                                     </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            <DropdownMenuSeparator />
-                          </>
-                        )}
-                        {canSendInvites && (
-                          <DropdownMenuItem onClick={() => { setSelectedGuest(guest); setInviteDialogOpen(true); }}>
-                            <Send className="w-4 h-4 mr-2" />{guest.invitation_sent ? 'Resend Invitation' : 'Send Invitation'}
-                          </DropdownMenuItem>
-                        )}
-                         {canCheckin && !guest.checked_in && (
-                          <DropdownMenuItem onClick={() => handleCheckin(guest)}><CheckCircle className="w-4 h-4 mr-2 text-emerald-600" />Check In</DropdownMenuItem>
-                         )}
-                         {canCheckin && guest.checked_in && (
-                          <DropdownMenuItem onClick={() => handleUndoCheckin(guest)}><X className="w-4 h-4 mr-2" />Undo check-in</DropdownMenuItem>
-                         )}
-                         {canManage && (
-                           <>
-                             <DropdownMenuSeparator />
-                             <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteGuest(guest.id)}>
-                               <Trash className="w-4 h-4 mr-2" />Remove
-                             </DropdownMenuItem>
-                           </>
-                         )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                                  ))}
+                                  {guest.follow_up_label && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleUpdateFollowUp(guest, null)
+                                        }
+                                      >
+                                        <X className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                                        Clear label
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
+                          {canSendInvites && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedGuest(guest);
+                                setInviteDialogOpen(true);
+                              }}
+                            >
+                              <Send className="w-4 h-4 mr-2" />
+                              {guest.invitation_sent
+                                ? "Resend Invitation"
+                                : "Send Invitation"}
+                            </DropdownMenuItem>
+                          )}
+                          {canCheckin && !guest.checked_in && (
+                            <DropdownMenuItem
+                              disabled={checkingInId === guest.id}
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                handleCheckin(guest);
+                              }}
+                            >
+                              {checkingInId === guest.id ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-emerald-600" />
+                                  Checking in {guest.name || "guest"}…
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-600" />
+                                  Check In
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          )}
+                          {canCheckin && guest.checked_in && (
+                            <DropdownMenuItem
+                              onClick={() => handleUndoCheckin(guest)}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Undo check-in
+                            </DropdownMenuItem>
+                          )}
+                          {canManage && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleDeleteGuest(guest.id)}
+                              >
+                                <Trash className="w-4 h-4 mr-2" />
+                                Remove
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </div>
                 );
               })
             )}
@@ -530,31 +786,64 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
       </Card>
 
       {/* Add Guest Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (!open) resetDialog(); }}>
+      <Dialog
+        open={addDialogOpen}
+        onOpenChange={(open) => {
+          setAddDialogOpen(open);
+          if (!open) resetDialog();
+        }}
+      >
         <DialogContent>
-          <DialogHeader><DialogTitle>{t("add_guest")}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{t("add_guest")}</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4 py-4">
-            <Tabs value={guestSourceTab} onValueChange={(v) => { setGuestSourceTab(v); resetDialog(); }}>
+            <Tabs
+              value={guestSourceTab}
+              onValueChange={(v) => {
+                setGuestSourceTab(v);
+                resetDialog();
+              }}
+            >
               <TabsList className="w-full">
-                <TabsTrigger value="user" className="flex-1"><UserPlus className="w-4 h-4 mr-1" />Nuru User</TabsTrigger>
-                <TabsTrigger value="contributor" className="flex-1"><BookUser className="w-4 h-4 mr-1" />Contributor</TabsTrigger>
+                <TabsTrigger value="user" className="flex-1">
+                  <UserPlus className="w-4 h-4 mr-1" />
+                  Nuru User
+                </TabsTrigger>
+                <TabsTrigger value="contributor" className="flex-1">
+                  <BookUser className="w-4 h-4 mr-1" />
+                  Contributor
+                </TabsTrigger>
               </TabsList>
             </Tabs>
 
-            {guestSourceTab === 'user' ? (
+            {guestSourceTab === "user" ? (
               <div className="space-y-2">
                 <Label>Search User *</Label>
                 {selectedUser ? (
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                     <Avatar className="w-8 h-8">
                       <AvatarImage src={selectedUser.avatar || undefined} />
-                      <AvatarFallback>{selectedUser.first_name?.charAt(0)}{selectedUser.last_name?.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>
+                        {selectedUser.first_name?.charAt(0)}
+                        {selectedUser.last_name?.charAt(0)}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">{selectedUser.first_name} {selectedUser.last_name}</p>
-                      <p className="text-xs text-muted-foreground">{selectedUser.email}</p>
+                      <p className="text-sm font-medium">
+                        {selectedUser.first_name} {selectedUser.last_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedUser.email}
+                      </p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)}>Change</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedUser(null)}
+                    >
+                      Change
+                    </Button>
                   </div>
                 ) : (
                   <UserSearchInput onSelect={setSelectedUser} />
@@ -566,13 +855,27 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
                 {selectedContributor ? (
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                     <Avatar className="w-8 h-8">
-                      <AvatarFallback className="text-xs">{getInitials(selectedContributor.name)}</AvatarFallback>
+                      <AvatarFallback className="text-xs">
+                        {getInitials(selectedContributor.name)}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">{selectedContributor.name}</p>
-                      <p className="text-xs text-muted-foreground">{selectedContributor.phone || selectedContributor.email || 'No contact'}</p>
+                      <p className="text-sm font-medium">
+                        {selectedContributor.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedContributor.phone ||
+                          selectedContributor.email ||
+                          "No contact"}
+                      </p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedContributor(null)}>Change</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedContributor(null)}
+                    >
+                      Change
+                    </Button>
                   </div>
                 ) : (
                   <ContributorSearchInput onSelect={setSelectedContributor} />
@@ -584,27 +887,58 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
               <Label>Card display name (optional)</Label>
               <Input
                 value={newGuest.common_name}
-                onChange={(e) => setNewGuest(prev => ({ ...prev, common_name: e.target.value }))}
+                onChange={(e) =>
+                  setNewGuest((prev) => ({
+                    ...prev,
+                    common_name: e.target.value,
+                  }))
+                }
                 placeholder='e.g. "Mr & Mrs Doe"'
                 maxLength={255}
               />
               <p className="text-xs text-muted-foreground">
-                Used on invitation cards instead of the legal name. Leave blank to use the full name.
+                Used on invitation cards instead of the legal name. Leave blank
+                to use the full name.
               </p>
             </div>
             <div className="space-y-2">
               <Label>Dietary Requirements</Label>
-              <Input value={newGuest.dietary_requirements} onChange={(e) => setNewGuest(prev => ({ ...prev, dietary_requirements: e.target.value }))} placeholder="Vegetarian, halal, allergies..." />
+              <Input
+                value={newGuest.dietary_requirements}
+                onChange={(e) =>
+                  setNewGuest((prev) => ({
+                    ...prev,
+                    dietary_requirements: e.target.value,
+                  }))
+                }
+                placeholder="Vegetarian, halal, allergies..."
+              />
             </div>
             <div className="space-y-2">
               <Label>Notes</Label>
-              <Textarea value={newGuest.notes} onChange={(e) => setNewGuest(prev => ({ ...prev, notes: e.target.value }))} placeholder="Additional notes..." rows={2} />
+              <Textarea
+                value={newGuest.notes}
+                onChange={(e) =>
+                  setNewGuest((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                placeholder="Additional notes..."
+                rows={2}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleAddGuest} disabled={isSubmitting}>
-              {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding...</> : 'Add Guest'}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add Guest"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -613,27 +947,70 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
       {/* Send Invitation Dialog */}
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Send Invitation</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Send Invitation</DialogTitle>
+          </DialogHeader>
           <div className="py-4">
             <p className="text-muted-foreground mb-4">
-              How would you like to send the invitation to <strong>{selectedGuest?.name}</strong>?
+              How would you like to send the invitation to{" "}
+              <strong>{selectedGuest?.name}</strong>?
             </p>
             <div className="grid gap-3">
               {selectedGuest?.email && (
-                <Button variant="outline" className="justify-start" onClick={() => handleSendInvitation('email')} disabled={sendingMethod !== null}>
-                  {sendingMethod === 'email' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}Send via Email
+                <Button
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => handleSendInvitation("email")}
+                  disabled={sendingMethod !== null}
+                >
+                  {sendingMethod === "email" ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Mail className="w-4 h-4 mr-2" />
+                  )}
+                  Send via Email
                 </Button>
               )}
               {selectedGuest?.phone && (
                 <>
-                  <Button variant="outline" className="justify-start" onClick={() => handleSendInvitation('sms')} disabled={sendingMethod !== null}>
-                    {sendingMethod === 'sms' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Phone className="w-4 h-4 mr-2" />}Send via SMS
+                  <Button
+                    variant="outline"
+                    className="justify-start"
+                    onClick={() => handleSendInvitation("sms")}
+                    disabled={sendingMethod !== null}
+                  >
+                    {sendingMethod === "sms" ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Phone className="w-4 h-4 mr-2" />
+                    )}
+                    Send via SMS
                   </Button>
-                  <Button variant="outline" className="justify-start" onClick={() => handleSendInvitation('whatsapp_text')} disabled={sendingMethod !== null}>
-                    {sendingMethod === 'whatsapp' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}Send via WhatsApp (text)
+                  <Button
+                    variant="outline"
+                    className="justify-start"
+                    onClick={() => handleSendInvitation("whatsapp_text")}
+                    disabled={sendingMethod !== null}
+                  >
+                    {sendingMethod === "whatsapp" ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    Send via WhatsApp (text)
                   </Button>
-                  <Button variant="outline" className="justify-start" onClick={handleSendInvitationCard} disabled={sendingMethod !== null}>
-                    {sendingMethod === 'card' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-2" />}Send Invitation Card (WhatsApp image)
+                  <Button
+                    variant="outline"
+                    className="justify-start"
+                    onClick={handleSendInvitationCard}
+                    disabled={sendingMethod !== null}
+                  >
+                    {sendingMethod === "card" ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                    )}
+                    Send Invitation Card (WhatsApp image)
                   </Button>
                 </>
               )}
@@ -649,9 +1026,7 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
         onClose={() => setImportOpen(false)}
         onCompleted={() => refetch()}
       />
-
     </div>
-
   );
 };
 

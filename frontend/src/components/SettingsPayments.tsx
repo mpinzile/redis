@@ -24,6 +24,7 @@ import { useWorkspaceMeta } from "@/hooks/useWorkspaceMeta";
 import { PaymentSetupModal } from "@/components/payments/PaymentSetupModal";
 import { SUPPORTED_REGIONS, RegionCode, PrimaryRegionCode } from "@/lib/region/config";
 import type { PaymentProfile } from "@/lib/api/payments-types";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 /**
  * Settings → Payments page.
@@ -37,6 +38,7 @@ const SettingsPayments = () => {
   const queryClient = useQueryClient();
   const { data: user, refetch } = useCurrentUser();
   const { currency, countryCode } = useCurrency();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   useWorkspaceMeta({
     title: "Payments",
@@ -102,7 +104,13 @@ const SettingsPayments = () => {
   };
 
   const handleDelete = async (profile: PaymentProfile) => {
-    if (!confirm(`Remove ${profile.account_holder_name}?`)) return;
+    const ok = await confirm({
+      title: `Remove ${profile.account_holder_name}?`,
+      description: "This payout method will be removed from your account. You can add it again later if needed.",
+      confirmLabel: "Remove",
+      destructive: true,
+    });
+    if (!ok) return;
     const res = await api.paymentProfiles.remove(profile.id);
     if (!res.success) {
       showApiErrors(res, "Failed to delete");
@@ -114,6 +122,7 @@ const SettingsPayments = () => {
 
   return (
     <div className="space-y-6 pb-12">
+      <ConfirmDialog />
       <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0">
           <h1 className="text-xl md:text-2xl font-semibold">Payments</h1>

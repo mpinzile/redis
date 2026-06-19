@@ -7,10 +7,12 @@ import { ArrowLeft, Plus, Star, Copy, Trash2, Eye, Pencil } from "lucide-react";
 import { invitationTemplatesApi, type InvitationCardTemplate } from "@/lib/api/invitationTemplates";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 export default function InvitationCardManagerPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [items, setItems] = useState<InvitationCardTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,10 +28,22 @@ export default function InvitationCardManagerPage() {
 
   async function activate(id: string) { await invitationTemplatesApi.activate(eventId!, id); toast.success("Activated"); load(); }
   async function dup(id: string) { await invitationTemplatesApi.duplicate(eventId!, id); toast.success("Duplicated"); load(); }
-  async function del(id: string) { if (!confirm("Delete this design?")) return; await invitationTemplatesApi.remove(eventId!, id); toast.success("Deleted"); load(); }
+  async function del(id: string) {
+    const ok = await confirm({
+      title: "Delete this design?",
+      description: "This invitation card design will be permanently removed. This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    await invitationTemplatesApi.remove(eventId!, id);
+    toast.success("Deleted");
+    load();
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <ConfirmDialog />
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(`/event-management/${eventId}`)}><ArrowLeft className="w-4 h-4" /></Button>
         <div className="flex-1">

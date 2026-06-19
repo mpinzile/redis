@@ -15,6 +15,7 @@ import { adminApi } from "@/lib/api/admin";
 import { useAdminMeta } from "@/hooks/useAdminMeta";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 type Status = "all" | "new" | "read" | "replied" | "archived";
 
@@ -68,6 +69,8 @@ const formatDate = (iso?: string) => {
 
 export default function AdminContactMessages() {
   useAdminMeta("Contact Messages");
+  const { confirm, ConfirmDialog } = useConfirmDialog();
+
 
   const [items, setItems] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,7 +132,13 @@ export default function AdminContactMessages() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this message? This cannot be undone.")) return;
+    const ok = await confirm({
+      title: "Delete this message?",
+      description: "The contact message will be permanently removed. This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const res = await adminApi.deleteContactMessage(id);
     if (res.success) {
       toast.success("Message deleted");
@@ -140,6 +149,7 @@ export default function AdminContactMessages() {
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog />
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-foreground text-background flex items-center justify-center">

@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { adminApi } from "@/lib/api/admin";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 type ChatMsg = { id: string; content: string; sender: "user" | "agent" | "system"; sender_name?: string; sent_at: string };
 type SessionUser = { name: string; avatar: string | null } | null;
@@ -19,6 +20,7 @@ const getInitials = (name: string) => {
 export default function AdminChatDetail() {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -80,7 +82,13 @@ export default function AdminChatDetail() {
 
   const handleClose = async () => {
     if (!chatId) return;
-    if (!confirm("Close this chat session?")) return;
+    const ok = await confirm({
+      title: "Close this chat session?",
+      description: "The user will see this conversation as closed and won't be able to reply unless they start a new one.",
+      confirmLabel: "Close session",
+      destructive: true,
+    });
+    if (!ok) return;
     await adminApi.closeChat(chatId);
     toast.success("Chat closed");
     navigate("/admin/chats");
@@ -90,6 +98,7 @@ export default function AdminChatDetail() {
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col bg-card border border-border rounded-xl overflow-hidden">
+      <ConfirmDialog />
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/admin/chats")}>

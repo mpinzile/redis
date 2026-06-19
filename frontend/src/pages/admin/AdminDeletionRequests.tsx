@@ -15,6 +15,7 @@ import { adminApi } from "@/lib/api/admin";
 import { useAdminMeta } from "@/hooks/useAdminMeta";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 type Status = "all" | "pending" | "in_progress" | "completed" | "rejected";
 
@@ -60,6 +61,7 @@ const fmt = (iso?: string) => {
 
 export default function AdminDeletionRequests() {
   useAdminMeta("Account Deletion Requests");
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const [items, setItems] = useState<DeletionRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +116,13 @@ export default function AdminDeletionRequests() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this request record? (This does not undelete the user.)")) return;
+    const ok = await confirm({
+      title: "Delete this request record?",
+      description: "This only removes the request from this list — it does not undelete the user.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const res = await adminApi.deleteDeletionRequest(id);
     if (res.success) { toast.success("Removed"); setSelected(null); load(); }
     else toast.error(res.message || "Delete failed");
@@ -122,6 +130,7 @@ export default function AdminDeletionRequests() {
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog />
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-foreground text-background flex items-center justify-center">
           <Trash2 className="w-5 h-5" />

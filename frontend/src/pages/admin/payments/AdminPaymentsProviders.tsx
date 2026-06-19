@@ -23,6 +23,7 @@ import { showApiErrors } from "@/lib/api/showApiErrors";
 import type {
   PaymentProvider, UpsertProviderRequest, CountryCode, CurrencyCode, PaymentProviderType,
 } from "@/lib/api/payments-types";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 const COUNTRIES: { code: CountryCode; label: string; currency: CurrencyCode }[] = [
   { code: "TZ", label: "Tanzania", currency: "TZS" },
@@ -36,6 +37,8 @@ export default function AdminPaymentsProviders() {
   const [country, setCountry] = useState<CountryCode>("TZ");
   const [editing, setEditing] = useState<PaymentProvider | null>(null);
   const [creating, setCreating] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-providers", country],
@@ -48,7 +51,13 @@ export default function AdminPaymentsProviders() {
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin-providers", country] });
 
   const onDelete = async (id: string) => {
-    if (!confirm("Delete this provider? This cannot be undone.")) return;
+    const ok = await confirm({
+      title: "Delete this provider?",
+      description: "Removing a provider stops users in this country from selecting it for new payments. This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const res = await adminPaymentsApi.deleteProvider(id);
     if (res.success) { toast.success("Provider deleted"); refresh(); }
     else showApiErrors(res, "Failed to delete provider");
@@ -56,6 +65,7 @@ export default function AdminPaymentsProviders() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialog />
       <div className="flex items-center gap-3">
         <Select value={country} onValueChange={(v) => setCountry(v as CountryCode)}>
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
