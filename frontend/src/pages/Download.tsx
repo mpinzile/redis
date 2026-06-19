@@ -83,7 +83,7 @@ const Download = () => {
                   rel="noopener noreferrer"
                   className="group flex items-center gap-4 bg-foreground text-background rounded-2xl px-6 py-4 hover:bg-foreground/90 transition-all min-w-[220px]"
                 >
-                  <img src={AppStoreIcon} alt="" className="icon-original w-10 h-10 shrink-0" />
+                  <img src={AppStoreIcon} alt="" className="w-10 h-10 shrink-0" />
                   <div className="flex flex-col text-left leading-tight">
                     <span className="text-[10px] tracking-[0.18em] uppercase text-background/60 font-mono">
                       Download on the
