@@ -53,6 +53,10 @@ class EventAttendee(Base):
     # Optional display label used on invitation cards. Falls back to the
     # resolved full name when blank. See alembic cafe27052400.
     common_name = Column(Text, nullable=True)
+    # Optional UI-only follow-up label set by organizers tracking outreach
+    # (e.g. "not_reachable", "call_later"). Visual hint only — never used in
+    # reports or business logic. See alembic cafe27054700.
+    follow_up_label = Column(Text, nullable=True)
     invitation_id = Column(UUID(as_uuid=True), ForeignKey('event_invitations.id', ondelete='SET NULL'))
     rsvp_status = Column(Enum(RSVPStatusEnum, name="rsvp_status_enum"), default=RSVPStatusEnum.pending)
     checked_in = Column(Boolean, default=False)

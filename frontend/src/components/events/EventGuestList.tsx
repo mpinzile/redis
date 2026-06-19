@@ -35,6 +35,7 @@ import MemberImportDialog from './MemberImportDialog';
 
 import ContributorSearchInput from './ContributorSearchInput';
 import GuestListSkeletonLoader from './GuestListSkeletonLoader';
+import { GUEST_FOLLOW_UP_LABELS, getGuestFollowUpLabel } from './guestFollowUpLabels';
 import type { EventGuest } from '@/lib/api/types';
 import type { SearchedUser } from '@/hooks/useUserSearch';
 import type { UserContributor } from '@/lib/api/contributors';
@@ -51,7 +52,7 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
   const canManage = permissions?.can_manage_guests || permissions?.is_creator;
   const canSendInvites = permissions?.can_send_invitations || permissions?.is_creator;
   const canCheckin = permissions?.can_check_in_guests || permissions?.is_creator;
-  const { guests, summary, loading, error, refetch, addGuest, updateGuest, deleteGuest, sendInvitation, checkinGuest } = useEventGuests(eventId);
+  const { guests, summary, loading, error, refetch, addGuest, updateGuest, deleteGuest, sendInvitation, checkinGuest, undoCheckinGuest } = useEventGuests(eventId);
   
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
@@ -180,12 +181,49 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
     }
   };
 
-  const handleCheckin = async (guestId: string) => {
+  const handleCheckin = async (guest: EventGuest) => {
+    // Manual check-in mirrors the QR-scan validation on the backend
+    // (permissions + already-checked-in guard). We add a UX confirm step
+    // when the RSVP is not Confirmed so organisers don't tap by mistake.
+    const needsConfirm = guest.rsvp_status !== 'confirmed';
+    if (needsConfirm) {
+      const labelMap: Record<string, string> = {
+        pending: 'has not replied yet',
+        declined: 'declined the invitation',
+        maybe: 'replied "Maybe"',
+      };
+      const reason = labelMap[guest.rsvp_status] || `is marked "${guest.rsvp_status}"`;
+      const ok = await confirm({
+        title: 'Check in this guest?',
+        description: `${guest.name || 'This guest'} ${reason}. Check them in anyway?`,
+        confirmLabel: 'Check In',
+      });
+      if (!ok) return;
+    }
     try {
-      await checkinGuest(guestId);
-      toast.success('Guest checked in successfully');
+      await checkinGuest(guest.id);
+      toast.success(`${guest.name || 'Guest'} checked in`, {
+        description: 'Welcome marked at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        icon: <CheckCircle className="w-4 h-4 text-emerald-600" />,
+      });
     } catch (err: any) {
       showCaughtError(err, 'Failed to check in guest');
+    }
+  };
+
+  const handleUndoCheckin = async (guest: EventGuest) => {
+    const ok = await confirm({
+      title: 'Undo check-in?',
+      description: `Remove the check-in for ${guest.name || 'this guest'}? They will appear as not arrived again.`,
+      confirmLabel: 'Undo check-in',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await undoCheckinGuest(guest.id);
+      toast.success('Check-in reversed');
+    } catch (err: any) {
+      showCaughtError(err, 'Failed to undo check-in');
     }
   };
 
@@ -203,6 +241,16 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
       toast.success(`RSVP updated to ${label}`);
     } catch (err: any) {
       showCaughtError(err, 'Failed to update RSVP');
+    }
+  };
+
+  const handleUpdateFollowUp = async (guest: EventGuest, slug: string | null) => {
+    if ((guest.follow_up_label || null) === slug) return;
+    try {
+      await updateGuest(guest.id, { follow_up_label: slug } as Partial<EventGuest>);
+      toast.success(slug ? 'Follow-up label set' : 'Follow-up label cleared');
+    } catch (err: any) {
+      showCaughtError(err, 'Failed to update follow-up label');
     }
   };
 
@@ -326,8 +374,10 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
             {filteredGuests.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground">No guests found</div>
             ) : (
-              filteredGuests.map((guest) => (
-                <div key={guest.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/50">
+              filteredGuests.map((guest) => {
+                const followUp = getGuestFollowUpLabel(guest.follow_up_label);
+                return (
+                <div key={guest.id} className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${followUp ? followUp.row + ' hover:brightness-[0.98] dark:hover:brightness-110' : 'hover:bg-muted/50'}`}>
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar className="flex-shrink-0">
                       <AvatarImage src={guest.avatar || undefined} />
@@ -352,8 +402,17 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-auto sm:ml-0">
                     <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
                         {getStatusBadge(guest.rsvp_status)}
+                        {followUp && (
+                          <Badge
+                            className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${followUp.badge}`}
+                            title="Follow-up label (visual only, not in reports)"
+                          >
+                            <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${followUp.dot}`} />
+                            {followUp.label}
+                          </Badge>
+                        )}
                         {guest.checked_in && <Badge className="bg-blue-100 text-blue-800 whitespace-nowrap"><SvgIcon src={QrIcon} alt="QR" className="w-3 h-3 mr-1" />Checked In</Badge>}
                       </div>
                       {guest.checked_in && (guest as any).checked_in_by?.full_name && (
@@ -407,6 +466,36 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
                                 </DropdownMenuItem>
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${followUp?.dot ?? 'bg-muted-foreground/40'}`} />
+                                Follow-up label
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="w-56">
+                                <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-normal">
+                                  Visual only · not in reports
+                                </DropdownMenuLabel>
+                                {GUEST_FOLLOW_UP_LABELS.map((opt) => (
+                                  <DropdownMenuItem
+                                    key={opt.slug}
+                                    disabled={guest.follow_up_label === opt.slug}
+                                    onClick={() => handleUpdateFollowUp(guest, opt.slug)}
+                                  >
+                                    <span className={`inline-block w-2 h-2 rounded-full mr-2 ${opt.dot}`} />
+                                    {opt.label}
+                                  </DropdownMenuItem>
+                                ))}
+                                {guest.follow_up_label && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleUpdateFollowUp(guest, null)}>
+                                      <X className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                                      Clear label
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
                             <DropdownMenuSeparator />
                           </>
                         )}
@@ -415,8 +504,11 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
                             <Send className="w-4 h-4 mr-2" />{guest.invitation_sent ? 'Resend Invitation' : 'Send Invitation'}
                           </DropdownMenuItem>
                         )}
-                         {canCheckin && !guest.checked_in && guest.rsvp_status === 'confirmed' && (
-                          <DropdownMenuItem onClick={() => handleCheckin(guest.id)}><CheckCircle className="w-4 h-4 mr-2" />Check In</DropdownMenuItem>
+                         {canCheckin && !guest.checked_in && (
+                          <DropdownMenuItem onClick={() => handleCheckin(guest)}><CheckCircle className="w-4 h-4 mr-2 text-emerald-600" />Check In</DropdownMenuItem>
+                         )}
+                         {canCheckin && guest.checked_in && (
+                          <DropdownMenuItem onClick={() => handleUndoCheckin(guest)}><X className="w-4 h-4 mr-2" />Undo check-in</DropdownMenuItem>
                          )}
                          {canManage && (
                            <>
@@ -430,7 +522,8 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
                     </DropdownMenu>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </CardContent>

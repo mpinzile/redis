@@ -1796,6 +1796,7 @@ def build_event_attendee_dicts(db: Session, attendees: list) -> List[Dict]:
             "guest_type": guest_type,
             "name": name, "avatar": avatar,
             "common_name": getattr(att, "common_name", None),
+            "follow_up_label": getattr(att, "follow_up_label", None),
             "email": email, "phone": phone,
             "rsvp_status": att.rsvp_status.value if hasattr(att.rsvp_status, "value") else att.rsvp_status,
             "dietary_requirements": att.dietary_restrictions,

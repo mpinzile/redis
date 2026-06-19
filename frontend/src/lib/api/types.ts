@@ -244,6 +244,9 @@ export interface EventGuest {
   /** Optional display label used on invitation cards (e.g. "Mr & Mrs Doe").
    *  Falls back to `name` when blank. */
   common_name?: string;
+  /** Optional UI-only follow-up label slug (e.g. "not_reachable").
+   *  Visual hint for organizer outreach — never used in reports. */
+  follow_up_label?: string | null;
   avatar?: string;
   email?: string;
   phone?: string;

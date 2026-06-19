@@ -289,18 +289,33 @@ export const useEventGuests = (eventId: string | null, initialParams?: GuestQuer
     }
   };
 
-  return { 
-    guests, 
-    summary, 
-    loading, 
-    error, 
-    pagination, 
+  const undoCheckinGuest = async (guestId: string) => {
+    if (!eventId) return null;
+    try {
+      const response = await eventsApi.undoCheckin(eventId, guestId);
+      if (response.success) {
+        await fetchGuests();
+        return response.data;
+      }
+      throwApiError(response);
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  return {
+    guests,
+    summary,
+    loading,
+    error,
+    pagination,
     refetch: fetchGuests,
     addGuest,
     updateGuest,
     deleteGuest,
     sendInvitation,
-    checkinGuest
+    checkinGuest,
+    undoCheckinGuest,
   };
 };
 

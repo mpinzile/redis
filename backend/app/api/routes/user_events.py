@@ -2301,6 +2301,7 @@ def _attendee_dict(db: Session, att: EventAttendee) -> dict:
         "guest_type": guest_type,
         "name": name, "avatar": avatar,
         "common_name": getattr(att, "common_name", None),
+        "follow_up_label": getattr(att, "follow_up_label", None),
         "email": email, "phone": phone,
         "rsvp_status": att.rsvp_status.value if hasattr(att.rsvp_status, "value") else att.rsvp_status,
         "dietary_requirements": att.dietary_restrictions, "meal_preference": att.meal_preference,
@@ -2840,6 +2841,14 @@ def update_guest(event_id: str, guest_id: str, body: dict = Body(...), db: Sessi
     if "common_name" in body:
         cn = (body.get("common_name") or "").strip()
         att.common_name = cn or None
+    if "follow_up_label" in body:
+        # UI-only visual hint. Accept any short slug or null to clear.
+        raw = body.get("follow_up_label")
+        if raw is None:
+            att.follow_up_label = None
+        else:
+            slug = str(raw).strip().lower()
+            att.follow_up_label = slug[:64] or None
     att.updated_at = now
 
     if "plus_one_names" in body:
