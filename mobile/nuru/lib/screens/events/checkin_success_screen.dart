@@ -52,16 +52,32 @@ class CheckinSuccessScreen extends StatelessWidget {
     return '$h:$m $ampm';
   }
 
+  String _shortId(String s) {
+    if (s.isEmpty) return '-';
+    // Strip dashes then return first 8 chars uppercased so the chip is
+    // readable but still uniquely identifies the row in audit logs.
+    final compact = s.replaceAll('-', '');
+    if (compact.length <= 8) return compact.toUpperCase();
+    return compact.substring(0, 8).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final ev = (data['event'] as Map?) ?? {};
     final isTicket = data['kind'] == 'ticket';
+    final isTicketed = data['is_ticketed_event'] == true || isTicket;
     final rawName = (data['name'] ?? '').toString().trim();
     final hasName = data['has_name'] == true ||
         (rawName.isNotEmpty && rawName.toLowerCase() != 'guest checked in');
     final name = rawName.isEmpty ? 'Guest checked in' : rawName;
-    final ticketClass = (data['ticket_class'] ?? (isTicket ? 'Ticket' : 'Guest Pass')).toString();
-    final ticketId = (data['ticket_id'] ?? data['code'] ?? '').toString();
+    final ticketClass = (data['ticket_class'] ?? '').toString();
+    final rawTicketId = (data['ticket_id'] ?? data['code'] ?? '').toString();
+    final ticketIdShort = _shortId(rawTicketId);
+    final eventType = (data['event_type'] ?? '').toString();
+    final rawEventId = (ev['id'] ?? '').toString();
+    final eventShort = (data['event_short_id']?.toString().isNotEmpty == true)
+        ? data['event_short_id'].toString().toUpperCase()
+        : _shortId(rawEventId);
     final qty = (data['quantity'] is num) ? (data['quantity'] as num).toInt() : 1;
     final eventName = (ev['name'] ?? '').toString();
     final whenIso = (data['checked_in_at']?.toString().isNotEmpty == true)
@@ -93,9 +109,14 @@ class CheckinSuccessScreen extends StatelessWidget {
                   _heroCard(name, hasName, clockOnly),
                   const SizedBox(height: 16),
                   _detailsCard([
-                    _row('assets/icons/user-icon.svg', 'Guest Name', name),
-                    _row(isTicket ? 'assets/icons/ticket-icon.svg' : 'assets/icons/users-icon.svg', 'Ticket Type', ticketClass),
-                    _row('assets/icons/ticket-icon.svg', 'Ticket ID', ticketId.isEmpty ? '-' : ticketId),
+                    _row('assets/icons/user-icon.svg', isTicketed ? 'Ticket Holder' : 'Guest Name', name),
+                    if (isTicketed) ...[
+                      _row('assets/icons/ticket-icon.svg', 'Ticket Type', ticketClass.isEmpty ? 'Standard' : ticketClass),
+                      _row('assets/icons/ticket-icon.svg', 'Ticket ID', ticketIdShort, mono: true),
+                    ] else ...[
+                      _row('assets/icons/calendar-icon.svg', 'Event Type', eventType.isEmpty ? '-' : eventType),
+                      _row('assets/icons/ticket-icon.svg', 'Event ID', eventShort, mono: true),
+                    ],
                     if (qty > 1) _row('assets/icons/users-icon.svg', 'Number of Guests', '$qty'),
                     _row('assets/icons/calendar-icon.svg', 'Event', eventName.isEmpty ? '-' : eventName),
                     _row('assets/icons/clock-icon.svg', 'Checked In At', checkedInAt, last: true),
@@ -168,7 +189,7 @@ class CheckinSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _row(String iconAsset, String label, String value, {bool last = false}) {
+  Widget _row(String iconAsset, String label, String value, {bool last = false, bool mono = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
@@ -189,7 +210,11 @@ class CheckinSuccessScreen extends StatelessWidget {
         Flexible(
           child: Text(value,
               textAlign: TextAlign.right,
-              style: appText(size: 13, weight: FontWeight.w700, color: AppColors.textPrimary)),
+              style: appText(
+                size: 13,
+                weight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ).copyWith(fontFamily: mono ? 'monospace' : null, letterSpacing: mono ? 0.5 : null)),
         ),
       ]),
     );

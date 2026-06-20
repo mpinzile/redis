@@ -208,6 +208,9 @@ class _EventCheckinTabState extends State<EventCheckinTab>
       'ticket_id': data['id'] ?? '',
       'code': data['id'] ?? raw,
       'scanned_code': raw,
+      'event_type': (data['event_type'] ?? '').toString(),
+      'event_short_id': (data['event_short_id'] ?? '').toString(),
+      'is_ticketed_event': data['is_ticketed_event'] == true,
       'checked_in_at': (data['checked_in_at']?.toString().isNotEmpty == true)
           ? data['checked_in_at']
           : nowIso,
@@ -215,7 +218,12 @@ class _EventCheckinTabState extends State<EventCheckinTab>
           ? data['scan_time']
           : nowIso,
       'reason': data['reason'] ?? '',
-      'event': {'id': widget.eventId, 'name': widget.eventTitle ?? ''},
+      'event': {
+        'id': widget.eventId,
+        'name': (data['event_name']?.toString().isNotEmpty == true)
+            ? data['event_name']
+            : (widget.eventTitle ?? ''),
+      },
     };
     final message = (res['message'] ?? '').toString();
     final isAlready = data['already_checked_in'] == true ||

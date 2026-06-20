@@ -54,7 +54,11 @@ from models import (
     EventInvitation,
     EventTicket,
     TicketOrderStatusEnum,
+    User,
+    UserContributor,
 )
+from models.events import EventType
+from models.ticketing import EventTicketClass
 from models.checkin_team import EventCheckinTeamMember
 
 log = logging.getLogger("checkin.fastlane")
@@ -214,15 +218,35 @@ def preload_event(db: Session, event_id: uuid.UUID | str, *, force: bool = False
 
     scanners = _collect_scanner_ids(db, event)
 
+    # Resolve the event type label (e.g. "Wedding") for non-ticketed events.
+    event_type_name = ""
+    if getattr(event, "event_type_id", None):
+        et = db.query(EventType.name).filter(EventType.id == event.event_type_id).first()
+        if et and et[0]:
+            event_type_name = str(et[0])
+    event_short_id = str(event.id)[:8]
+
     # Attendees — token is the attendee.id (UUID as string).
+    # Outer-join the supporting tables once so we can resolve a real
+    # display name without dropping the response under "Guest" when
+    # EventAttendee.guest_name is null.
     attendees = (
         db.query(
             EventAttendee.id,
             EventAttendee.guest_name,
+            EventAttendee.common_name,
             EventAttendee.checked_in,
             EventAttendee.checked_in_at,
             EventAttendee.invitation_id,
+            EventInvitation.guest_name.label("inv_guest_name"),
+            User.first_name,
+            User.last_name,
+            User.username,
+            UserContributor.name.label("contrib_name"),
         )
+        .outerjoin(EventInvitation, EventInvitation.id == EventAttendee.invitation_id)
+        .outerjoin(User, User.id == EventAttendee.attendee_id)
+        .outerjoin(UserContributor, UserContributor.id == EventAttendee.contributor_id)
         .filter(EventAttendee.event_id == event.id)
         .all()
     )
@@ -235,7 +259,8 @@ def preload_event(db: Session, event_id: uuid.UUID | str, *, force: bool = False
     )
     inv_code_by_id = {iid: code for iid, code in inv_rows if code}
 
-    # Tickets — token is ticket_code.
+    # Tickets + their class names so the success screen can show
+    # "Ticket Type: VIP" instead of a blank value.
     tickets = (
         db.query(
             EventTicket.id,
@@ -244,10 +269,26 @@ def preload_event(db: Session, event_id: uuid.UUID | str, *, force: bool = False
             EventTicket.checked_in,
             EventTicket.checked_in_at,
             EventTicket.status,
+            EventTicketClass.name.label("class_name"),
+            User.first_name.label("buyer_first"),
+            User.last_name.label("buyer_last"),
+            User.username.label("buyer_username"),
         )
+        .outerjoin(EventTicketClass, EventTicketClass.id == EventTicket.ticket_class_id)
+        .outerjoin(User, User.id == EventTicket.buyer_user_id)
         .filter(EventTicket.event_id == event.id)
         .all()
     )
+    is_ticketed = "1" if tickets else "0"
+
+    def _resolve_name(parts: list[str | None]) -> str:
+        for p in parts:
+            if p:
+                s = str(p).strip()
+                if s and s.lower() not in ("guest", "ticket"):
+                    return s
+        # Try first+last combination separately for tickets/attendees.
+        return ""
 
     pipe = r.pipeline(transaction=False)
     # Scanners
@@ -257,40 +298,59 @@ def preload_event(db: Session, event_id: uuid.UUID | str, *, force: bool = False
     pipe.expire(k_scanners(eid), _TTL_SECONDS)
 
     tokens_loaded = 0
-    for att_id, name, checked, checked_at, inv_id in attendees:
+    for row in attendees:
+        att_id = row[0]
+        guest_name = row[1]
+        common_name = row[2]
+        checked = row[3]
+        checked_at = row[4]
+        inv_id = row[5]
+        inv_guest_name = row[6]
+        first_name = row[7]
+        last_name = row[8]
+        username = row[9]
+        contrib_name = row[10]
+        full = (f"{first_name or ''} {last_name or ''}").strip()
+        resolved = _resolve_name([
+            guest_name, common_name, inv_guest_name, contrib_name, full, username,
+        ]) or ""
         tok = str(att_id)
         state = "in" if checked else "out"
         h = {
             "kind": "guest",
             "id": tok,
-            "name": (name or "Guest"),
+            "name": resolved,
             "ticket_name": "",
             "state": state,
             "checked_in_at": checked_at.isoformat() if checked_at else "",
         }
         pipe.hset(k_token(eid, tok), mapping=h)
         pipe.expire(k_token(eid, tok), _TTL_SECONDS)
-        # Manual-lookup index by attendee id
         pipe.set(k_id(eid, "guest", tok), tok, ex=_TTL_SECONDS)
         tokens_loaded += 1
-        # Invitation-code alias (points to same hash, separate key)
         inv_code = inv_code_by_id.get(inv_id) if inv_id else None
         if inv_code and inv_code != tok:
             pipe.hset(k_token(eid, inv_code), mapping=h)
             pipe.expire(k_token(eid, inv_code), _TTL_SECONDS)
 
-    for tid, code, buyer, checked, checked_at, status in tickets:
+    for row in tickets:
+        tid = row[0]; code = row[1]; buyer = row[2]
+        checked = row[3]; checked_at = row[4]; status = row[5]
+        class_name = row[6] or ""
+        buyer_first = row[7]; buyer_last = row[8]; buyer_username = row[9]
         if not code:
             continue
         state = "in" if checked else "out"
         blocked = ""
         if status not in (TicketOrderStatusEnum.approved, TicketOrderStatusEnum.confirmed):
             blocked = f"ticket_{status.value if hasattr(status,'value') else status}"
+        full_buyer = (f"{buyer_first or ''} {buyer_last or ''}").strip()
+        resolved_buyer = _resolve_name([buyer, full_buyer, buyer_username]) or ""
         h = {
             "kind": "ticket",
             "id": str(tid),
-            "name": (buyer or "Ticket"),
-            "ticket_name": "",
+            "name": resolved_buyer,
+            "ticket_name": class_name,
             "state": state,
             "checked_in_at": checked_at.isoformat() if checked_at else "",
             "blocked_reason": blocked,
@@ -305,6 +365,10 @@ def preload_event(db: Session, event_id: uuid.UUID | str, *, force: bool = False
         "tokens_loaded": tokens_loaded,
         "scanners_loaded": len(scanners),
         "last_preloaded_at": datetime.utcnow().isoformat(),
+        "event_type": event_type_name,
+        "event_short_id": event_short_id,
+        "is_ticketed": is_ticketed,
+        "event_name": (event.name or "")[:200],
     })
     pipe.expire(meta_key, _TTL_SECONDS)
     pipe.execute()
@@ -413,7 +477,7 @@ def scan(
         # Re-read the token state directly; this is one HMGET, still fast.
         h = r.hgetall(k_token(eid, token)) or {}
         if h:
-            return "already", _payload_from_hash(h)
+            return "already", _enrich_with_event_meta(r, eid, _payload_from_hash(h))
 
     sha = _load_lua()
     try:
@@ -454,14 +518,14 @@ def scan(
                            "reason": "not_found"}
     if tag == "blocked":
         reason = _s(4)
-        return "blocked", {
+        return "blocked", _enrich_with_event_meta(r, eid, {
             "message": _blocked_message(reason),
             "reason": reason,
             "kind": _s(2),
             "id": _s(3),
             "display_name": _s(1),
             "ticket_name": _s(5),
-        }
+        })
     now_iso = datetime.utcnow().isoformat()
     payload = {
         "kind": _s(2),
@@ -475,10 +539,34 @@ def scan(
         payload["already_checked_in"] = True
         payload["reason"] = "already_used"
         payload["message"] = "Already checked in"
-        return "already", payload
+        return "already", _enrich_with_event_meta(r, eid, payload)
     payload["already_checked_in"] = False
     payload["message"] = "Welcome!"
-    return "ok", payload
+    return "ok", _enrich_with_event_meta(r, eid, payload)
+
+
+def _enrich_with_event_meta(r, eid: str, payload: dict) -> dict:
+    """Add event_type / event_short_id / is_ticketed_event to a scan payload.
+
+    One ``HMGET`` against ``k_meta(eid)`` — ~1ms — so the hot path stays
+    well under the 1-2s budget.
+    """
+    try:
+        fields = r.hmget(k_meta(eid), "event_type", "event_short_id", "is_ticketed", "event_name")
+        et = fields[0] if fields else None
+        sid = fields[1] if fields else None
+        flag = fields[2] if fields else None
+        ev_name = fields[3] if fields else None
+        def _d(v):
+            if v is None: return ""
+            return v.decode() if isinstance(v, (bytes, bytearray)) else str(v)
+        payload["event_type"] = _d(et)
+        payload["event_short_id"] = _d(sid)
+        payload["is_ticketed_event"] = _d(flag) == "1"
+        payload["event_name"] = _d(ev_name)
+    except Exception:
+        pass
+    return payload
 
 
 def _payload_from_hash(h: dict) -> dict:

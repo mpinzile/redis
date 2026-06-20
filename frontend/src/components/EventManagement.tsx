@@ -1353,6 +1353,7 @@ const EventManagement = () => {
               eventLocation={eventLocation}
               guestCount={eventGuestCount}
               confirmedCount={apiEvent?.confirmed_guest_count || 0}
+              checkedInCount={apiEvent?.checked_in_count || 0}
             />
           </TabsContent>
         )}

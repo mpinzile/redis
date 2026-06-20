@@ -107,13 +107,27 @@ class CheckinFailedScreen extends StatelessWidget {
   }
 
 
+  String _shortId(String s) {
+    if (s.isEmpty) return '-';
+    final compact = s.replaceAll('-', '');
+    if (compact.length <= 8) return compact.toUpperCase();
+    return compact.substring(0, 8).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final ev = (data['event'] as Map?) ?? {};
     final scanTime = _fmtDateTime(data['scan_time']?.toString());
-    final guestName = (data['name'] ?? 'Unknown').toString();
+    final rawName = (data['name'] ?? '').toString().trim();
+    final guestName = (rawName.isEmpty || rawName.toLowerCase() == 'guest checked in')
+        ? 'Unknown'
+        : rawName;
+    final isTicket = data['kind'] == 'ticket';
+    final isTicketed = data['is_ticketed_event'] == true || isTicket;
+    final whoLabel = isTicketed ? 'Ticket Holder' : 'Guest Name';
     final eventName = (ev['name'] ?? '-').toString();
-    final code = (data['ticket_id'] ?? data['code'] ?? data['scanned_code'] ?? '-').toString();
+    final rawCode = (data['ticket_id'] ?? data['code'] ?? data['scanned_code'] ?? '').toString();
+    final code = _shortId(rawCode);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -139,9 +153,9 @@ class CheckinFailedScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   _detailsCard([
                     _row('assets/icons/clock-icon.svg', 'Scan Time', scanTime),
-                    _row('assets/icons/user-icon.svg', 'Guest', guestName),
+                    _row('assets/icons/user-icon.svg', whoLabel, guestName),
                     _row('assets/icons/calendar-icon.svg', 'Event', eventName),
-                    _row('assets/icons/ticket-icon.svg', 'Ticket / QR Code', code, mono: true),
+                    _row('assets/icons/ticket-icon.svg', isTicketed ? 'Ticket ID' : 'Guest ID', code, mono: true),
                     _reasonRow(),
                   ]),
                   const SizedBox(height: 12),

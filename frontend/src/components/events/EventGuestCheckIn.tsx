@@ -28,9 +28,10 @@ interface EventGuestCheckInProps {
   eventLocation?: string;
   guestCount?: number;
   confirmedCount?: number;
+  checkedInCount?: number;
 }
 
-const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLocation, guestCount = 0, confirmedCount = 0 }: EventGuestCheckInProps) => {
+const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLocation, guestCount = 0, confirmedCount = 0, checkedInCount: checkedInCountProp = 0 }: EventGuestCheckInProps) => {
   const { t } = useLanguage();
   const [scanOpen, setScanOpen] = useState(false);
   const [scanMode, setScanMode] = useState<'manual' | 'camera'>('manual');
@@ -40,7 +41,11 @@ const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLoc
   const [scanError, setScanError] = useState<string | null>(null);
   const [_checkingIn, _setCheckingIn] = useState(false);
   const [checkInDone, setCheckInDone] = useState(false);
-  const [checkedInCount, setCheckedInCount] = useState(0);
+  // Local count of checks performed in this session so the stat tile keeps
+  // ticking up without waiting for a stats refetch. It seeds from the
+  // server-supplied total so a reload doesn't show a stale 0.
+  const [sessionChecks, setSessionChecks] = useState(0);
+  const checkedInCount = checkedInCountProp + sessionChecks;
   const [recentCheckins, setRecentCheckins] = useState<Array<{ name: string; time: string }>>([]);
   const cameraRef = useRef<HTMLDivElement>(null);
   const scannerRef = useRef<any>(null);
@@ -107,7 +112,7 @@ const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLoc
         const d = res.data as any;
         setScannedGuest(d);
         setCheckInDone(true);
-        setCheckedInCount(prev => prev + 1);
+        setSessionChecks(prev => prev + 1);
         setRecentCheckins(prev => [{ name: d.name || 'Guest', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }, ...prev].slice(0, 10));
         toast.success(`${d.name || 'Guest'} checked in!`);
       } else {
@@ -270,15 +275,10 @@ const EventGuestCheckIn = ({ eventId, isCreator, eventTitle, eventDate, eventLoc
         </Card>
       )}
 
-      {recentCheckins.length === 0 && (
-        <div className="text-center py-12 border-2 border-dashed border-border rounded-2xl">
-          <div className="w-16 h-16 bg-muted/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Scan className="w-8 h-8 text-muted-foreground/40" />
-          </div>
-          <h3 className="font-semibold text-foreground mb-1">No Check-ins Yet</h3>
-          <p className="text-sm text-muted-foreground mb-4">Tap the scan button above to start checking in guests</p>
-        </div>
-      )}
+      {/* The duplicate "No Check-ins Yet" placeholder was removed — the
+          CheckinActivityLog below already shows its own empty-state and the
+          server-driven activity feed, so the stats card no longer claims
+          "0 / No Check-ins" when the backend has recorded scans. */}
 
       {/* Audit log — who scanned whom */}
       <CheckinActivityLog eventId={eventId} />
