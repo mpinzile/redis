@@ -293,10 +293,12 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
       destructive: true,
     });
     if (!ok) return;
+    const toastId = toast.loading(`Reversing check-in for ${guest.name || "guest"}…`);
     try {
       await undoCheckinGuest(guest.id);
-      toast.success("Check-in reversed");
+      toast.success("Check-in reversed", { id: toastId });
     } catch (err: any) {
+      toast.dismiss(toastId);
       showCaughtError(err, "Failed to undo check-in");
     }
   };
@@ -306,20 +308,22 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
     status: "confirmed" | "pending" | "declined" | "maybe",
   ) => {
     if (guest.rsvp_status === status) return;
+    const label =
+      status === "confirmed"
+        ? "Confirmed"
+        : status === "declined"
+          ? "Declined"
+          : status === "maybe"
+            ? "Maybe"
+            : "Pending";
+    const toastId = toast.loading(`Updating RSVP for ${guest.name || "guest"} to ${label}…`);
     try {
       await updateGuest(guest.id, {
         rsvp_status: status,
       } as Partial<EventGuest>);
-      const label =
-        status === "confirmed"
-          ? "Confirmed"
-          : status === "declined"
-            ? "Declined"
-            : status === "maybe"
-              ? "Maybe"
-              : "Pending";
-      toast.success(`RSVP updated to ${label}`);
+      toast.success(`RSVP updated to ${label}`, { id: toastId });
     } catch (err: any) {
+      toast.dismiss(toastId);
       showCaughtError(err, "Failed to update RSVP");
     }
   };
@@ -329,12 +333,16 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
     slug: string | null,
   ) => {
     if ((guest.follow_up_label || null) === slug) return;
+    const toastId = toast.loading(
+      slug ? `Setting follow-up label for ${guest.name || "guest"}…` : `Clearing follow-up label…`,
+    );
     try {
       await updateGuest(guest.id, {
         follow_up_label: slug,
       } as Partial<EventGuest>);
-      toast.success(slug ? "Follow-up label set" : "Follow-up label cleared");
+      toast.success(slug ? "Follow-up label set" : "Follow-up label cleared", { id: toastId });
     } catch (err: any) {
+      toast.dismiss(toastId);
       showCaughtError(err, "Failed to update follow-up label");
     }
   };
@@ -348,10 +356,13 @@ const EventGuestList = ({ eventId, permissions }: EventGuestListProps) => {
       destructive: true,
     });
     if (!confirmed) return;
+    const guest = guests.find((g) => g.id === guestId);
+    const toastId = toast.loading(`Removing ${guest?.name || "guest"}…`);
     try {
       await deleteGuest(guestId);
-      toast.success("Guest removed");
+      toast.success("Guest removed", { id: toastId });
     } catch (err: any) {
+      toast.dismiss(toastId);
       showCaughtError(err, "Failed to remove guest");
     }
   };

@@ -23,7 +23,7 @@ from models import (
 from models.checkin_team import (
     EventCheckinCode, EventCheckinTeamMember, EventCheckinSession,
 )
-from utils.auth import get_current_user
+from utils.auth import get_current_user, verify_password
 from utils.helpers import standard_response
 
 router = APIRouter(prefix="/user-events", tags=["Event Check-In Team"])
@@ -394,6 +394,49 @@ def revoke_checkin_code(event_id: str, db: Session = Depends(get_db), current_us
     })
     db.commit()
     return standard_response(True, "Access code revoked", {"revoked": n})
+
+
+@router.post("/{event_id}/checkin-code/reveal")
+def reveal_checkin_code(
+    event_id: str,
+    body: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the plain access code after re-confirming the user's password.
+
+    Only the event organizer / committee managers can reveal. We require the
+    account password every time so a stolen session can't silently exfiltrate
+    the code that lets anyone scan guests.
+    """
+    event = _resolve_event(db, event_id)
+    if not event:
+        return standard_response(False, "Event not found")
+    if not _can_manage_team(db, event, current_user):
+        return standard_response(False, "You do not have permission to view the access code")
+
+    password = (body.get("password") or "").strip()
+    if not password:
+        return standard_response(False, "Password is required")
+    if not current_user.password_hash or not verify_password(password, current_user.password_hash):
+        return standard_response(False, "Incorrect password")
+
+    code = db.query(EventCheckinCode).filter(
+        EventCheckinCode.event_id == event.id,
+        EventCheckinCode.status == "active",
+    ).order_by(EventCheckinCode.created_at.desc()).first()
+    if not code:
+        return standard_response(False, "No active access code")
+    if not code.code_plain:
+        return standard_response(False, "This code was generated before reveal was supported. Regenerate it to view.")
+
+    return standard_response(True, "Access code revealed", {
+        "id": str(code.id),
+        "code": code.code_plain,
+        "prefix": code.code_prefix,
+        "status": code.status,
+        "created_at": code.created_at.isoformat() if code.created_at else None,
+    })
 
 
 # ──────────────────────────────────────────────

@@ -281,6 +281,8 @@ const CreateEvent: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    const tid = 'save-event';
+    toast.loading(editId ? 'Updating event…' : 'Creating event…', { id: tid });
 
     try {
       const form = new FormData();
@@ -384,12 +386,13 @@ const CreateEvent: React.FC = () => {
         }
       }
 
-      toast.success(response.message || (editId ? "Event updated successfully." : "Event created successfully."));
+      toast.success(response.message || (editId ? "Event updated successfully." : "Event created successfully."), { id: tid });
       if (!editId) {
         navigate(`/event-management/${createdId}`);
       }
     } catch (err: any) {
       console.error("Event API error:", err);
+      toast.dismiss(tid);
       showCaughtError(err);
     } finally {
       setIsSubmitting(false);

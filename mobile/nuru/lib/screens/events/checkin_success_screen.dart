@@ -18,7 +18,17 @@ class CheckinSuccessScreen extends StatelessWidget {
 
   String _fmtDateTime(String? iso) {
     if (iso == null || iso.isEmpty) return '-';
-    final dt = DateTime.tryParse(iso)?.toLocal();
+    final hasTz = iso.endsWith('Z') ||
+        RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(iso);
+    var normalized = iso;
+    if (!hasTz) {
+      if (iso.contains('T')) {
+        normalized = '${iso}Z';
+      } else if (RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}').hasMatch(iso)) {
+        normalized = '${iso.replaceFirst(' ', 'T')}Z';
+      }
+    }
+    final dt = DateTime.tryParse(normalized)?.toLocal();
     if (dt == null) return iso;
     const months = [
       'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'

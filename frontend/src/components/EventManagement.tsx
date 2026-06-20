@@ -1,59 +1,99 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import EventAutomationsPage from '@/pages/event/EventAutomationsPage';
-import { ChevronLeft, Users, UserCheck, CheckCircle2, Plus, Search, Trash2, X, Loader2, Images, ChevronDown, FileText, ChevronRight, Eye } from 'lucide-react';
-import SvgIcon from '@/components/ui/svg-icon';
-import ShareIcon from '@/assets/icons/share-icon.svg';
-import CalendarIcon from '@/assets/icons/calendar-icon.svg';
-import LocationIcon from '@/assets/icons/location-icon.svg';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { PillTabsNav } from '@/components/ui/pill-tabs';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useWorkspaceMeta } from '@/hooks/useWorkspaceMeta';
-import EventRSVP from './EventRSVP';
-import EventCardsTab from './events/EventCardsTab';
-import EventGuestList from './events/EventGuestList';
-import EventCommittee from './events/EventCommittee';
-import EventContributions from './events/EventContributions';
-import EventExpenses from './events/EventExpenses';
-import EventBudget from './events/EventBudget';
-import EventChecklist from './events/EventChecklist';
-import EventSchedule from './events/EventSchedule';
-import { useEventContributors } from '@/data/useContributors';
-import { useEvent } from '@/data/useEvents';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { usePolling } from '@/hooks/usePolling';
-import { useCurrency } from '@/hooks/useCurrency';
-import { getEventCountdown } from '@/utils/getEventCountdown';
-import { EventManagementSkeleton } from '@/components/ui/EventManagementSkeleton';
-import { eventsApi, showCaughtError } from '@/lib/api';
-import { Skeleton } from '@/components/ui/skeleton';
-import { servicesApi } from '@/lib/api/services';
-import { referencesApi } from '@/lib/api/references';
-import { photoLibrariesApi } from '@/lib/api/photoLibraries';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import EventAutomationsPage from "@/pages/event/EventAutomationsPage";
+import {
+  ChevronLeft,
+  Users,
+  UserCheck,
+  CheckCircle2,
+  Plus,
+  Search,
+  Trash2,
+  X,
+  Loader2,
+  Images,
+  ChevronDown,
+  FileText,
+  ChevronRight,
+  Eye,
+} from "lucide-react";
+import SvgIcon from "@/components/ui/svg-icon";
+import ShareIcon from "@/assets/icons/share-icon.svg";
+import CalendarIcon from "@/assets/icons/calendar-icon.svg";
+import LocationIcon from "@/assets/icons/location-icon.svg";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { PillTabsNav } from "@/components/ui/pill-tabs";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useWorkspaceMeta } from "@/hooks/useWorkspaceMeta";
+import EventRSVP from "./EventRSVP";
+import EventCardsTab from "./events/EventCardsTab";
+import EventGuestList from "./events/EventGuestList";
+import EventCommittee from "./events/EventCommittee";
+import EventContributions from "./events/EventContributions";
+import EventExpenses from "./events/EventExpenses";
+import EventBudget from "./events/EventBudget";
+import EventChecklist from "./events/EventChecklist";
+import EventSchedule from "./events/EventSchedule";
+import { useEventContributors } from "@/data/useContributors";
+import { useEvent } from "@/data/useEvents";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePolling } from "@/hooks/usePolling";
+import { useCurrency } from "@/hooks/useCurrency";
+import { getEventCountdown } from "@/utils/getEventCountdown";
+import { EventManagementSkeleton } from "@/components/ui/EventManagementSkeleton";
+import { eventsApi, showCaughtError } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import { servicesApi } from "@/lib/api/services";
+import { referencesApi } from "@/lib/api/references";
+import { photoLibrariesApi } from "@/lib/api/photoLibraries";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
-import { toast } from 'sonner';
-import { useEventPermissions } from '@/hooks/useEventPermissions';
-import ShareEventToFeed from '@/components/ShareEventToFeed';
-import EventTicketManagement from '@/components/events/EventTicketManagement';
-import EventGuestCheckIn from '@/components/events/EventGuestCheckIn';
-import EventMeetings from '@/components/events/EventMeetings';
-import EventGroupCta from '@/components/eventGroups/EventGroupCta';
-import EventOverviewDashboard from '@/components/events/EventOverviewDashboard';
-import EventSponsors from '@/components/events/EventSponsors';
-import { LogOfflinePaymentDialog } from '@/components/events/LogOfflinePaymentDialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { toast } from "sonner";
+import { useEventPermissions } from "@/hooks/useEventPermissions";
+import ShareEventToFeed from "@/components/ShareEventToFeed";
+import EventTicketManagement from "@/components/events/EventTicketManagement";
+import EventGuestCheckIn from "@/components/events/EventGuestCheckIn";
+import EventMeetings from "@/components/events/EventMeetings";
+import EventGroupCta from "@/components/eventGroups/EventGroupCta";
+import EventOverviewDashboard from "@/components/events/EventOverviewDashboard";
+import EventSponsors from "@/components/events/EventSponsors";
+import { LogOfflinePaymentDialog } from "@/components/events/LogOfflinePaymentDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const EventManagement = () => {
   const { format: formatPrice } = useCurrency();
@@ -63,10 +103,16 @@ const EventManagement = () => {
   const location = useLocation();
   const { data: currentUser } = useCurrentUser();
 
-  const { event: apiEvent, loading: eventLoading, refetch: refetchEvent } = useEvent(id || null);
+  const {
+    event: apiEvent,
+    loading: eventLoading,
+    refetch: refetchEvent,
+  } = useEvent(id || null);
   usePolling(refetchEvent, 15000);
 
-  const { permissions, loading: permsLoading } = useEventPermissions(id || null);
+  const { permissions, loading: permsLoading } = useEventPermissions(
+    id || null,
+  );
   const { summary: contributionSummary } = useEventContributors(id || null);
 
   const event = apiEvent;
@@ -75,18 +121,18 @@ const EventManagement = () => {
   const isCreator = permissions.is_creator;
 
   useWorkspaceMeta({
-    title: event?.title || 'Event Management',
-    description: `Manage services, committee, contributions, and invitations for ${event?.title || 'your event'}.`
+    title: event?.title || "Event Management",
+    description: `Manage services, committee, contributions, and invitations for ${event?.title || "your event"}.`,
   });
 
   const [activeTab, setActiveTab] = useState(() => {
-    const tab = new URLSearchParams(location.search).get('tab');
-    return tab || 'overview';
+    const tab = new URLSearchParams(location.search).get("tab");
+    return tab || "overview";
   });
   const [openingWorkspace, setOpeningWorkspace] = useState(false);
 
   useEffect(() => {
-    const tab = new URLSearchParams(location.search).get('tab');
+    const tab = new URLSearchParams(location.search).get("tab");
     if (tab && tab !== activeTab) setActiveTab(tab);
   }, [location.search, activeTab]);
 
@@ -94,27 +140,41 @@ const EventManagement = () => {
     if (!id || openingWorkspace) return;
     setOpeningWorkspace(true);
     try {
-      const { eventGroupsApi } = await import('@/lib/api/eventGroups');
+      const { eventGroupsApi } = await import("@/lib/api/eventGroups");
       let res = await eventGroupsApi.getForEvent(id);
       if (!res.success || !res.data?.id) {
         res = await eventGroupsApi.createForEvent(id);
       }
       const groupId = (res.data as any)?.id;
       if (groupId) navigate(`/event-group/${groupId}`);
-      else toast.error('Could not open workspace');
+      else toast.error("Could not open workspace");
     } catch (e: any) {
-      toast.error(e?.message || 'Could not open workspace');
+      toast.error(e?.message || "Could not open workspace");
     } finally {
       setOpeningWorkspace(false);
     }
   }, [id, navigate, openingWorkspace]);
   const [showAddServiceDialog, setShowAddServiceDialog] = useState(false);
-  const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceSearch, setServiceSearch] = useState("");
   const [deleteServiceId, setDeleteServiceId] = useState<string | null>(null);
-  const [logPaymentFor, setLogPaymentFor] = useState<{ id: string; vendorName: string; serviceTitle: string; agreedPrice?: number | null } | null>(null);
-  const [addMode, setAddMode] = useState<'search' | 'manual'>('search');
-  const [serviceCategories, setServiceCategories] = useState<{ id: string; name: string }[]>([]);
-  const [manualForm, setManualForm] = useState({ name: '', categoryId: '', phone: '', email: '', price: '', notes: '' });
+  const [logPaymentFor, setLogPaymentFor] = useState<{
+    id: string;
+    vendorName: string;
+    serviceTitle: string;
+    agreedPrice?: number | null;
+  } | null>(null);
+  const [addMode, setAddMode] = useState<"search" | "manual">("search");
+  const [serviceCategories, setServiceCategories] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [manualForm, setManualForm] = useState({
+    name: "",
+    categoryId: "",
+    phone: "",
+    email: "",
+    price: "",
+    notes: "",
+  });
   const [manualSubmitting, setManualSubmitting] = useState(false);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -135,8 +195,11 @@ const EventManagement = () => {
         const data = res.data as any;
         setEventServices(Array.isArray(data) ? data : data?.items || []);
       }
-    } catch { /* silent */ }
-    finally { setServicesLoading(false); }
+    } catch {
+      /* silent */
+    } finally {
+      setServicesLoading(false);
+    }
   };
 
   const loadEventPhotoLibraries = async () => {
@@ -146,9 +209,10 @@ const EventManagement = () => {
       if (res.success && res.data) {
         setEventPhotoLibraries(res.data.libraries || []);
       }
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   };
-
 
   // Lazy-load services + photo libraries only when the user opens the
   // Services tab (or the Overview, which renders the completed/total counter).
@@ -157,7 +221,7 @@ const EventManagement = () => {
   const _servicesLoaded = useRef(false);
   useEffect(() => {
     if (!id) return;
-    const needsServices = activeTab === 'services' || activeTab === 'overview';
+    const needsServices = activeTab === "services" || activeTab === "overview";
     if (needsServices && !_servicesLoaded.current) {
       _servicesLoaded.current = true;
       loadEventServices();
@@ -165,37 +229,49 @@ const EventManagement = () => {
     }
   }, [id, activeTab]);
 
-  const completedServices = eventServices.filter((s: any) => s.status === 'completed').length;
+  const completedServices = eventServices.filter(
+    (s: any) => s.status === "completed",
+  ).length;
   const totalServices = eventServices.length;
-  const progress = totalServices > 0 ? Math.round((completedServices / totalServices) * 100) : 0;
+  const progress =
+    totalServices > 0
+      ? Math.round((completedServices / totalServices) * 100)
+      : 0;
 
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
   const updateServiceStatus = async (serviceId: string, newStatus: string) => {
     setUpdatingStatusId(serviceId);
     try {
-      await eventsApi.updateEventService(id!, serviceId, { service_status: newStatus });
+      await eventsApi.updateEventService(id!, serviceId, {
+        service_status: newStatus,
+      });
       loadEventServices();
       toast.success(`Service status updated to ${newStatus}`);
-    } catch (err: any) { showCaughtError(err); }
-    finally { setUpdatingStatusId(null); }
+    } catch (err: any) {
+      showCaughtError(err);
+    } finally {
+      setUpdatingStatusId(null);
+    }
   };
 
   const statusOptions = [
-    { value: 'pending', label: 'Pending', color: 'bg-yellow-500' },
-    { value: 'assigned', label: 'Assigned', color: 'bg-blue-500' },
-    { value: 'in_progress', label: 'In Progress', color: 'bg-orange-500' },
-    { value: 'completed', label: 'Completed', color: 'bg-green-500' },
-    { value: 'cancelled', label: 'Cancelled', color: 'bg-red-500' },
+    { value: "pending", label: "Pending", color: "bg-yellow-500" },
+    { value: "assigned", label: "Assigned", color: "bg-blue-500" },
+    { value: "in_progress", label: "In Progress", color: "bg-orange-500" },
+    { value: "completed", label: "Completed", color: "bg-green-500" },
+    { value: "cancelled", label: "Cancelled", color: "bg-red-500" },
   ];
 
   const handleRemoveService = async () => {
     if (!deleteServiceId || !id) return;
     try {
       await eventsApi.removeEventService(id, deleteServiceId);
-      toast.success('Service removed');
+      toast.success("Service removed");
       loadEventServices();
-    } catch (err: any) { showCaughtError(err); }
+    } catch (err: any) {
+      showCaughtError(err);
+    }
     setDeleteServiceId(null);
   };
 
@@ -206,7 +282,10 @@ const EventManagement = () => {
 
   const handleServiceSearch = async (query: string) => {
     setServiceSearch(query);
-    if (query.length < 2) { setSearchResults([]); return; }
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
     setSearchLoading(true);
     try {
       const res = await servicesApi.search({ search: query, limit: 20 });
@@ -214,8 +293,11 @@ const EventManagement = () => {
         const data = res.data as any;
         setSearchResults(data?.services || (Array.isArray(data) ? data : []));
       }
-    } catch { /* silent */ }
-    finally { setSearchLoading(false); }
+    } catch {
+      /* silent */
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   const handleAddService = async (service: any) => {
@@ -231,32 +313,43 @@ const EventManagement = () => {
         toast.success(`${service.title} added to event`);
         loadEventServices();
         setShowAddServiceDialog(false);
-        setServiceSearch('');
+        setServiceSearch("");
         setSearchResults([]);
       } else {
         showCaughtError(res);
       }
-    } catch (err: any) { showCaughtError(err); }
-    finally { setAddingServiceId(null); }
+    } catch (err: any) {
+      showCaughtError(err);
+    } finally {
+      setAddingServiceId(null);
+    }
   };
 
   // Load service categories the first time the manual-vendor form is opened
   useEffect(() => {
-    if (addMode === 'manual' && serviceCategories.length === 0) {
-      referencesApi.getServiceCategories()
+    if (addMode === "manual" && serviceCategories.length === 0) {
+      referencesApi
+        .getServiceCategories()
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
-            setServiceCategories(res.data.map((c: any) => ({ id: c.id, name: c.name })));
+            setServiceCategories(
+              res.data.map((c: any) => ({ id: c.id, name: c.name })),
+            );
           }
         })
-        .catch(() => { /* silent */ });
+        .catch(() => {
+          /* silent */
+        });
     }
   }, [addMode, serviceCategories.length]);
 
   const handleAddManualVendor = async () => {
     if (!id) return;
     const name = manualForm.name.trim();
-    if (!name) { toast.error('Vendor name is required'); return; }
+    if (!name) {
+      toast.error("Vendor name is required");
+      return;
+    }
     setManualSubmitting(true);
     try {
       const payload: any = {
@@ -272,42 +365,72 @@ const EventManagement = () => {
         toast.success(`${name} added as off-platform vendor`);
         loadEventServices();
         setShowAddServiceDialog(false);
-        setManualForm({ name: '', categoryId: '', phone: '', email: '', price: '', notes: '' });
-        setAddMode('search');
+        setManualForm({
+          name: "",
+          categoryId: "",
+          phone: "",
+          email: "",
+          price: "",
+          notes: "",
+        });
+        setAddMode("search");
       } else {
         showCaughtError(res);
       }
-    } catch (err: any) { showCaughtError(err); }
-    finally { setManualSubmitting(false); }
+    } catch (err: any) {
+      showCaughtError(err);
+    } finally {
+      setManualSubmitting(false);
+    }
   };
 
   if (eventLoading || permsLoading) return <EventManagementSkeleton />;
-  if (!event) return <div className="text-center py-8 text-muted-foreground">Event not found</div>;
+  if (!event)
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Event not found
+      </div>
+    );
 
   const eventImages: string[] = (() => {
-    if (apiEvent?.gallery_images && (apiEvent.gallery_images as string[]).length > 0) return apiEvent.gallery_images as string[];
+    if (
+      apiEvent?.gallery_images &&
+      (apiEvent.gallery_images as string[]).length > 0
+    )
+      return apiEvent.gallery_images as string[];
     if ((apiEvent as any)?.images?.length > 0) {
-      return (apiEvent as any).images.map((img: any) => img.image_url || img.url || img);
+      return (apiEvent as any).images.map(
+        (img: any) => img.image_url || img.url || img,
+      );
     }
-    const cover = (apiEvent as any)?.cover_image || (apiEvent as any)?.cover_image_url;
+    const cover =
+      (apiEvent as any)?.cover_image || (apiEvent as any)?.cover_image_url;
     return cover ? [cover] : [];
   })();
   const hasImages = eventImages.length > 0;
 
-  const openLightbox = (index: number) => { setLightboxIndex(index); setLightboxOpen(true); };
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
   const closeLightbox = () => setLightboxOpen(false);
 
-  const eventTitle = apiEvent?.title || '';
-  const eventDate = apiEvent?.start_date || '';
-  const eventLocation = apiEvent?.location || '';
+  const eventTitle = apiEvent?.title || "";
+  const eventDate = apiEvent?.start_date || "";
+  const eventLocation = apiEvent?.location || "";
   const eventGuestCount = apiEvent?.guest_count || 0;
   const expectedGuests = apiEvent?.expected_guests || 0;
-  const eventBudget = apiEvent?.budget ? formatPrice(apiEvent.budget) : '';
-  const eventDescription = apiEvent?.description || '';
+  const eventBudget = apiEvent?.budget ? formatPrice(apiEvent.budget) : "";
+  const eventDescription = apiEvent?.description || "";
   const isEventEnded = (() => {
-    const dateStr = (apiEvent as any)?.end_date || apiEvent?.start_date;
-    if (!dateStr) return false;
-    return new Date(dateStr) < new Date();
+    const dateStr = apiEvent?.start_date;
+    if (!dateStr) return true;
+
+    const eventDay = String(dateStr).slice(0, 10);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    return eventDay !== today;
   })();
 
   return (
@@ -323,7 +446,7 @@ const EventManagement = () => {
             variant="ghost"
             size="icon"
             className="flex-shrink-0 self-center"
-            onClick={() => navigate('/my-events')}
+            onClick={() => navigate("/my-events")}
             aria-label="Back"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -354,7 +477,11 @@ const EventManagement = () => {
               }}
               trigger={
                 <Button variant="outline" size="sm" className="gap-2">
-                  <SvgIcon src={ShareIcon} alt="" className="w-4 h-4 opacity-70" />
+                  <SvgIcon
+                    src={ShareIcon}
+                    alt=""
+                    className="w-4 h-4 opacity-70"
+                  />
                   <span className="hidden sm:inline">Share to Feed</span>
                   <span className="sm:hidden">Share</span>
                 </Button>
@@ -363,19 +490,43 @@ const EventManagement = () => {
           )}
         </div>
         <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-          <span className="flex items-center gap-2"><SvgIcon src={CalendarIcon} alt="Calendar" className="w-4 h-4 flex-shrink-0" /><span className="truncate">{eventDate}</span></span>
+          <span className="flex items-center gap-2">
+            <SvgIcon
+              src={CalendarIcon}
+              alt="Calendar"
+              className="w-4 h-4 flex-shrink-0"
+            />
+            <span className="truncate">{eventDate}</span>
+          </span>
           {(() => {
             const countdown = getEventCountdown(apiEvent?.start_date);
             if (!countdown) return null;
             return (
-              <span className={`flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${countdown.isPast ? 'bg-muted text-muted-foreground' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'}`}>
+              <span
+                className={`flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${countdown.isPast ? "bg-muted text-muted-foreground" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"}`}
+              >
                 {countdown.text}
               </span>
             );
           })()}
-          <span className="flex items-start gap-2 break-words min-w-0"><SvgIcon src={LocationIcon} alt="Location" className="w-4 h-4 flex-shrink-0 mt-0.5" /><span className="break-words">{eventLocation}</span></span>
-          <span className="flex items-center gap-2"><Users className="w-4 h-4 flex-shrink-0" /><span className="truncate">{expectedGuests} expected</span></span>
-          <span className="flex items-center gap-2"><UserCheck className="w-4 h-4 flex-shrink-0" /><span className="truncate">{apiEvent?.confirmed_guest_count || 0} confirmed</span></span>
+          <span className="flex items-start gap-2 break-words min-w-0">
+            <SvgIcon
+              src={LocationIcon}
+              alt="Location"
+              className="w-4 h-4 flex-shrink-0 mt-0.5"
+            />
+            <span className="break-words">{eventLocation}</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <Users className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{expectedGuests} expected</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <UserCheck className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">
+              {apiEvent?.confirmed_guest_count || 0} confirmed
+            </span>
+          </span>
         </div>
       </div>
 
@@ -384,13 +535,26 @@ const EventManagement = () => {
         <div className="mb-6">
           {eventImages.length === 1 ? (
             <div className="relative w-full rounded-lg overflow-hidden border border-border bg-muted/30">
-              <img src={eventImages[0]} alt={`${eventTitle} image`} className="w-full h-auto block cursor-pointer" onClick={() => openLightbox(0)} />
+              <img
+                src={eventImages[0]}
+                alt={`${eventTitle} image`}
+                className="w-full h-auto block cursor-pointer"
+                onClick={() => openLightbox(0)}
+              />
             </div>
           ) : (
             <div className="flex gap-3 overflow-x-auto py-2">
               {eventImages.map((src, idx) => (
-                <div key={idx} className="relative w-56 h-40 flex-shrink-0 rounded-lg overflow-hidden border border-border cursor-pointer" onClick={() => openLightbox(idx)}>
-                  <img src={src} alt={`event ${idx}`} className="w-full h-full object-cover" />
+                <div
+                  key={idx}
+                  className="relative w-56 h-40 flex-shrink-0 rounded-lg overflow-hidden border border-border cursor-pointer"
+                  onClick={() => openLightbox(idx)}
+                >
+                  <img
+                    src={src}
+                    alt={`event ${idx}`}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               ))}
             </div>
@@ -400,29 +564,74 @@ const EventManagement = () => {
 
       {/* Lightbox */}
       {lightboxOpen && hasImages && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={closeLightbox}>
-          <div className="relative max-w-[90vw] max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
-            <button onClick={closeLightbox} className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow z-50" aria-label={t("close")}>✕</button>
-            <img src={eventImages[lightboxIndex]} alt={`zoom ${lightboxIndex}`} className="w-full h-full object-contain rounded" style={{ maxHeight: '80vh' }} />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={closeLightbox}
+        >
+          <div
+            className="relative max-w-[90vw] max-h-[90vh] w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeLightbox}
+              className="absolute -top-3 -right-3 bg-white rounded-full p-2 shadow z-50"
+              aria-label={t("close")}
+            >
+              ✕
+            </button>
+            <img
+              src={eventImages[lightboxIndex]}
+              alt={`zoom ${lightboxIndex}`}
+              className="w-full h-full object-contain rounded"
+              style={{ maxHeight: "80vh" }}
+            />
             {eventImages.length > 1 && (
               <>
-                <button onClick={() => setLightboxIndex((i) => (i - 1 + eventImages.length) % eventImages.length)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full" aria-label="Previous">‹</button>
-                <button onClick={() => setLightboxIndex((i) => (i + 1) % eventImages.length)} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full" aria-label="Next">›</button>
+                <button
+                  onClick={() =>
+                    setLightboxIndex(
+                      (i) => (i - 1 + eventImages.length) % eventImages.length,
+                    )
+                  }
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full"
+                  aria-label="Previous"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={() =>
+                    setLightboxIndex((i) => (i + 1) % eventImages.length)
+                  }
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full"
+                  aria-label="Next"
+                >
+                  ›
+                </button>
               </>
             )}
           </div>
         </div>
       )}
 
-      <AlertDialog open={!!deleteServiceId} onOpenChange={() => setDeleteServiceId(null)}>
+      <AlertDialog
+        open={!!deleteServiceId}
+        onOpenChange={() => setDeleteServiceId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('remove')} {t('services')}?</AlertDialogTitle>
-            <AlertDialogDescription>{t('are_you_sure')}</AlertDialogDescription>
+            <AlertDialogTitle>
+              {t("remove")} {t("services")}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>{t("are_you_sure")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveService} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('remove')} {t('services')}</AlertDialogAction>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveService}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("remove")} {t("services")}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -432,38 +641,111 @@ const EventManagement = () => {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           tabs={[
-            { value: 'overview', label: t('overview') },
-            { value: 'checklist', label: t('checklist') },
-            { value: 'budget', label: t('budget') },
-            { value: 'expenses', label: t('expenses') },
-            { value: 'services', label: t('services') },
-            { value: 'committee', label: t('committee') },
-            { value: 'contributions', label: t('contributions') },
-            { value: 'guests', label: t('guests') },
-            { value: 'cards', label: 'Cards' },
-            { value: 'rsvp', label: t('rsvp') },
-            { value: 'schedule', label: t('schedule') || 'Schedule' },
-            { value: 'meetings', label: 'Meetings' },
-            ...((apiEvent as any)?.sells_tickets ? [{ value: 'tickets', label: t('tickets') }] : []),
-            { value: 'sponsors', label: 'Sponsors' },
-            ...(isCreator ? [{ value: 'reminders', label: 'Reminders' }] : []),
-            ...(isCreator && !isEventEnded ? [{ value: 'check-in', label: t('check_in') }] : []),
+            { value: "overview", label: t("overview") },
+            { value: "checklist", label: t("checklist") },
+            { value: "budget", label: t("budget") },
+            { value: "expenses", label: t("expenses") },
+            { value: "services", label: t("services") },
+            { value: "committee", label: t("committee") },
+            { value: "contributions", label: t("contributions") },
+            { value: "guests", label: t("guests") },
+            { value: "cards", label: "Cards" },
+            { value: "rsvp", label: t("rsvp") },
+            { value: "schedule", label: t("schedule") || "Schedule" },
+            { value: "meetings", label: "Meetings" },
+            ...((apiEvent as any)?.sells_tickets
+              ? [{ value: "tickets", label: t("tickets") }]
+              : []),
+            { value: "sponsors", label: "Sponsors" },
+            ...(isCreator ? [{ value: "reminders", label: "Reminders" }] : []),
+            ...((isCreator || permissions.can_check_in_guests) && !isEventEnded
+              ? [{ value: "check-in", label: t("check_in") }]
+              : []),
           ]}
         />
 
         <TabsContent value="overview" className="space-y-5">
           {/* Group Chat CTA — create or open the event group from here */}
-          <EventGroupCta eventId={id || ''} onOpen={openWorkspace} opening={openingWorkspace} />
+          <EventGroupCta
+            eventId={id || ""}
+            onOpen={openWorkspace}
+            opening={openingWorkspace}
+          />
 
           {/* Premium overview dashboard — all values come from the backend */}
           {id && <EventOverviewDashboard eventId={id} />}
 
           {/* Row 1: Financial overview */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <Card className="w-full"><CardContent className="p-5"><div className="flex items-center justify-between"><div className="flex-1"><p className="text-xs text-muted-foreground">Budget Status</p><p className="text-base font-semibold mt-1">{eventBudget}</p><p className="text-xs text-muted-foreground mt-1">Budget allocated</p></div><div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center"><Users className="w-4 h-4 text-blue-600" /></div></div></CardContent></Card>
-            <Card className="w-full"><CardContent className="p-5"><div className="flex items-center justify-between"><div className="flex-1"><p className="text-xs text-muted-foreground">Total Pledged</p><p className="text-base font-semibold text-primary mt-1">{formatPrice(contributionSummary?.total_pledged || 0)}</p><p className="text-xs text-muted-foreground mt-1">{contributionSummary?.pledged_count || 0} contributor{(contributionSummary?.pledged_count || 0) !== 1 ? 's' : ''} pledged</p></div><div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center"><Users className="w-4 h-4 text-purple-600" /></div></div></CardContent></Card>
+            <Card className="w-full">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">
+                      Budget Status
+                    </p>
+                    <p className="text-base font-semibold mt-1">
+                      {eventBudget}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Budget allocated
+                    </p>
+                  </div>
+                  <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Users className="w-4 h-4 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="w-full">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">
+                      Total Pledged
+                    </p>
+                    <p className="text-base font-semibold text-primary mt-1">
+                      {formatPrice(contributionSummary?.total_pledged || 0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {contributionSummary?.pledged_count || 0} contributor
+                      {(contributionSummary?.pledged_count || 0) !== 1
+                        ? "s"
+                        : ""}{" "}
+                      pledged
+                    </p>
+                  </div>
+                  <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Users className="w-4 h-4 text-purple-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
             {apiEvent?.budget && contributionSummary && (
-              <Card className="w-full"><CardContent className="p-5"><div className="flex items-center justify-between"><div className="flex-1"><p className="text-xs text-muted-foreground">Unpledged</p><p className="text-base font-semibold text-destructive mt-1">{formatPrice(Math.max(0, (apiEvent.budget as number) - (contributionSummary.total_pledged || 0)))}</p><p className="text-xs text-muted-foreground mt-1">Budget − Total Pledged</p></div><div className="w-9 h-9 bg-red-100 rounded-lg flex items-center justify-center"><Users className="w-4 h-4 text-red-600" /></div></div></CardContent></Card>
+              <Card className="w-full">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Unpledged</p>
+                      <p className="text-base font-semibold text-destructive mt-1">
+                        {formatPrice(
+                          Math.max(
+                            0,
+                            (apiEvent.budget as number) -
+                              (contributionSummary.total_pledged || 0),
+                          ),
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Budget − Total Pledged
+                      </p>
+                    </div>
+                    <div className="w-9 h-9 bg-red-100 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 text-red-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
           {/* Row 2: Cash in Hand */}
@@ -472,7 +754,9 @@ const EventManagement = () => {
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-xs text-muted-foreground">Cash in Hand</p>
-                  <p className="text-xl font-bold text-primary mt-1">{formatPrice(contributionSummary?.total_paid || 0)}</p>
+                  <p className="text-xl font-bold text-primary mt-1">
+                    {formatPrice(contributionSummary?.total_paid || 0)}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                   <CheckCircle2 className="w-5 h-5 text-primary" />
@@ -480,43 +764,140 @@ const EventManagement = () => {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="text-center p-2 rounded-md bg-background">
-                  <p className="text-base font-semibold">{contributionSummary?.paid_count || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">Paid contributors</p>
+                  <p className="text-base font-semibold">
+                    {contributionSummary?.paid_count || 0}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Paid contributors
+                  </p>
                 </div>
                 <div className="text-center p-2 rounded-md bg-background">
-                  <p className="text-base font-semibold">{formatPrice(Math.max(0, (contributionSummary?.total_pledged || 0) - (contributionSummary?.total_paid || 0)))}</p>
-                  <p className="text-[10px] text-muted-foreground">Outstanding</p>
+                  <p className="text-base font-semibold">
+                    {formatPrice(
+                      Math.max(
+                        0,
+                        (contributionSummary?.total_pledged || 0) -
+                          (contributionSummary?.total_paid || 0),
+                      ),
+                    )}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Outstanding
+                  </p>
                 </div>
                 <div className="text-center p-2 rounded-md bg-background">
-                  <p className="text-base font-semibold">{contributionSummary?.total_pledged ? Math.round(((contributionSummary?.total_paid || 0) / contributionSummary.total_pledged) * 100) : 0}%</p>
-                  <p className="text-[10px] text-muted-foreground">Collection rate</p>
+                  <p className="text-base font-semibold">
+                    {contributionSummary?.total_pledged
+                      ? Math.round(
+                          ((contributionSummary?.total_paid || 0) /
+                            contributionSummary.total_pledged) *
+                            100,
+                        )
+                      : 0}
+                    %
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Collection rate
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
           {/* Row 3: Event progress + Guest overview */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Card className="w-full"><CardContent className="p-5"><div className="flex items-center justify-between"><div className="flex-1"><p className="text-xs text-muted-foreground">Event Progress</p><p className="text-base font-semibold mt-1">{completedServices}/{totalServices} Services</p><div className="w-full bg-muted rounded-full h-2 mt-2"><div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${progress}%` }} /></div></div></div></CardContent></Card>
-            <Card className="w-full"><CardContent className="p-5"><div className="flex items-center justify-between"><div className="flex-1"><p className="text-xs text-muted-foreground">Guest Overview</p><p className="text-base font-semibold mt-1">{eventGuestCount}</p><p className="text-xs text-muted-foreground mt-1">of {expectedGuests} expected guests</p></div><div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center"><Users className="w-4 h-4 text-green-600" /></div></div></CardContent></Card>
-            <Card className="w-full"><CardContent className="p-5"><div className="flex items-center justify-between"><div className="flex-1"><p className="text-xs text-muted-foreground">Confirmed Guests</p><p className="text-base font-semibold text-green-600 mt-1">{apiEvent?.confirmed_guest_count || 0}</p></div><div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center"><UserCheck className="w-4 h-4 text-green-600" /></div></div></CardContent></Card>
+            <Card className="w-full">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">
+                      Event Progress
+                    </p>
+                    <p className="text-base font-semibold mt-1">
+                      {completedServices}/{totalServices} Services
+                    </p>
+                    <div className="w-full bg-muted rounded-full h-2 mt-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="w-full">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">
+                      Guest Overview
+                    </p>
+                    <p className="text-base font-semibold mt-1">
+                      {eventGuestCount}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      of {expectedGuests} expected guests
+                    </p>
+                  </div>
+                  <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Users className="w-4 h-4 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="w-full">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">
+                      Confirmed Guests
+                    </p>
+                    <p className="text-base font-semibold text-green-600 mt-1">
+                      {apiEvent?.confirmed_guest_count || 0}
+                    </p>
+                  </div>
+                  <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center">
+                    <UserCheck className="w-4 h-4 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <Card><CardContent className="p-4"><p className="text-[10px] text-muted-foreground mb-1">Event Description</p><p className="text-sm text-muted-foreground">{eventDescription}</p></CardContent></Card>
-
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-[10px] text-muted-foreground mb-1">
+                Event Description
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {eventDescription}
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="checklist" className="space-y-6">
-          <EventChecklist eventId={id!} eventTypeId={apiEvent?.event_type_id} permissions={permissions} />
+          <EventChecklist
+            eventId={id!}
+            eventTypeId={apiEvent?.event_type_id}
+            permissions={permissions}
+          />
         </TabsContent>
 
         <TabsContent value="budget" className="space-y-6">
           <EventBudget
             eventId={id!}
             eventTitle={eventTitle}
-            eventBudget={apiEvent?.budget ? parseFloat(String(apiEvent.budget).replace(/[^0-9]/g, '')) : undefined}
-            eventType={apiEvent?.event_type_id || ''}
+            eventBudget={
+              apiEvent?.budget
+                ? parseFloat(String(apiEvent.budget).replace(/[^0-9]/g, ""))
+                : undefined
+            }
+            eventType={apiEvent?.event_type_id || ""}
             eventTypeName={apiEvent?.event_type?.name}
-            eventLocation={apiEvent?.location || ''}
-            expectedGuests={apiEvent?.expected_guests ? String(apiEvent.expected_guests) : ''}
+            eventLocation={apiEvent?.location || ""}
+            expectedGuests={
+              apiEvent?.expected_guests ? String(apiEvent.expected_guests) : ""
+            }
             permissions={permissions}
           />
         </TabsContent>
@@ -525,7 +906,11 @@ const EventManagement = () => {
           <EventExpenses
             eventId={id!}
             eventTitle={eventTitle}
-            eventBudget={apiEvent?.budget ? parseFloat(String(apiEvent.budget).replace(/[^0-9]/g, '')) : undefined}
+            eventBudget={
+              apiEvent?.budget
+                ? parseFloat(String(apiEvent.budget).replace(/[^0-9]/g, ""))
+                : undefined
+            }
             totalRaised={contributionSummary?.total_paid || 0}
             permissions={permissions}
           />
@@ -535,7 +920,11 @@ const EventManagement = () => {
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <h2 className="text-lg font-bold">Vendors</h2>
-              <p className="text-xs text-muted-foreground">{eventServices.length} vendor{eventServices.length !== 1 ? 's' : ''} - {completedServices} completed</p>
+              <p className="text-xs text-muted-foreground">
+                {eventServices.length} vendor
+                {eventServices.length !== 1 ? "s" : ""} - {completedServices}{" "}
+                completed
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -543,28 +932,49 @@ const EventManagement = () => {
                 variant="outline"
                 onClick={async () => {
                   try {
-                    const blob = await eventsApi.downloadVendorsReport(id!, 'pdf');
+                    const blob = await eventsApi.downloadVendorsReport(
+                      id!,
+                      "pdf",
+                    );
                     const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url; a.download = `vendors-${id}.pdf`; a.click();
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `vendors-${id}.pdf`;
+                    a.click();
                     URL.revokeObjectURL(url);
-                  } catch { toast.error('Failed to download report'); }
+                  } catch {
+                    toast.error("Failed to download report");
+                  }
                 }}
-              >PDF</Button>
+              >
+                PDF
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={async () => {
                   try {
-                    const blob = await eventsApi.downloadVendorsReport(id!, 'xlsx');
+                    const blob = await eventsApi.downloadVendorsReport(
+                      id!,
+                      "xlsx",
+                    );
                     const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url; a.download = `vendors-${id}.xlsx`; a.click();
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `vendors-${id}.xlsx`;
+                    a.click();
                     URL.revokeObjectURL(url);
-                  } catch { toast.error('Failed to download report'); }
+                  } catch {
+                    toast.error("Failed to download report");
+                  }
                 }}
-              >Excel</Button>
+              >
+                Excel
+              </Button>
               {(permissions.can_manage_vendors || permissions.is_creator) && (
                 <Button size="sm" onClick={() => setShowAddServiceDialog(true)}>
-                  <Plus className="w-4 h-4 mr-1.5" />Add Vendor
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Add Vendor
                 </Button>
               )}
             </div>
@@ -573,7 +983,10 @@ const EventManagement = () => {
           {servicesLoading ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden">
+                <div
+                  key={i}
+                  className="rounded-2xl border border-border bg-card overflow-hidden"
+                >
                   <div className="h-32 bg-muted animate-pulse" />
                   <div className="p-4 space-y-2">
                     <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
@@ -588,10 +1001,13 @@ const EventManagement = () => {
                 <Plus className="w-8 h-8 text-primary opacity-60" />
               </div>
               <h3 className="font-bold text-lg mb-1">No Vendors Yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">Add vendors to keep their bookings and payments in one place.</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Add vendors to keep their bookings and payments in one place.
+              </p>
               {(permissions.can_manage_vendors || permissions.is_creator) && (
                 <Button onClick={() => setShowAddServiceDialog(true)}>
-                  <Plus className="w-4 h-4 mr-1.5" />Add First Vendor
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Add First Vendor
                 </Button>
               )}
             </div>
@@ -600,58 +1016,94 @@ const EventManagement = () => {
               {eventServices.map((service: any) => {
                 // Backend returns service.service.image (single string from _service_booking_dict)
                 const extractFirstImage = (arr: any) => {
-                  if (!Array.isArray(arr) || arr.length === 0) return '';
+                  if (!Array.isArray(arr) || arr.length === 0) return "";
                   const first = arr[0];
-                  if (typeof first === 'string') return first;
-                  return first?.url || first?.image_url || first?.file_url || first?.thumbnail_url || '';
+                  if (typeof first === "string") return first;
+                  return (
+                    first?.url ||
+                    first?.image_url ||
+                    first?.file_url ||
+                    first?.thumbnail_url ||
+                    ""
+                  );
                 };
-                const serviceImage = service.service?.image
-                  || service.service?.primary_image
-                  || service.service?.cover_image
-                  || service.service?.image_url
-                  || extractFirstImage(service.service?.images)
-                  || extractFirstImage(service.service?.gallery_images)
-                  || '';
+                const serviceImage =
+                  service.service?.image ||
+                  service.service?.primary_image ||
+                  service.service?.cover_image ||
+                  service.service?.image_url ||
+                  extractFirstImage(service.service?.images) ||
+                  extractFirstImage(service.service?.gallery_images) ||
+                  "";
 
-                const isActiveService = ['completed', 'assigned', 'in_progress'].includes(service.status);
+                const isActiveService = [
+                  "completed",
+                  "assigned",
+                  "in_progress",
+                ].includes(service.status);
                 // provider_service_id is the UserService id that was added to the event
-                const providerServiceId = service.provider_service_id || service.service?.id;
-                const serviceCategory = (service.service?.category || service.service?.service_type_name || service.service?.title || '').toLowerCase();
-                const isPhotographyService = serviceCategory.includes('photo') || serviceCategory.includes('cinema') || serviceCategory.includes('video') || serviceCategory.includes('film');
-                const matchedLibrary = isPhotographyService && isActiveService
-                  ? eventPhotoLibraries.find((lib: any) =>
-                      lib.user_service_id === providerServiceId ||
-                      lib.user_service_id === service.provider_service_id ||
-                      lib.user_service_id === service.service?.id ||
-                      (lib.service?.id && (lib.service.id === providerServiceId || lib.service.id === service.provider_service_id))
-                    ) ?? (eventPhotoLibraries.length > 0 ? eventPhotoLibraries[0] : null)
-                  : null;
+                const providerServiceId =
+                  service.provider_service_id || service.service?.id;
+                const serviceCategory = (
+                  service.service?.category ||
+                  service.service?.service_type_name ||
+                  service.service?.title ||
+                  ""
+                ).toLowerCase();
+                const isPhotographyService =
+                  serviceCategory.includes("photo") ||
+                  serviceCategory.includes("cinema") ||
+                  serviceCategory.includes("video") ||
+                  serviceCategory.includes("film");
+                const matchedLibrary =
+                  isPhotographyService && isActiveService
+                    ? (eventPhotoLibraries.find(
+                        (lib: any) =>
+                          lib.user_service_id === providerServiceId ||
+                          lib.user_service_id === service.provider_service_id ||
+                          lib.user_service_id === service.service?.id ||
+                          (lib.service?.id &&
+                            (lib.service.id === providerServiceId ||
+                              lib.service.id === service.provider_service_id)),
+                      ) ??
+                      (eventPhotoLibraries.length > 0
+                        ? eventPhotoLibraries[0]
+                        : null))
+                    : null;
 
                 const statusStyle: Record<string, string> = {
-                  completed: 'bg-emerald-500 text-white',
-                  assigned: 'bg-blue-500 text-white',
-                  in_progress: 'bg-indigo-500 text-white',
-                  pending: 'bg-amber-500 text-white',
-                  cancelled: 'bg-destructive text-white',
+                  completed: "bg-emerald-500 text-white",
+                  assigned: "bg-blue-500 text-white",
+                  in_progress: "bg-indigo-500 text-white",
+                  pending: "bg-amber-500 text-white",
+                  cancelled: "bg-destructive text-white",
                 };
-                const isCompleted = service.status === 'completed';
+                const isCompleted = service.status === "completed";
 
                 return (
                   <div
                     key={service.id}
                     className={`rounded-2xl border overflow-hidden bg-card transition-all hover:shadow-md
-                      ${isCompleted ? 'border-emerald-200 dark:border-emerald-800/60' : 'border-border'}`}
+                      ${isCompleted ? "border-emerald-200 dark:border-emerald-800/60" : "border-border"}`}
                   >
                     {/* Image Header */}
                     <div className="relative aspect-[4/3] bg-muted overflow-hidden">
                       {serviceImage ? (
-                        <img src={serviceImage} alt={service.service?.title} className="w-full h-full object-cover" />
+                        <img
+                          src={serviceImage}
+                          alt={service.service?.title}
+                          className="w-full h-full object-cover"
+                        />
                       ) : service.is_manual ? (
                         <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-primary/5 to-primary/15">
                           <span className="text-2xl font-bold text-primary/70">
-                            {(service.service?.title || 'V').slice(0, 2).toUpperCase()}
+                            {(service.service?.title || "V")
+                              .slice(0, 2)
+                              .toUpperCase()}
                           </span>
-                          <span className="text-[10px] font-medium text-muted-foreground mt-1 uppercase tracking-wide">Off-platform</span>
+                          <span className="text-[10px] font-medium text-muted-foreground mt-1 uppercase tracking-wide">
+                            Off-platform
+                          </span>
                         </div>
                       ) : (
                         <div className="flex items-center justify-center h-full">
@@ -661,7 +1113,9 @@ const EventManagement = () => {
 
                       {/* Status + Off-platform badges */}
                       <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
-                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${statusStyle[service.status] || 'bg-muted text-muted-foreground'}`}>
+                        <span
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${statusStyle[service.status] || "bg-muted text-muted-foreground"}`}
+                        >
                           {service.status}
                         </span>
                         {service.is_manual && (
@@ -685,48 +1139,68 @@ const EventManagement = () => {
                       <div className="flex items-center gap-2">
                         <Avatar className="w-7 h-7 flex-shrink-0">
                           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                            {(service.service?.provider_name || service.service?.title || 'S')[0]}
+                            {
+                              (service.service?.provider_name ||
+                                service.service?.title ||
+                                "S")[0]
+                            }
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-foreground truncate flex items-center gap-1">
-                            {service.service?.title || 'Unnamed Service'}
-
+                            {service.service?.title || "Unnamed Service"}
                           </p>
                           {service.service?.provider_name && (
-                            <p className="text-[11px] text-muted-foreground truncate">{service.service.provider_name}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">
+                              {service.service.provider_name}
+                            </p>
                           )}
                         </div>
-                        {(permissions.can_manage_vendors || permissions.is_creator) && !isActiveService && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setDeleteServiceId(service.id)}
-                            className="ml-auto text-muted-foreground hover:text-destructive h-7 w-7 p-0 flex-shrink-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+                        {(permissions.can_manage_vendors ||
+                          permissions.is_creator) &&
+                          !isActiveService && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setDeleteServiceId(service.id)}
+                              className="ml-auto text-muted-foreground hover:text-destructive h-7 w-7 p-0 flex-shrink-0"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                       </div>
 
                       {/* Photo Library CTA for photography services */}
-                      {isPhotographyService && isActiveService && (
-                        matchedLibrary ? (
+                      {isPhotographyService &&
+                        isActiveService &&
+                        (matchedLibrary ? (
                           <button
-                            onClick={() => navigate(`/photo-library/${matchedLibrary.id}`)}
+                            onClick={() =>
+                              navigate(`/photo-library/${matchedLibrary.id}`)
+                            }
                             className="w-full flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/40 hover:bg-muted transition-colors px-3 py-2 text-sm"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              {matchedLibrary.photos && matchedLibrary.photos.length > 0 ? (
+                              {matchedLibrary.photos &&
+                              matchedLibrary.photos.length > 0 ? (
                                 <div className="flex -space-x-1 shrink-0">
-                                  {matchedLibrary.photos.slice(0, 3).map((p: any, i: number) => (
-                                    <img key={i} src={p.url} alt="" className="w-6 h-6 rounded-full object-cover border-2 border-card" />
-                                  ))}
+                                  {matchedLibrary.photos
+                                    .slice(0, 3)
+                                    .map((p: any, i: number) => (
+                                      <img
+                                        key={i}
+                                        src={p.url}
+                                        alt=""
+                                        className="w-6 h-6 rounded-full object-cover border-2 border-card"
+                                      />
+                                    ))}
                                 </div>
                               ) : (
                                 <Images className="w-4 h-4 text-primary flex-shrink-0" />
                               )}
-                              <span className="font-medium text-foreground text-xs truncate">Photo Library</span>
+                              <span className="font-medium text-foreground text-xs truncate">
+                                Photo Library
+                              </span>
                             </div>
                             <span className="text-[11px] text-muted-foreground bg-background px-2 py-0.5 rounded-full border border-border shrink-0">
                               {matchedLibrary.photo_count || 0} photos
@@ -735,27 +1209,40 @@ const EventManagement = () => {
                         ) : (
                           <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2">
                             <Images className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                            <span className="text-xs text-muted-foreground">No photo library shared yet</span>
+                            <span className="text-xs text-muted-foreground">
+                              No photo library shared yet
+                            </span>
                           </div>
-                        )
-                      )}
+                        ))}
 
                       {/* Log offline payment CTA */}
-                      {(permissions.can_manage_vendors || permissions.is_creator) && (service.status === 'assigned' || (service.is_manual && service.status !== 'cancelled')) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full min-h-8 text-xs whitespace-normal leading-tight"
-                          onClick={() => setLogPaymentFor({
-                            id: service.id,
-                            vendorName: service.service?.provider_name || service.service?.title || 'Vendor',
-                            serviceTitle: service.service?.title || 'Service',
-                            agreedPrice: service.quoted_price ? Number(service.quoted_price) : null,
-                          })}
-                        >
-                          Log offline payment
-                        </Button>
-                      )}
+                      {(permissions.can_manage_vendors ||
+                        permissions.is_creator) &&
+                        (service.status === "assigned" ||
+                          (service.is_manual &&
+                            service.status !== "cancelled")) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full min-h-8 text-xs whitespace-normal leading-tight"
+                            onClick={() =>
+                              setLogPaymentFor({
+                                id: service.id,
+                                vendorName:
+                                  service.service?.provider_name ||
+                                  service.service?.title ||
+                                  "Vendor",
+                                serviceTitle:
+                                  service.service?.title || "Service",
+                                agreedPrice: service.quoted_price
+                                  ? Number(service.quoted_price)
+                                  : null,
+                              })
+                            }
+                          >
+                            Log offline payment
+                          </Button>
+                        )}
                     </div>
                   </div>
                 );
@@ -765,13 +1252,30 @@ const EventManagement = () => {
         </TabsContent>
 
         <TabsContent value="committee" className="space-y-6">
-          <EventCommittee eventId={id!} permissions={permissions} eventTitle={event?.title || 'Event'} />
+          <EventCommittee
+            eventId={id!}
+            permissions={permissions}
+            eventTitle={event?.title || "Event"}
+          />
         </TabsContent>
 
         <TabsContent value="contributions" className="space-y-6">
-          <EventContributions eventId={id!} eventTitle={eventTitle} eventBudget={apiEvent?.budget ? parseFloat(String(apiEvent.budget).replace(/[^0-9]/g, '')) : undefined} eventEndDate={apiEvent?.start_date} reminderContactPhone={(apiEvent as any)?.reminder_contact_phone || ''} isCreator={isCreator} permissions={permissions} />
+          <EventContributions
+            eventId={id!}
+            eventTitle={eventTitle}
+            eventBudget={
+              apiEvent?.budget
+                ? parseFloat(String(apiEvent.budget).replace(/[^0-9]/g, ""))
+                : undefined
+            }
+            eventEndDate={apiEvent?.start_date}
+            reminderContactPhone={
+              (apiEvent as any)?.reminder_contact_phone || ""
+            }
+            isCreator={isCreator}
+            permissions={permissions}
+          />
         </TabsContent>
-
 
         <TabsContent value="guests" className="space-y-6">
           <EventGuestList eventId={id!} permissions={permissions} />
@@ -780,8 +1284,6 @@ const EventManagement = () => {
         <TabsContent value="cards" className="space-y-6">
           <EventCardsTab eventId={id!} />
         </TabsContent>
-
-
 
         <TabsContent value="rsvp" className="space-y-6">
           <Card className="border-primary/20 bg-primary/5">
@@ -793,25 +1295,36 @@ const EventManagement = () => {
                 <div>
                   <p className="text-sm font-semibold">Smart RSVP Calls</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Let the Nuru Voice Assistant call your pending guests in Swahili and write outcomes back here.
+                    Let the Nuru Voice Assistant call your pending guests in
+                    Swahili and write outcomes back here.
                   </p>
                 </div>
               </div>
-              <Button size="sm" onClick={() => navigate(`/voice-calls?event_id=${id || ''}`)}>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/voice-calls?event_id=${id || ""}`)}
+              >
                 Open Smart RSVP Calls
               </Button>
             </CardContent>
           </Card>
-          <EventRSVP eventId={id || ''} eventTitle={eventTitle} permissions={permissions} />
+          <EventRSVP
+            eventId={id || ""}
+            eventTitle={eventTitle}
+            permissions={permissions}
+          />
         </TabsContent>
-
 
         <TabsContent value="schedule" className="space-y-6">
           <EventSchedule eventId={id!} />
         </TabsContent>
 
         <TabsContent value="meetings" className="space-y-6">
-          <EventMeetings eventId={id!} isCreator={isCreator} eventName={eventTitle} />
+          <EventMeetings
+            eventId={id!}
+            isCreator={isCreator}
+            eventName={eventTitle}
+          />
         </TabsContent>
 
         {(apiEvent as any)?.sells_tickets && (
@@ -830,7 +1343,7 @@ const EventManagement = () => {
           </TabsContent>
         )}
 
-        {isCreator && !isEventEnded && (
+        {(isCreator || permissions.can_check_in_guests) && !isEventEnded && (
           <TabsContent value="check-in" className="space-y-4">
             <EventGuestCheckIn
               eventId={id!}
@@ -846,14 +1359,20 @@ const EventManagement = () => {
       </Tabs>
 
       {/* Add Service Dialog */}
-      <Dialog open={showAddServiceDialog} onOpenChange={(v) => { setShowAddServiceDialog(v); if (!v) setAddMode('search'); }}>
+      <Dialog
+        open={showAddServiceDialog}
+        onOpenChange={(v) => {
+          setShowAddServiceDialog(v);
+          if (!v) setAddMode("search");
+        }}
+      >
         <DialogContent className="sm:max-w-[520px] max-h-[88vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Add Vendor</DialogTitle>
             <DialogDescription>
-              {addMode === 'search'
-                ? 'Find a verified vendor on Nuru or add one manually if they are not yet on Nuru.'
-                : 'Record an off-platform vendor so you can track payments here.'}
+              {addMode === "search"
+                ? "Find a verified vendor on Nuru or add one manually if they are not yet on Nuru."
+                : "Record an off-platform vendor so you can track payments here."}
             </DialogDescription>
           </DialogHeader>
 
@@ -861,65 +1380,117 @@ const EventManagement = () => {
           <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-xl flex-shrink-0">
             <button
               type="button"
-              onClick={() => setAddMode('search')}
-              className={`text-xs font-semibold py-2 rounded-lg transition-colors ${addMode === 'search' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setAddMode("search")}
+              className={`text-xs font-semibold py-2 rounded-lg transition-colors ${addMode === "search" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
               From Nuru
             </button>
             <button
               type="button"
-              onClick={() => setAddMode('manual')}
-              className={`text-xs font-semibold py-2 rounded-lg transition-colors ${addMode === 'manual' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setAddMode("manual")}
+              className={`text-xs font-semibold py-2 rounded-lg transition-colors ${addMode === "manual" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
               Not on Nuru
             </button>
           </div>
 
-          {addMode === 'search' ? (
+          {addMode === "search" ? (
             <div className="space-y-4 flex-1 min-h-0 flex flex-col">
               <div className="relative flex-shrink-0">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search by name, category..." value={serviceSearch} onChange={(e) => handleServiceSearch(e.target.value)} className="pl-9" autoComplete="off" />
+                <Input
+                  placeholder="Search by name, category..."
+                  value={serviceSearch}
+                  onChange={(e) => handleServiceSearch(e.target.value)}
+                  className="pl-9"
+                  autoComplete="off"
+                />
               </div>
               <ScrollArea className="flex-1 min-h-0 max-h-[50vh] pr-4">
                 <div className="space-y-2">
                   {searchLoading && (
-                    <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-                  )}
-                  {!searchLoading && searchResults.map((service: any) => (
-                    <button
-                      key={service.id}
-                      onClick={() => handleAddService(service)}
-                      disabled={addingServiceId === service.id}
-                      className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center gap-3"
-                    >
-                      <Avatar className="w-10 h-10 flex-shrink-0">
-                        <AvatarImage src={service.primary_image || service.images?.[0]?.url} />
-                        <AvatarFallback>{service.title?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium truncate">{service.title}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
-                          <span className="truncate">{service.category_name || service.category || service.service_type_name}</span>
-                          {service.provider?.name && <><span>•</span><span className="truncate">{service.provider.name}</span></>}
-                          {service.min_price && <><span>•</span><span className="whitespace-nowrap">From TZS {formatPrice(service.min_price)}</span></>}
-                        </div>
-                      </div>
-                      {addingServiceId === service.id && <Loader2 className="w-4 h-4 animate-spin" />}
-                    </button>
-                  ))}
-                  {!searchLoading && serviceSearch.length >= 2 && searchResults.length === 0 && (
-                    <div className="text-center py-8 space-y-3">
-                      <p className="text-sm text-muted-foreground">No vendors found on Nuru</p>
-                      <Button variant="outline" size="sm" onClick={() => { setManualForm((f) => ({ ...f, name: serviceSearch })); setAddMode('manual'); }}>
-                        <Plus className="w-3.5 h-3.5 mr-1.5" />Add "{serviceSearch}" manually
-                      </Button>
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                     </div>
                   )}
+                  {!searchLoading &&
+                    searchResults.map((service: any) => (
+                      <button
+                        key={service.id}
+                        onClick={() => handleAddService(service)}
+                        disabled={addingServiceId === service.id}
+                        className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center gap-3"
+                      >
+                        <Avatar className="w-10 h-10 flex-shrink-0">
+                          <AvatarImage
+                            src={
+                              service.primary_image || service.images?.[0]?.url
+                            }
+                          />
+                          <AvatarFallback>{service.title?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium truncate">
+                              {service.title}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
+                            <span className="truncate">
+                              {service.category_name ||
+                                service.category ||
+                                service.service_type_name}
+                            </span>
+                            {service.provider?.name && (
+                              <>
+                                <span>•</span>
+                                <span className="truncate">
+                                  {service.provider.name}
+                                </span>
+                              </>
+                            )}
+                            {service.min_price && (
+                              <>
+                                <span>•</span>
+                                <span className="whitespace-nowrap">
+                                  From TZS {formatPrice(service.min_price)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {addingServiceId === service.id && (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        )}
+                      </button>
+                    ))}
+                  {!searchLoading &&
+                    serviceSearch.length >= 2 &&
+                    searchResults.length === 0 && (
+                      <div className="text-center py-8 space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          No vendors found on Nuru
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setManualForm((f) => ({
+                              ...f,
+                              name: serviceSearch,
+                            }));
+                            setAddMode("manual");
+                          }}
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1.5" />
+                          Add "{serviceSearch}" manually
+                        </Button>
+                      </div>
+                    )}
                   {!searchLoading && serviceSearch.length < 2 && (
-                    <div className="text-center py-8 text-muted-foreground text-sm">Type at least 2 characters to search</div>
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      Type at least 2 characters to search
+                    </div>
                   )}
                 </div>
               </ScrollArea>
@@ -928,42 +1499,115 @@ const EventManagement = () => {
             <ScrollArea className="flex-1 min-h-0 max-h-[60vh] pr-3">
               <div className="space-y-3 py-1">
                 <div className="space-y-1.5">
-                  <Label htmlFor="mv-name" className="text-xs font-medium">Vendor name <span className="text-destructive">*</span></Label>
-                  <Input id="mv-name" placeholder="e.g. Asili Catering" value={manualForm.name} onChange={(e) => setManualForm({ ...manualForm, name: e.target.value })} autoComplete="off" />
+                  <Label htmlFor="mv-name" className="text-xs font-medium">
+                    Vendor name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="mv-name"
+                    placeholder="e.g. Asili Catering"
+                    value={manualForm.name}
+                    onChange={(e) =>
+                      setManualForm({ ...manualForm, name: e.target.value })
+                    }
+                    autoComplete="off"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">Category</Label>
-                  <Select value={manualForm.categoryId || undefined} onValueChange={(v) => setManualForm({ ...manualForm, categoryId: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                  <Select
+                    value={manualForm.categoryId || undefined}
+                    onValueChange={(v) =>
+                      setManualForm({ ...manualForm, categoryId: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
                     <SelectContent className="max-h-72">
                       {serviceCategories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="mv-phone" className="text-xs font-medium">Phone</Label>
-                    <Input id="mv-phone" placeholder="0712 345 678" value={manualForm.phone} onChange={(e) => setManualForm({ ...manualForm, phone: e.target.value })} autoComplete="off" />
+                    <Label htmlFor="mv-phone" className="text-xs font-medium">
+                      Phone
+                    </Label>
+                    <Input
+                      id="mv-phone"
+                      placeholder="0712 345 678"
+                      value={manualForm.phone}
+                      onChange={(e) =>
+                        setManualForm({ ...manualForm, phone: e.target.value })
+                      }
+                      autoComplete="off"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="mv-email" className="text-xs font-medium">Email</Label>
-                    <Input id="mv-email" type="email" placeholder="vendor@example.com" value={manualForm.email} onChange={(e) => setManualForm({ ...manualForm, email: e.target.value })} autoComplete="off" />
+                    <Label htmlFor="mv-email" className="text-xs font-medium">
+                      Email
+                    </Label>
+                    <Input
+                      id="mv-email"
+                      type="email"
+                      placeholder="vendor@example.com"
+                      value={manualForm.email}
+                      onChange={(e) =>
+                        setManualForm({ ...manualForm, email: e.target.value })
+                      }
+                      autoComplete="off"
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="mv-price" className="text-xs font-medium">Agreed price (TZS)</Label>
-                  <Input id="mv-price" type="number" inputMode="numeric" placeholder="0" value={manualForm.price} onChange={(e) => setManualForm({ ...manualForm, price: e.target.value })} autoComplete="off" />
+                  <Label htmlFor="mv-price" className="text-xs font-medium">
+                    Agreed price (TZS)
+                  </Label>
+                  <Input
+                    id="mv-price"
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={manualForm.price}
+                    onChange={(e) =>
+                      setManualForm({ ...manualForm, price: e.target.value })
+                    }
+                    autoComplete="off"
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="mv-notes" className="text-xs font-medium">Notes</Label>
-                  <Textarea id="mv-notes" rows={3} placeholder="Anything you want to remember about this vendor..." value={manualForm.notes} onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })} />
+                  <Label htmlFor="mv-notes" className="text-xs font-medium">
+                    Notes
+                  </Label>
+                  <Textarea
+                    id="mv-notes"
+                    rows={3}
+                    placeholder="Anything you want to remember about this vendor..."
+                    value={manualForm.notes}
+                    onChange={(e) =>
+                      setManualForm({ ...manualForm, notes: e.target.value })
+                    }
+                  />
                 </div>
                 <div className="flex items-center justify-end gap-2 pt-2">
-                  <Button variant="ghost" onClick={() => setShowAddServiceDialog(false)} disabled={manualSubmitting}>Cancel</Button>
-                  <Button onClick={handleAddManualVendor} disabled={manualSubmitting || !manualForm.name.trim()}>
-                    {manualSubmitting && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowAddServiceDialog(false)}
+                    disabled={manualSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAddManualVendor}
+                    disabled={manualSubmitting || !manualForm.name.trim()}
+                  >
+                    {manualSubmitting && (
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                    )}
                     Save vendor
                   </Button>
                 </div>
@@ -976,7 +1620,9 @@ const EventManagement = () => {
       {logPaymentFor && (
         <LogOfflinePaymentDialog
           open={!!logPaymentFor}
-          onOpenChange={(v) => { if (!v) setLogPaymentFor(null); }}
+          onOpenChange={(v) => {
+            if (!v) setLogPaymentFor(null);
+          }}
           eventId={id!}
           eventServiceId={logPaymentFor.id}
           vendorName={logPaymentFor.vendorName}

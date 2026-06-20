@@ -276,27 +276,33 @@ const EventCommittee = ({ eventId, permissions, eventTitle }: EventCommitteeProp
   };
 
   const handleRemoveMember = async (memberId: string) => {
+    const member = members.find((m: any) => m.id === memberId) as any;
+    const memberName = member?.user?.full_name || member?.user?.first_name || 'member';
     const confirmed = await confirm({
       title: 'Remove Committee Member',
-      description: 'Are you sure you want to remove this committee member? This action cannot be undone.',
+      description: `Are you sure you want to remove ${memberName}? This action cannot be undone.`,
       confirmLabel: 'Remove',
       destructive: true,
     });
     if (!confirmed) return;
+    const toastId = toast.loading(`Removing ${memberName}…`);
     try {
       await removeMember(memberId);
-      toast.success('Member removed');
+      toast.success('Member removed', { id: toastId });
     } catch (err: any) {
+      toast.dismiss(toastId);
       showCaughtError(err, 'Failed to remove member');
     }
   };
 
   const handleResendInvite = async (memberId: string) => {
+    const toastId = toast.loading('Resending invitation…');
     try {
       const { eventsApi } = await import('@/lib/api/events');
       await eventsApi.resendCommitteeInvitation(eventId, memberId);
-      toast.success('Invitation resent');
+      toast.success('Invitation resent', { id: toastId });
     } catch (err: any) {
+      toast.dismiss(toastId);
       showCaughtError(err, 'Failed to resend invitation');
     }
   };

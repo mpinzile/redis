@@ -106,46 +106,54 @@ const CommunityDetail = () => {
   const handleJoin = async () => {
     if (!id) return;
     setJoining(true);
+    const tid = 'cd-join';
+    toast.loading('Joining community…', { id: tid });
     try {
       const res = await socialApi.joinCommunity(id);
       if (res.success) {
-        toast.success('Joined community!');
+        toast.success('Joined community!', { id: tid });
         setCommunity((prev: any) => prev ? { ...prev, is_member: true, member_count: (prev.member_count || 0) + 1 } : prev);
         await fetchMembers();
+      } else {
+        toast.error('Failed to join', { id: tid });
       }
-    } catch { toast.error('Failed to join'); }
+    } catch { toast.error('Failed to join', { id: tid }); }
     finally { setJoining(false); }
   };
 
   const handleAddMember = async (userId: string) => {
     if (!id) return;
     setAddingMember(true);
+    const tid = `cd-add-${userId}`;
+    toast.loading('Adding member…', { id: tid });
     try {
       const res = await socialApi.addCommunityMember(id, userId);
       if (res.success) {
-        toast.success('Member added!');
+        toast.success('Member added!', { id: tid });
         await fetchMembers();
         setCommunity((prev: any) => prev ? { ...prev, member_count: (prev.member_count || 0) + 1 } : prev);
         setMemberSearchQuery('');
       } else {
-        toast.error(res.message || 'Failed to add member');
+        toast.error(res.message || 'Failed to add member', { id: tid });
       }
-    } catch { toast.error('Failed to add member'); }
+    } catch { toast.error('Failed to add member', { id: tid }); }
     finally { setAddingMember(false); }
   };
 
   const handleRemoveMember = async (userId: string) => {
     if (!id) return;
+    const tid = `cd-rm-${userId}`;
+    toast.loading('Removing member…', { id: tid });
     try {
       const res = await socialApi.removeCommunityMember(id, userId);
       if (res.success) {
-        toast.success('Member removed');
+        toast.success('Member removed', { id: tid });
         await fetchMembers();
         setCommunity((prev: any) => prev ? { ...prev, member_count: Math.max(0, (prev.member_count || 0) - 1) } : prev);
       } else {
-        toast.error(res.message || 'Failed to remove member');
+        toast.error(res.message || 'Failed to remove member', { id: tid });
       }
-    } catch { toast.error('Failed to remove member'); }
+    } catch { toast.error('Failed to remove member', { id: tid }); }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,13 +171,15 @@ const CommunityDetail = () => {
   const handleCreatePost = async () => {
     if (!id || (!postContent.trim() && postImages.length === 0)) return;
     setPosting(true);
+    const tid = 'cd-post';
+    toast.loading('Sharing post…', { id: tid });
     try {
       const formData = new FormData();
       if (postContent.trim()) formData.append('content', postContent.trim());
       postImages.forEach(f => formData.append('images', f));
       const res = await socialApi.createCommunityPost(id, formData);
       if (res.success) {
-        toast.success('Post shared!');
+        toast.success('Post shared!', { id: tid });
         setPostContent('');
         setPostImages([]);
         setPostPreviews([]);
@@ -179,9 +189,9 @@ const CommunityDetail = () => {
           setPosts(pd?.posts || (Array.isArray(pd) ? pd : []));
         }
       } else {
-        toast.error(res.message || 'Failed to post');
+        toast.error(res.message || 'Failed to post', { id: tid });
       }
-    } catch { toast.error('Failed to create post'); }
+    } catch { toast.error('Failed to create post', { id: tid }); }
     finally { setPosting(false); }
   };
 

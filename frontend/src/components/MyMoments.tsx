@@ -86,16 +86,18 @@ const MyMoments = () => {
   // getTimeAgo imported from shared utility
 
   const handleDelete = async (postId: string) => {
+    const tid = `del-moment-${postId}`;
+    toast.loading('Deleting moment…', { id: tid });
     try {
       const response = await socialApi.deletePost(postId);
       if (response.success) {
         setPosts(posts.filter(p => p.id !== postId));
-        toast.success('Moment deleted successfully');
+        toast.success('Moment deleted successfully', { id: tid });
       } else {
-        toast.error('Failed to delete moment');
+        toast.error('Failed to delete moment', { id: tid });
       }
     } catch {
-      toast.error('Failed to delete moment');
+      toast.error('Failed to delete moment', { id: tid });
     }
   };
 
@@ -107,32 +109,36 @@ const MyMoments = () => {
   };
 
   const handleVisibilityChange = async (postId: string, newVisibility: string) => {
+    const tid = `vis-${postId}`;
+    toast.loading('Updating visibility…', { id: tid });
     try {
       const response = await socialApi.updatePost(postId, { visibility: newVisibility });
       if (response.success) {
         setPosts(posts.map(p => p.id === postId ? { ...p, visibility: newVisibility } : p));
-        toast.success(`Visibility changed to ${newVisibility === 'circle' ? 'My Circle' : 'Public'}`);
+        toast.success(`Visibility changed to ${newVisibility === 'circle' ? 'My Circle' : 'Public'}`, { id: tid });
       } else {
-        toast.error('Failed to change visibility');
+        toast.error('Failed to change visibility', { id: tid });
       }
     } catch {
-      toast.error('Failed to change visibility');
+      toast.error('Failed to change visibility', { id: tid });
     }
   };
 
   const saveEdit = async () => {
     if (!editingPost) return;
+    const tid = `edit-moment-${editingPost.id}`;
+    toast.loading('Saving changes…', { id: tid });
     try {
       const response = await socialApi.updatePost(editingPost.id, { content: editText, visibility: editVisibility });
       if (response.success) {
-        toast.success('Moment updated');
+        toast.success('Moment updated', { id: tid });
         setEditDialogOpen(false);
         fetchMyPosts();
       } else {
-        toast.error('Failed to update');
+        toast.error('Failed to update', { id: tid });
       }
     } catch {
-      toast.error('Failed to update moment');
+      toast.error('Failed to update moment', { id: tid });
     }
   };
 

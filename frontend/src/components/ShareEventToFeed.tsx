@@ -57,19 +57,19 @@ const ShareEventToFeed = ({ event, trigger }: ShareEventToFeedProps) => {
 
   const handleShare = async () => {
     setIsSubmitting(true);
+    const tid = `share-event-${event.id}`;
+    toast.loading('Sharing event to feed…', { id: tid });
     try {
       const formData = new FormData();
-      
-      // Create a post that references the event
-      const content = caption.trim() 
-        ? caption.trim() 
+      const content = caption.trim()
+        ? caption.trim()
         : `Check out my event: ${event.title}`;
-      
+
       formData.append("content", content);
       formData.append("visibility", visibility);
       formData.append("post_type", "event_share");
       formData.append("event_id", event.id);
-      
+
       if (duration === "until" && untilDate) {
         const expiresAt = new Date(untilDate);
         const [h, m] = untilTime.split(":");
@@ -79,14 +79,14 @@ const ShareEventToFeed = ({ event, trigger }: ShareEventToFeedProps) => {
 
       const response = await socialApi.createPost(formData);
       if (response.success) {
-        toast.success("Event shared to feed!");
+        toast.success("Event shared to feed!", { id: tid });
         setOpen(false);
         setCaption("");
       } else {
-        toast.error(response.message || "Failed to share event");
+        toast.error(response.message || "Failed to share event", { id: tid });
       }
     } catch {
-      toast.error("Failed to share event");
+      toast.error("Failed to share event", { id: tid });
     } finally {
       setIsSubmitting(false);
     }

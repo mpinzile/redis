@@ -160,6 +160,8 @@ export default function MyIssues() {
     if (!form.subject.trim()) { toast.error("Subject is required"); return; }
     if (!form.description.trim()) { toast.error("Description is required"); return; }
     setSubmitting(true);
+    const tid = 'submit-issue';
+    toast.loading('Submitting your issue…', { id: tid });
 
     try {
       // Upload staged files first
@@ -169,7 +171,7 @@ export default function MyIssues() {
         if (res.success && res.data?.url) {
           uploadedUrls.push(res.data.url);
         } else {
-          toast.error("Failed to upload screenshot");
+          toast.error("Failed to upload screenshot", { id: tid });
           setSubmitting(false);
           return;
         }
@@ -181,18 +183,17 @@ export default function MyIssues() {
       });
 
       if (res.success) {
-        toast.success("Issue submitted successfully");
+        toast.success("Issue submitted successfully", { id: tid });
         setShowSubmit(false);
         setForm({ category_id: "", subject: "", description: "", priority: "medium", screenshot_urls: [] });
-        // Clean up staged file previews
         stagedFiles.forEach(s => URL.revokeObjectURL(s.previewUrl));
         setStagedFiles([]);
         loadIssues();
       } else {
-        toast.error(res.message || "Failed to submit issue");
+        toast.error(res.message || "Failed to submit issue", { id: tid });
       }
     } catch {
-      toast.error("Failed to submit issue");
+      toast.error("Failed to submit issue", { id: tid });
     }
     setSubmitting(false);
   };
@@ -200,27 +201,31 @@ export default function MyIssues() {
   const handleReply = async () => {
     if (!selectedIssue || !replyText.trim()) return;
     setReplying(true);
+    const tid = `reply-${selectedIssue.id}`;
+    toast.loading('Sending reply…', { id: tid });
     const res = await issuesApi.replyToIssue(selectedIssue.id, { message: replyText.trim() });
     if (res.success) {
-      toast.success("Reply sent");
+      toast.success("Reply sent", { id: tid });
       setReplyText("");
       openIssueDetail(selectedIssue.id);
       loadIssues();
     } else {
-      toast.error(res.message || "Failed to send reply");
+      toast.error(res.message || "Failed to send reply", { id: tid });
     }
     setReplying(false);
   };
 
   const handleCloseIssue = async () => {
     if (!selectedIssue) return;
+    const tid = `close-${selectedIssue.id}`;
+    toast.loading('Closing issue…', { id: tid });
     const res = await issuesApi.closeIssue(selectedIssue.id);
     if (res.success) {
-      toast.success("Issue closed");
+      toast.success("Issue closed", { id: tid });
       setSelectedIssue(null);
       loadIssues();
     } else {
-      toast.error(res.message || "Failed to close issue");
+      toast.error(res.message || "Failed to close issue", { id: tid });
     }
   };
 

@@ -130,25 +130,36 @@ const MyEvents = () => {
   const totalGuests    = events.reduce((s: number, e: any) => s + (e.expected_guests || 0), 0);
 
   const handleDelete = async (id: string) => {
-    try { await deleteEvent(id); refetch(); }
-    catch (err) { console.error('Failed to delete event:', err); }
+    const tid = `del-event-${id}`;
+    toast.loading('Deleting event…', { id: tid });
+    try {
+      await deleteEvent(id);
+      toast.success('Event deleted', { id: tid });
+      refetch();
+    } catch (err) {
+      console.error('Failed to delete event:', err);
+      toast.error('Could not delete event', { id: tid });
+    }
   };
 
   const handleStatusChange = async (eventId: string, newStatus: string) => {
     setLocalStatusOverrides(prev => ({ ...prev, [eventId]: newStatus }));
     setUpdatingStatus(eventId);
+    const tid = `status-${eventId}`;
+    toast.loading(`Updating status to ${newStatus}…`, { id: tid });
     try {
       const res = await eventsApi.updateStatus(eventId, newStatus as any);
       if (res.success) {
-        toast.success(`Status updated to ${newStatus}`);
+        toast.success(`Status updated to ${newStatus}`, { id: tid });
         setLocalStatusOverrides(prev => { const next = { ...prev }; delete next[eventId]; return next; });
         refetch();
       } else {
         setLocalStatusOverrides(prev => { const next = { ...prev }; delete next[eventId]; return next; });
-        toast.error(res.message || 'Failed to update status');
+        toast.error(res.message || 'Failed to update status', { id: tid });
       }
     } catch (err: any) {
       setLocalStatusOverrides(prev => { const next = { ...prev }; delete next[eventId]; return next; });
+      toast.dismiss(tid);
       showCaughtError(err, 'Failed to update status');
     } finally { setUpdatingStatus(null); }
   };

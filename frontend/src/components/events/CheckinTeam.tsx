@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck, Copy, RefreshCw, Trash2, UserPlus, Search,
-  Loader2, X, AlertTriangle, ScanLine, Users,
+  Loader2, X, AlertTriangle, ScanLine, Users, Eye, EyeOff, Lock,
 } from "lucide-react";
 import SvgIcon from "@/components/ui/svg-icon";
 import KeySquareIcon from "@/assets/icons/key-square-icon.svg";
@@ -45,6 +45,12 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
 
   const [revealedCode, setRevealedCode] = useState<string | null>(null);
   const [revealOpen, setRevealOpen] = useState(false);
+  const [revealJustGenerated, setRevealJustGenerated] = useState(false);
+
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [revealing, setRevealing] = useState(false);
 
   const [confirmRevoke, setConfirmRevoke] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<CheckinTeamMember | null>(null);
@@ -79,6 +85,7 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
       const res = await checkinTeamApi.generateCode(eventId);
       if (res.success && res.data?.code) {
         setRevealedCode(res.data.code);
+        setRevealJustGenerated(true);
         setRevealOpen(true);
         await refresh();
       } else {
@@ -102,6 +109,29 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
     } finally {
       setBusyCode(null);
       setConfirmRevoke(false);
+    }
+  };
+
+  const handleReveal = async () => {
+    if (!password.trim()) {
+      toast.error("Enter your password to view the code");
+      return;
+    }
+    setRevealing(true);
+    try {
+      const res = await checkinTeamApi.revealCode(eventId, password);
+      if (res.success && res.data?.code) {
+        setRevealedCode(res.data.code);
+        setRevealJustGenerated(false);
+        setPasswordOpen(false);
+        setPassword("");
+        setShowPassword(false);
+        setRevealOpen(true);
+      } else {
+        toast.error(res.message || "Could not reveal code");
+      }
+    } finally {
+      setRevealing(false);
     }
   };
 
@@ -214,6 +244,18 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
                 {busyCode === "generate" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 {code ? "Regenerate" : "Generate code"}
               </Button>
+              {code && code.status === "active" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => { setPassword(""); setShowPassword(false); setPasswordOpen(true); }}
+                  disabled={busyCode !== null}
+                >
+                  <Eye className="w-4 h-4" />
+                  View code
+                </Button>
+              )}
               {code && code.status === "active" && (
                 <Button
                   size="sm"
@@ -381,14 +423,15 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Reveal generated code dialog */}
+      {/* Reveal generated/revealed code dialog */}
       <Dialog open={revealOpen} onOpenChange={(o) => { setRevealOpen(o); if (!o) setRevealedCode(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>New access code</DialogTitle>
+            <DialogTitle>{revealJustGenerated ? "New access code" : "Event access code"}</DialogTitle>
             <DialogDescription>
-              This is the only time the full code will be shown. Copy it now and share it with
-              your check-in team. You can regenerate at any time if it leaks.
+              {revealJustGenerated
+                ? "Copy this code now and share it with your check-in team. You can view it again later by re-entering your password."
+                : "Share this code with your check-in team. They redeem it in the Nuru app to enter Check-In Mode."}
             </DialogDescription>
           </DialogHeader>
           {revealedCode && (
@@ -415,6 +458,53 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirm password to reveal */}
+      <Dialog open={passwordOpen} onOpenChange={(o) => { setPasswordOpen(o); if (!o) { setPassword(""); setShowPassword(false); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-primary" />
+              Confirm your password
+            </DialogTitle>
+            <DialogDescription>
+              For your safety, re-enter your account password to reveal the active access code.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void handleReveal(); }}
+                autoComplete="off"
+                autoFocus
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setPasswordOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleReveal} disabled={revealing || !password.trim()} className="flex-1 gap-2">
+                {revealing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                Reveal
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Confirm revoke */}
       <Dialog open={confirmRevoke} onOpenChange={setConfirmRevoke}>

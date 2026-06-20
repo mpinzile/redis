@@ -58,38 +58,44 @@ const Communities = () => {
     }
 
     setIsSubmitting(true);
+    const tid = 'create-community';
+    toast.loading('Creating community…', { id: tid });
     try {
       await createCommunity({
         name: newCommunity.name,
         description: newCommunity.description
       }, coverImage || undefined);
-      toast.success('Community created successfully!');
+      toast.success('Community created successfully!', { id: tid });
       setNewCommunity({ name: '', description: '' });
       setCoverImage(null);
       setCoverPreview(null);
       setIsCreateDialogOpen(false);
     } catch (err) {
-      toast.error('Failed to create community');
+      toast.error('Failed to create community', { id: tid });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleJoinCommunity = async (id: string) => {
+    const tid = `join-${id}`;
+    toast.loading('Joining community…', { id: tid });
     try {
       await joinCommunity(id);
-      toast.success('Joined community successfully!');
+      toast.success('Joined community successfully!', { id: tid });
     } catch (err) {
-      toast.error('Failed to join community');
+      toast.error('Failed to join community', { id: tid });
     }
   };
 
   const handleLeaveCommunity = async (id: string) => {
+    const tid = `leave-${id}`;
+    toast.loading('Leaving community…', { id: tid });
     try {
       await leaveCommunity(id);
-      toast.success('Left community');
+      toast.success('Left community', { id: tid });
     } catch (err) {
-      toast.error('Failed to leave community');
+      toast.error('Failed to leave community', { id: tid });
     }
   };
 

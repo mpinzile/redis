@@ -71,6 +71,9 @@ export const checkinTeamApi = {
   revokeCode: (eventId: string): Promise<ApiResponse<{ revoked: number }>> =>
     post(`/user-events/${eventId}/checkin-code/revoke`, {}),
 
+  revealCode: (eventId: string, password: string): Promise<ApiResponse<CheckinCode>> =>
+    post(`/user-events/${eventId}/checkin-code/reveal`, { password }),
+
   log: (eventId: string, limit = 100): Promise<ApiResponse<CheckinLogResponse>> =>
     get(`/user-events/${eventId}/checkin-log?limit=${limit}`),
 };
