@@ -3075,11 +3075,11 @@ def checkin_guest(
         return standard_response(False, "Guest not found")
 
     now = datetime.now(EAT)
-    name = _resolve_guest_name(db, att)
+    # Cheap display name — avoid the extra contributor/user lookup on the
+    # fast path; the scanner already has the name cached locally.
+    name = att.guest_name or "Guest"
 
-    # Parity with QR scan validations (see checkin_guest_qr): event timing,
-    # rsvp_declined, already-checked-in. We surface the same reason codes so
-    # the UI can render consistent messages regardless of scan vs manual.
+    # Parity with QR scan validations (event timing, already-checked-in).
     if hasattr(event, "start_date") and event.start_date:
         from datetime import date as date_type, timedelta
         event_date = event.start_date if isinstance(event.start_date, date_type) else (
@@ -3102,24 +3102,36 @@ def checkin_guest(
             "checked_in_at": att.checked_in_at.isoformat() if att.checked_in_at else None,
         })
 
-    # Declined guests are still allowed to be checked in (they may show up
-    # at the door anyway). Their rsvp_status is updated to "checked_in"
-    # below so the change is reflected on the guest list immediately.
-
-
     actor = current_user
-    if scan_session and scan_session.user_id:
+    if scan_session and scan_session.user_id and scan_session.user_id != current_user.id:
         bound = db.query(User).filter(User.id == scan_session.user_id).first()
         if bound:
             actor = bound
-    att.checked_in = True
-    att.checked_in_at = now
-    att.rsvp_status = RSVPStatusEnum.checked_in
-    att.updated_at = now
-    stamp_audit(att, user=actor, session=scan_session, device_ref=(body or {}).get("device_ref"))
+
+    # Atomic UPDATE — single round-trip, race-safe against parallel scans.
+    updated = db.query(EventAttendee).filter(
+        EventAttendee.id == att.id,
+        EventAttendee.checked_in == False,  # noqa: E712
+    ).update({
+        "checked_in": True,
+        "checked_in_at": now,
+        "rsvp_status": RSVPStatusEnum.checked_in,
+        "updated_at": now,
+        "checked_in_by_user_id": actor.id,
+        "checkin_session_id": scan_session.id if scan_session else None,
+        "checkin_code_id": scan_session.code_id if scan_session else None,
+        "checkin_device_ref": ((body or {}).get("device_ref") or "")[:200] or None,
+    }, synchronize_session=False)
     db.commit()
+    if not updated:
+        return standard_response(False, "This guest has already been checked in", {
+            "reason": "already_used",
+            "guest_id": str(att.id),
+            "name": name,
+        })
 
     return standard_response(True, "Guest checked in successfully", {"guest_id": str(att.id), "name": name, "checked_in": True, "checked_in_at": now.isoformat()})
+
 
 
 def _extract_scan_code(raw: str) -> str:
@@ -3377,6 +3389,56 @@ def _attendee_payload(db: Session, att: EventAttendee, event: Event, *, reason: 
     }
 
 
+# ── FAST-PATH PAYLOADS ─────────────────────────────────────────────
+# Live-gate scanning cannot afford extra lookups (plus_ones, invitation,
+# ticket_class, performer/user/profile). These lean variants return only
+# what the scanner success/failed screens render, with zero extra queries.
+
+def _ticket_payload_lean(ticket: EventTicket, event: Event, *, reason: str | None = None,
+                          ticket_class_name: str | None = None) -> dict:
+    return {
+        "kind": "ticket",
+        "id": str(ticket.id),
+        "code": ticket.ticket_code,
+        "name": ticket.buyer_name or "Ticket Holder",
+        "phone": ticket.buyer_phone,
+        "email": ticket.buyer_email,
+        "ticket_class": ticket_class_name,
+        "ticket_id": ticket.ticket_code,
+        "quantity": ticket.quantity or 1,
+        "checked_in": ticket.checked_in,
+        "checked_in_at": ticket.checked_in_at.isoformat() if ticket.checked_in_at else None,
+        "checked_in_by": None,
+        "event": {"id": str(event.id), "name": event.name},
+        "reason": reason,
+    }
+
+
+def _attendee_payload_lean(att: EventAttendee, event: Event, *, reason: str | None = None,
+                            invitation_code: str | None = None) -> dict:
+    short = str(att.id)[:8].upper()
+    return {
+        "kind": "guest",
+        "id": str(att.id),
+        "code": invitation_code or short,
+        "name": att.guest_name or "Guest",
+        "phone": att.guest_phone,
+        "email": att.guest_email,
+        "ticket_class": "Guest Pass",
+        "ticket_id": invitation_code or short,
+        "quantity": 1,
+        "rsvp_status": att.rsvp_status.value if hasattr(att.rsvp_status, "value") else att.rsvp_status,
+        "checked_in": att.checked_in,
+        "checked_in_at": att.checked_in_at.isoformat() if att.checked_in_at else None,
+        "checked_in_by": None,
+        "event": {"id": str(event.id), "name": event.name},
+        "reason": reason,
+    }
+
+
+
+
+
 
 @router.post("/{event_id}/guests/checkin-qr")
 def checkin_guest_qr(
@@ -3408,7 +3470,11 @@ def checkin_guest_qr(
         return cached
 
     now = datetime.now(EAT)
-    stats = _scan_event_aggregates(db, event)
+    # Aggregate stats are NEVER computed inline on the scan path. They are
+    # full-table COUNT/SUM queries and would dominate latency at the gate.
+    # The mobile scanner refreshes stats via /scan/stats after the success
+    # screen is shown (background, non-blocking).
+    stats = None
 
     # ── 1. Parse the scanned code first so we can ALWAYS surface the
     #       guest/ticket name in the failure payload (even when blocked
@@ -3418,6 +3484,7 @@ def checkin_guest_qr(
         return standard_response(False, "No QR code was scanned — please try again", {
             "reason": "empty_code",
             "scan_time": now.isoformat(),
+
             "event": {"id": str(event.id), "name": event.name},
             "stats": stats,
         })
@@ -3457,6 +3524,8 @@ def checkin_guest_qr(
         cross_event_match = cross_ticket or cross_att
 
     # ── 3. Build a "best so far" payload (name + ids) for any failure return.
+    #       Failure paths can afford the richer payload — they are rare. The
+    #       success path uses the lean variants below to stay under 1s.
     def _base_payload(reason: str) -> dict:
         if ticket:
             p = _ticket_payload(db, ticket, event, reason=reason)
@@ -3472,7 +3541,8 @@ def checkin_guest_qr(
                 "reason": reason,
             }
         p["scan_time"] = now.isoformat()
-        p["stats"] = stats
+        # `stats` is intentionally omitted on the scan response — mobile
+        # refreshes via /scan/stats in the background.
         return p
 
     # ── 4. Validate event timing AFTER we have the name to display.
@@ -3498,7 +3568,14 @@ def checkin_guest_qr(
             "We couldn't match this QR code to any guest or ticket for this event",
             _base_payload("not_found"))
 
-    # ── 6. TICKET branch.
+    # Resolve the actor ONCE (avoid duplicate user lookup across branches).
+    actor = current_user
+    if scan_session and scan_session.user_id and scan_session.user_id != current_user.id:
+        bound = db.query(User).filter(User.id == scan_session.user_id).first()
+        if bound:
+            actor = bound
+
+    # ── 6. TICKET branch (atomic UPDATE … RETURNING — single round-trip).
     if ticket:
         if ticket.status == TicketOrderStatusEnum.pending:
             return standard_response(False, "This ticket hasn't been paid for yet",
@@ -3517,47 +3594,62 @@ def checkin_guest_qr(
             return standard_response(False, "This ticket has already been used to check in",
                                      _base_payload("already_used"))
 
-        actor = current_user
-        if scan_session and scan_session.user_id:
-            bound = db.query(User).filter(User.id == scan_session.user_id).first()
-            if bound:
-                actor = bound
-        ticket.checked_in = True
-        ticket.checked_in_at = now
-        stamp_audit(ticket, user=actor, session=scan_session, device_ref=(body or {}).get("device_ref"))
+        # Atomic check-in: only flips the row if it's still pending. This
+        # races safely against another scanner hitting the same ticket.
+        updated = db.query(EventTicket).filter(
+            EventTicket.id == ticket.id,
+            EventTicket.checked_in == False,  # noqa: E712
+        ).update({
+            "checked_in": True,
+            "checked_in_at": now,
+            "checked_in_by_user_id": actor.id,
+            "checkin_session_id": scan_session.id if scan_session else None,
+            "checkin_code_id": scan_session.code_id if scan_session else None,
+            "checkin_device_ref": ((body or {}).get("device_ref") or "")[:200] or None,
+        }, synchronize_session=False)
         db.commit()
-        stats = _scan_event_aggregates(db, event)
-        payload = _ticket_payload(db, ticket, event)
-        payload.update({"scan_time": now.isoformat(), "stats": stats})
+        if not updated:
+            # Lost the race — another scanner stamped it first. Re-read just
+            # enough to surface the existing timestamp.
+            db.refresh(ticket)
+            return standard_response(False, "This ticket has already been used to check in",
+                                     _base_payload("already_used"))
+        db.refresh(ticket)
+        payload = _ticket_payload_lean(ticket, event)
+        payload["scan_time"] = now.isoformat()
         resp = standard_response(True, "Ticket checked in successfully", payload)
         if store_idem:
             store_idem(resp)
         return resp
 
-    # ── 7. GUEST branch.
+    # ── 7. GUEST branch (atomic UPDATE).
     if att.checked_in:
         return standard_response(False, "This guest has already been checked in",
                                  _base_payload("already_used"))
 
-    # Declined guests are still allowed to be checked in (people change
-    # plans). Their rsvp_status is updated to "checked_in" below.
-
-
-    actor = current_user
-    if scan_session and scan_session.user_id:
-        bound = db.query(User).filter(User.id == scan_session.user_id).first()
-        if bound:
-            actor = bound
-    att.checked_in = True
-    att.checked_in_at = now
-    att.rsvp_status = RSVPStatusEnum.checked_in
-    att.updated_at = now
-    stamp_audit(att, user=actor, session=scan_session, device_ref=(body or {}).get("device_ref"))
+    updated = db.query(EventAttendee).filter(
+        EventAttendee.id == att.id,
+        EventAttendee.checked_in == False,  # noqa: E712
+    ).update({
+        "checked_in": True,
+        "checked_in_at": now,
+        "rsvp_status": RSVPStatusEnum.checked_in,
+        "updated_at": now,
+        "checked_in_by_user_id": actor.id,
+        "checkin_session_id": scan_session.id if scan_session else None,
+        "checkin_code_id": scan_session.code_id if scan_session else None,
+        "checkin_device_ref": ((body or {}).get("device_ref") or "")[:200] or None,
+    }, synchronize_session=False)
     db.commit()
-    stats = _scan_event_aggregates(db, event)
-    payload = _attendee_payload(db, att, event)
-    payload.update({"scan_time": now.isoformat(), "stats": stats})
+    if not updated:
+        db.refresh(att)
+        return standard_response(False, "This guest has already been checked in",
+                                 _base_payload("already_used"))
+    db.refresh(att)
+    payload = _attendee_payload_lean(att, event)
+    payload["scan_time"] = now.isoformat()
     resp = standard_response(True, "Guest checked in successfully", payload)
+
     if store_idem:
         store_idem(resp)
     return resp
