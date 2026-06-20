@@ -5,7 +5,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/services/events_service.dart';
-import '../../../core/services/scan_resolve_service.dart';
+import '../../../core/services/checkin_fast_service.dart';
 import '../checkin_success_screen.dart';
 import '../checkin_failed_screen.dart';
 import '../../../core/widgets/self_scrolling_pills.dart';
@@ -85,6 +85,21 @@ class _EventCheckinTabState extends State<EventCheckinTab>
       duration: const Duration(milliseconds: 1750),
     )..repeat(reverse: true);
     _loadStats();
+    // Warm the Redis gate state so the very first scan doesn't pay the
+    // preload cost. Fire-and-forget — readiness check guards the path.
+    _ensureReady();
+  }
+
+  Future<void> _ensureReady() async {
+    try {
+      final r = await CheckinFastService.readiness(widget.eventId);
+      final data = (r['data'] is Map)
+          ? Map<String, dynamic>.from(r['data'] as Map)
+          : <String, dynamic>{};
+      if (data['ready'] != true) {
+        await CheckinFastService.preload(widget.eventId);
+      }
+    } catch (_) {/* readiness is best-effort */}
   }
 
   @override
@@ -156,69 +171,48 @@ class _EventCheckinTabState extends State<EventCheckinTab>
     _lastAt = now;
     setState(() => _processing = true);
 
-    // 1. Universal resolver — figure out what this QR is BEFORE mutating.
-    final resolved = await ScanResolveService.resolve(raw, eventId: widget.eventId);
-    final r = (resolved['data'] is Map)
-        ? Map<String, dynamic>.from(resolved['data'] as Map)
-        : <String, dynamic>{};
-    final route = (r['route'] ?? 'unknown').toString();
-    final payload = (r['payload'] is Map)
-        ? Map<String, dynamic>.from(r['payload'] as Map)
-        : <String, dynamic>{};
-    final crossEvent = payload['cross_event'] == true;
-    final resolvedMsg = (r['message'] ?? '').toString();
-
-    String? blockMessage;
-    if (route == 'checkin_code') {
-      blockMessage = 'This is a Check-In Team access code. Tap the QR icon on My Events to redeem it.';
-    } else if (route == 'contribution_pay' || route == 'contribution_receipt') {
-      blockMessage = '${resolvedMsg.isEmpty ? 'Contribution link detected' : resolvedMsg} is not a pass for this event.';
-    } else if (crossEvent) {
-      final otherName = (r['event'] is Map) ? (r['event']['name'] ?? '').toString() : '';
-      blockMessage = otherName.isNotEmpty
-          ? 'This pass belongs to "$otherName". Open that event to check it in.'
-          : 'This pass belongs to a different event.';
-    } else if (route == 'unknown') {
-      blockMessage = resolvedMsg.isEmpty ? 'We could not recognize this QR code.' : resolvedMsg;
-    }
-
-    if (blockMessage != null) {
-      if (!mounted) return;
-      setState(() => _processing = false);
-      await _pushResult((_) => CheckinFailedScreen(
-            data: r,
-            message: blockMessage!,
-            onScanAgain: () {},
-            onManualCheckIn: () => _showManualEntry(),
-          ));
-      return;
-    }
-
-    final res = await EventsService.checkinByQR(widget.eventId, raw);
+    // FAST LANE — single RTT. Redis decides the gate; Postgres is
+    // updated asynchronously by tasks.checkin_persist.
+    final res = await CheckinFastService.scan(widget.eventId, raw);
     if (!mounted) return;
     setState(() => _processing = false);
 
     final data = res['data'] is Map
         ? Map<String, dynamic>.from(res['data'] as Map)
         : <String, dynamic>{};
-    if (data['stats'] is Map) {
-      _stats = Map<String, dynamic>.from(data['stats'] as Map);
-    }
+    // Map fast-lane keys to the shape the existing success/failed screens
+    // already render — no UI changes required.
+    final shaped = <String, dynamic>{
+      'kind': data['kind'] ?? 'guest',
+      'name': data['display_name'] ?? data['name'] ?? 'Guest',
+      'ticket_class': data['ticket_name'] ?? '',
+      'ticket_id': data['id'] ?? '',
+      'code': data['id'] ?? '',
+      'checked_in_at': data['checked_in_at'] ?? '',
+      'event': {'id': widget.eventId, 'name': widget.eventTitle ?? ''},
+    };
+    final message = (res['message'] ?? '').toString();
+    final isAlready = data['already_checked_in'] == true;
 
     if (res['success'] == true) {
-      setState(() {});
       await _pushResult((_) => CheckinSuccessScreen(
-            data: data,
+            data: shaped,
             onScanNext: () {},
           ));
-      _loadStats();
-    } else {
-      setState(() {});
+      // Refresh stats in the background — never block the next scan.
+      // ignore: unawaited_futures
+      Future.microtask(_loadStats);
+    } else if (isAlready) {
       await _pushResult((_) => CheckinFailedScreen(
-            data: data,
-            message: ((res['message'] ?? '').toString().isNotEmpty
-                ? res['message'].toString()
-                : (resolvedMsg.isNotEmpty ? resolvedMsg : 'Check-in failed')),
+            data: shaped,
+            message: message.isNotEmpty ? message : 'Already checked in',
+            onScanAgain: () {},
+            onManualCheckIn: () => _showManualEntry(),
+          ));
+    } else {
+      await _pushResult((_) => CheckinFailedScreen(
+            data: shaped,
+            message: message.isNotEmpty ? message : 'Check-in failed',
             onScanAgain: () {},
             onManualCheckIn: () => _showManualEntry(),
           ));

@@ -50,6 +50,7 @@ celery_app = Celery(
         "tasks.contributor_imports",
         "tasks.member_imports",
         "tasks.whatsapp_availability",
+        "tasks.checkin_persist",
     ],
 )
 
@@ -151,6 +152,13 @@ celery_app.conf.update(
         "scan-due-reminder-automations": {
             "task": "tasks.reminder_dispatch.scan_due_automations",
             "schedule": crontab(minute="*/5"),
+        },
+        # Check-In Fast Lane — drain every active event's Redis stream
+        # into Postgres. Cheap when nothing is happening (only walks keys
+        # that exist).
+        "checkin-fastlane-drain": {
+            "task": "tasks.checkin_persist.drain_active_events",
+            "schedule": 2.0,  # every 2 seconds
         },
         # WhatsApp availability — active probing is disabled by policy.
         # Availability is learned opportunistically from real Nuru sends,

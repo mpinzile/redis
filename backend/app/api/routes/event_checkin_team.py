@@ -278,6 +278,13 @@ def add_checkin_team_member(
     db.add(member)
     db.commit()
     db.refresh(member)
+    # Keep the fast-lane scanners set in sync so the new team member can
+    # scan immediately without paying the cold-cache penalty.
+    try:
+        from services.checkin_fastlane import add_scanner
+        add_scanner(event.id, member.user_id)
+    except Exception:
+        pass
     _notify_team_member(db, event, target, current_user)
     return standard_response(True, "Added to the team", {"id": str(member.id)})
 
@@ -321,6 +328,11 @@ def remove_checkin_team_member(
         EventCheckinSession.updated_at: _now(),
     })
     db.commit()
+    try:
+        from services.checkin_fastlane import remove_scanner
+        remove_scanner(event.id, member.user_id)
+    except Exception:
+        pass
     return standard_response(True, "Removed from the team")
 
 
@@ -488,6 +500,14 @@ def redeem_checkin_code(
     db.add(session)
     db.commit()
     db.refresh(session)
+    # Warm the fast-lane gate state in the background so the very first
+    # scan after redeeming an access code hits a hot Redis cache.
+    try:
+        from services.checkin_fastlane import preload_event, add_scanner
+        add_scanner(event.id, current_user.id)
+        preload_event(db, event.id)
+    except Exception:
+        pass
 
     return standard_response(True, "Check-in session started", {
         "session_token": session_token,

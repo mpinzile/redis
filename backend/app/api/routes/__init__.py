@@ -68,6 +68,7 @@ from .whatsapp_logs import router as whatsapp_logs_router
 from .voice_calls import router as voice_calls_router
 from .event_checkin_team import router as event_checkin_team_router, redeem_router as checkin_redeem_router
 from .scan_resolve import router as scan_resolve_router
+from .checkin_fast import router as checkin_fast_router
 
 # All routers to be included in main app
 all_routers = [
@@ -138,6 +139,7 @@ all_routers = [
     event_checkin_team_router,          # /user-events/.../checkin-team + /checkin-code
     checkin_redeem_router,              # /checkin/redeem + /checkin/session/*
     scan_resolve_router,                # /scan/resolve  (universal QR dispatcher)
+    checkin_fast_router,                # /events/{id}/checkin/{fast,manual,readiness,preload,force-sync}
 ]
 
 __all__ = [
