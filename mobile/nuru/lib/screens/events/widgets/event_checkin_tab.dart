@@ -144,21 +144,37 @@ class _EventCheckinTabState extends State<EventCheckinTab>
     _process(raw.trim());
   }
 
-  /// Push a result screen, block further scans until it's dismissed, and
-  /// auto-pop after 5 seconds so a guest holding the QR up doesn't cause
-  /// the scanner to stack multiple result pages.
-  Future<void> _pushResult(WidgetBuilder builder) async {
+  /// Push a result screen, block further scans until it's dismissed.
+  /// Auto-close only happens on SUCCESS (so the scanner returns to the
+  /// camera quickly). On errors we leave the screen up — the gate team
+  /// must consciously decide what to do next.
+  Future<void> _pushResult(WidgetBuilder builder, {bool autoClose = false}) async {
     _resultOpen = true;
-    Timer? autoClose;
+    Timer? closeTimer;
     final route = MaterialPageRoute(builder: builder);
-    autoClose = Timer(const Duration(seconds: 5), () {
-      if (route.isCurrent) Navigator.of(context).maybePop();
-    });
+    if (autoClose) {
+      closeTimer = Timer(const Duration(seconds: 5), () {
+        if (route.isCurrent) Navigator.of(context).maybePop();
+      });
+    }
     await Navigator.of(context).push(route);
-    autoClose.cancel();
+    closeTimer?.cancel();
     _resultOpen = false;
     _lastCode = null;
     _lastAt = null;
+  }
+
+  String _pickName(Map<String, dynamic> data) {
+    for (final k in const ['display_name', 'name', 'guest_name', 'ticket_holder_name', 'buyer_name']) {
+      final v = data[k];
+      if (v == null) continue;
+      final s = v.toString().trim();
+      if (s.isEmpty) continue;
+      final low = s.toLowerCase();
+      if (low == 'null' || low == 'undefined' || low == 'unknown') continue;
+      return s;
+    }
+    return '';
   }
 
   Future<void> _process(String raw) async {
@@ -180,29 +196,41 @@ class _EventCheckinTabState extends State<EventCheckinTab>
     final data = res['data'] is Map
         ? Map<String, dynamic>.from(res['data'] as Map)
         : <String, dynamic>{};
+    final pickedName = _pickName(data);
+    final nowIso = DateTime.now().toIso8601String();
     // Map fast-lane keys to the shape the existing success/failed screens
     // already render — no UI changes required.
     final shaped = <String, dynamic>{
       'kind': data['kind'] ?? 'guest',
-      'name': data['display_name'] ?? data['name'] ?? 'Guest',
+      'name': pickedName.isNotEmpty ? pickedName : 'Guest checked in',
+      'has_name': pickedName.isNotEmpty,
       'ticket_class': data['ticket_name'] ?? '',
       'ticket_id': data['id'] ?? '',
-      'code': data['id'] ?? '',
-      'checked_in_at': data['checked_in_at'] ?? '',
+      'code': data['id'] ?? raw,
+      'scanned_code': raw,
+      'checked_in_at': (data['checked_in_at']?.toString().isNotEmpty == true)
+          ? data['checked_in_at']
+          : nowIso,
+      'scan_time': (data['scan_time']?.toString().isNotEmpty == true)
+          ? data['scan_time']
+          : nowIso,
+      'reason': data['reason'] ?? '',
       'event': {'id': widget.eventId, 'name': widget.eventTitle ?? ''},
     };
     final message = (res['message'] ?? '').toString();
-    final isAlready = data['already_checked_in'] == true;
+    final isAlready = data['already_checked_in'] == true ||
+        (data['reason']?.toString() == 'already_used');
 
     if (res['success'] == true) {
-      await _pushResult((_) => CheckinSuccessScreen(
-            data: shaped,
-            onScanNext: () {},
-          ));
+      await _pushResult(
+        (_) => CheckinSuccessScreen(data: shaped, onScanNext: () {}),
+        autoClose: true,
+      );
       // Refresh stats in the background — never block the next scan.
       // ignore: unawaited_futures
       Future.microtask(_loadStats);
     } else if (isAlready) {
+      shaped['reason'] = 'already_used';
       await _pushResult((_) => CheckinFailedScreen(
             data: shaped,
             message: message.isNotEmpty ? message : 'Already checked in',

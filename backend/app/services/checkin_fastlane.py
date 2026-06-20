@@ -447,9 +447,11 @@ def scan(
         return v.decode() if isinstance(v, (bytes, bytearray)) else str(v)
 
     if tag == "forbidden":
-        return "forbidden", {"message": "You do not have permission to scan this event"}
+        return "forbidden", {"message": "You do not have permission to scan this event",
+                             "reason": "forbidden"}
     if tag == "unknown":
-        return "unknown", {"message": "We couldn't match this QR code to any guest or ticket"}
+        return "unknown", {"message": "We couldn't match this QR code to any guest or ticket",
+                           "reason": "not_found"}
     if tag == "blocked":
         reason = _s(4)
         return "blocked", {
@@ -460,15 +462,18 @@ def scan(
             "display_name": _s(1),
             "ticket_name": _s(5),
         }
+    now_iso = datetime.utcnow().isoformat()
     payload = {
         "kind": _s(2),
         "id": _s(3),
         "display_name": _s(1),
         "ticket_name": _s(5),
         "checked_in_at": _s(4),
+        "scan_time": now_iso,
     }
     if tag == "already":
         payload["already_checked_in"] = True
+        payload["reason"] = "already_used"
         payload["message"] = "Already checked in"
         return "already", payload
     payload["already_checked_in"] = False
@@ -477,14 +482,17 @@ def scan(
 
 
 def _payload_from_hash(h: dict) -> dict:
+    is_in = h.get("state") == "in"
     return {
         "kind": h.get("kind", ""),
         "id": h.get("id", ""),
         "display_name": h.get("name", ""),
         "ticket_name": h.get("ticket_name", ""),
         "checked_in_at": h.get("checked_in_at", ""),
-        "already_checked_in": h.get("state") == "in",
-        "message": "Already checked in" if h.get("state") == "in" else "Pending",
+        "scan_time": datetime.utcnow().isoformat(),
+        "already_checked_in": is_in,
+        "reason": "already_used" if is_in else "",
+        "message": "Already checked in" if is_in else "Pending",
     }
 
 

@@ -48,17 +48,22 @@ class CheckinFailedScreen extends StatelessWidget {
   String get _reasonLabel {
     final r = (data['reason'] ?? '').toString();
     switch (r) {
-      case 'already_used': return 'Already Checked In';
-      case 'not_found': return 'Not Recognised';
-      case 'wrong_event': return 'Wrong Event';
-      case 'ticket_pending': return 'Awaiting Payment';
-      case 'ticket_rejected': return 'Ticket Rejected';
-      case 'ticket_cancelled': return 'Ticket Cancelled';
-      case 'event_ended': return 'Event Ended';
-      case 'event_not_started': return 'Event Not Started';
-      case 'rsvp_declined': return 'Guest Declined';
-      case 'empty_code': return 'No Code Scanned';
-      default: return 'Cannot Check In';
+      case 'already_used': return 'Already checked in';
+      case 'not_found': return 'Guest not found';
+      case 'wrong_event': return 'Wrong event';
+      case 'ticket_pending': return 'Awaiting payment';
+      case 'ticket_rejected': return 'Ticket rejected';
+      case 'ticket_cancelled': return 'Ticket cancelled';
+      case 'event_ended': return 'Event ended';
+      case 'event_not_started': return 'Check-in not ready';
+      case 'rsvp_declined': return 'Guest declined';
+      case 'empty_code': return 'Invalid QR code';
+      case 'forbidden': return 'Scanner not allowed';
+      default:
+        // Fall back to the message text rather than echoing the title.
+        final m = message.trim();
+        if (m.isNotEmpty) return m;
+        return 'Failed to check in';
     }
   }
 
@@ -121,7 +126,7 @@ class CheckinFailedScreen extends StatelessWidget {
               colorFilter: const ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: Text('Check In Failed', style: appText(size: 18, weight: FontWeight.w800)),
+        title: Text('Cannot Check In', style: appText(size: 18, weight: FontWeight.w800)),
       ),
       body: SafeArea(
         child: Column(
@@ -174,11 +179,12 @@ class CheckinFailedScreen extends StatelessWidget {
         Text("We couldn't check in this guest",
             style: appText(size: 18, weight: FontWeight.w800, color: AppColors.textPrimary),
             textAlign: TextAlign.center),
-        const SizedBox(height: 6),
+        const SizedBox(height: 10),
+        // Reason — large, red, easy to read at the gate.
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(message.isEmpty ? 'The QR code is invalid or has already been used. Please verify the details and try again.' : message,
-              style: appText(size: 13, color: AppColors.textTertiary),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(_reasonLabel,
+              style: appText(size: 22, weight: FontWeight.w800, color: AppColors.error),
               textAlign: TextAlign.center),
         ),
       ]),
@@ -241,8 +247,8 @@ class CheckinFailedScreen extends StatelessWidget {
 
   Widget _reasonRow() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(children: [
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         Container(
           width: 34, height: 34,
           decoration: BoxDecoration(color: AppColors.error.withOpacity(0.10), shape: BoxShape.circle),
@@ -252,15 +258,12 @@ class CheckinFailedScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Expanded(child: Text('Reason', style: appText(size: 13, color: AppColors.textSecondary, weight: FontWeight.w500))),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.error.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(20),
-          ),
+        Text('Reason', style: appText(size: 13, color: AppColors.textSecondary, weight: FontWeight.w500)),
+        const SizedBox(width: 12),
+        Expanded(
           child: Text(_reasonLabel,
-              style: appText(size: 12, weight: FontWeight.w700, color: AppColors.error)),
+              textAlign: TextAlign.right,
+              style: appText(size: 16, weight: FontWeight.w800, color: AppColors.error)),
         ),
       ]),
     );

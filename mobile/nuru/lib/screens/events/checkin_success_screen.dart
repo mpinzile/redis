@@ -16,8 +16,8 @@ class CheckinSuccessScreen extends StatelessWidget {
     required this.onScanNext,
   });
 
-  String _fmtDateTime(String? iso) {
-    if (iso == null || iso.isEmpty) return '-';
+  DateTime? _parse(String? iso) {
+    if (iso == null || iso.isEmpty) return null;
     final hasTz = iso.endsWith('Z') ||
         RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(iso);
     var normalized = iso;
@@ -28,8 +28,12 @@ class CheckinSuccessScreen extends StatelessWidget {
         normalized = '${iso.replaceFirst(' ', 'T')}Z';
       }
     }
-    final dt = DateTime.tryParse(normalized)?.toLocal();
-    if (dt == null) return iso;
+    return DateTime.tryParse(normalized)?.toLocal();
+  }
+
+  String _fmtDateTime(String? iso) {
+    final dt = _parse(iso);
+    if (dt == null) return (iso == null || iso.isEmpty) ? '-' : iso;
     const months = [
       'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
     ];
@@ -39,16 +43,32 @@ class CheckinSuccessScreen extends StatelessWidget {
     return '${dt.day} ${months[dt.month - 1]} ${dt.year}, $h:$m $ampm';
   }
 
+  String _fmtClock(String? iso) {
+    final dt = _parse(iso);
+    if (dt == null) return '';
+    final h = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
+    final m = dt.minute.toString().padLeft(2, '0');
+    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $ampm';
+  }
+
   @override
   Widget build(BuildContext context) {
     final ev = (data['event'] as Map?) ?? {};
     final isTicket = data['kind'] == 'ticket';
-    final name = (data['name'] ?? 'Guest').toString();
+    final rawName = (data['name'] ?? '').toString().trim();
+    final hasName = data['has_name'] == true ||
+        (rawName.isNotEmpty && rawName.toLowerCase() != 'guest checked in');
+    final name = rawName.isEmpty ? 'Guest checked in' : rawName;
     final ticketClass = (data['ticket_class'] ?? (isTicket ? 'Ticket' : 'Guest Pass')).toString();
     final ticketId = (data['ticket_id'] ?? data['code'] ?? '').toString();
     final qty = (data['quantity'] is num) ? (data['quantity'] as num).toInt() : 1;
     final eventName = (ev['name'] ?? '').toString();
-    final checkedInAt = _fmtDateTime(data['checked_in_at']?.toString());
+    final whenIso = (data['checked_in_at']?.toString().isNotEmpty == true)
+        ? data['checked_in_at']?.toString()
+        : data['scan_time']?.toString();
+    final checkedInAt = _fmtDateTime(whenIso);
+    final clockOnly = _fmtClock(whenIso);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -70,7 +90,7 @@ class CheckinSuccessScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _heroCard(),
+                  _heroCard(name, hasName, clockOnly),
                   const SizedBox(height: 16),
                   _detailsCard([
                     _row('assets/icons/user-icon.svg', 'Guest Name', name),
@@ -92,10 +112,10 @@ class CheckinSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _heroCard() {
+  Widget _heroCard(String name, bool hasName, String clockOnly) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.success.withOpacity(0.18), AppColors.success.withOpacity(0.04)],
@@ -116,12 +136,18 @@ class CheckinSuccessScreen extends StatelessWidget {
                 colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         Text('Check in successful!',
             style: appText(size: 20, weight: FontWeight.w800, color: AppColors.textPrimary)),
-        const SizedBox(height: 4),
-        Text('Guest verified and admitted.',
-            style: appText(size: 13, color: AppColors.textTertiary)),
+        const SizedBox(height: 6),
+        Text(hasName ? name : 'Guest checked in',
+            textAlign: TextAlign.center,
+            style: appText(size: 16, weight: FontWeight.w700, color: AppColors.success)),
+        if (clockOnly.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text('Checked in at $clockOnly',
+              style: appText(size: 13, weight: FontWeight.w600, color: AppColors.textSecondary)),
+        ],
       ]),
     );
   }
