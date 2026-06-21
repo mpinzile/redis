@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/theme/app_colors.dart';
@@ -6,15 +7,54 @@ import '../../core/theme/text_styles.dart';
 /// Premium full-screen "Check In Successful" page shown after a guest or
 /// ticket scan succeeds. Renders the unified scanner payload returned by
 /// `POST /user-events/{event_id}/guests/checkin-qr`.
-class CheckinSuccessScreen extends StatelessWidget {
+///
+/// The screen auto-dismisses after [autoCloseAfter] so the scanner returns
+/// to the camera quickly. If the gate team taps anywhere on the screen the
+/// countdown is cancelled so they can confirm guest details for as long as
+/// they need; they then leave with the "Scan Next Guest" button.
+class CheckinSuccessScreen extends StatefulWidget {
   final Map<String, dynamic> data;
   final VoidCallback onScanNext;
+  final Duration? autoCloseAfter;
 
   const CheckinSuccessScreen({
     super.key,
     required this.data,
     required this.onScanNext,
+    this.autoCloseAfter,
   });
+
+  @override
+  State<CheckinSuccessScreen> createState() => _CheckinSuccessScreenState();
+}
+
+class _CheckinSuccessScreenState extends State<CheckinSuccessScreen> {
+  Timer? _autoCloseTimer;
+  bool _paused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.autoCloseAfter;
+    if (d != null) {
+      _autoCloseTimer = Timer(d, () {
+        if (mounted) Navigator.of(context).maybePop();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _autoCloseTimer?.cancel();
+    super.dispose();
+  }
+
+  void _pauseAutoClose() {
+    if (_paused || _autoCloseTimer == null) return;
+    _autoCloseTimer?.cancel();
+    _autoCloseTimer = null;
+    setState(() => _paused = true);
+  }
 
   DateTime? _parse(String? iso) {
     if (iso == null || iso.isEmpty) return null;
@@ -54,8 +94,6 @@ class CheckinSuccessScreen extends StatelessWidget {
 
   String _shortId(String s) {
     if (s.isEmpty) return '-';
-    // Strip dashes then return first 8 chars uppercased so the chip is
-    // readable but still uniquely identifies the row in audit logs.
     final compact = s.replaceAll('-', '');
     if (compact.length <= 8) return compact.toUpperCase();
     return compact.substring(0, 8).toUpperCase();
@@ -63,6 +101,7 @@ class CheckinSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = widget.data;
     final ev = (data['event'] as Map?) ?? {};
     final isTicket = data['kind'] == 'ticket';
     final isTicketed = data['is_ticketed_event'] == true || isTicket;
@@ -105,39 +144,48 @@ class CheckinSuccessScreen extends StatelessWidget {
         title: Text('Check In Successful', style: appText(size: 18, weight: FontWeight.w800)),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _heroCard(displayName, hasName, clockOnly),
-                  const SizedBox(height: 16),
-                  _detailsCard([
-                    _row('assets/icons/user-icon.svg', isTicketed ? 'Ticket Holder' : 'Guest Name', displayName),
-                    if (isTicketed) ...[
-                      _row('assets/icons/ticket-icon.svg', 'Ticket Type', ticketClass.isEmpty ? 'Standard' : ticketClass),
-                      _row('assets/icons/ticket-icon.svg', 'Ticket ID', ticketIdShort, mono: true),
-                    ] else ...[
-                      _row('assets/icons/calendar-icon.svg', 'Event Type', eventType.isEmpty ? '-' : eventType),
-                      _row('assets/icons/ticket-icon.svg', 'Event ID', eventShort, mono: true),
-                    ],
-                    if (plusOnes > 0)
-                      _row('assets/icons/users-icon.svg', 'Plus Ones', '+$plusOnes (total $qty)'),
-                    _row('assets/icons/calendar-icon.svg', 'Event', eventName.isEmpty ? '-' : eventName),
-                    _row('assets/icons/clock-icon.svg', 'Checked In At', checkedInAt, last: true),
+        // Listener (not GestureDetector) catches pointer-down even when the
+        // touch lands on a child that participates in gestures (e.g. the
+        // SingleChildScrollView). Without this the auto-close timer keeps
+        // firing because scroll children win the gesture arena.
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => _pauseAutoClose(),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    _heroCard(displayName, hasName, clockOnly),
+                    const SizedBox(height: 16),
+                    _detailsCard([
+                      _row('assets/icons/user-icon.svg', isTicketed ? 'Ticket Holder' : 'Guest Name', displayName),
+                      if (isTicketed) ...[
+                        _row('assets/icons/ticket-icon.svg', 'Ticket Type', ticketClass.isEmpty ? 'Standard' : ticketClass),
+                        _row('assets/icons/ticket-icon.svg', 'Ticket ID', ticketIdShort, mono: true),
+                      ] else ...[
+                        _row('assets/icons/calendar-icon.svg', 'Event Type', eventType.isEmpty ? '-' : eventType),
+                        _row('assets/icons/ticket-icon.svg', 'Event ID', eventShort, mono: true),
+                      ],
+                      if (plusOnes > 0)
+                        _row('assets/icons/users-icon.svg', 'Plus Ones', '+$plusOnes (total $qty)'),
+                      _row('assets/icons/calendar-icon.svg', 'Event', eventName.isEmpty ? '-' : eventName),
+                      _row('assets/icons/clock-icon.svg', 'Checked In At', checkedInAt, last: true),
+                    ]),
+                    const SizedBox(height: 12),
+                    _statusBanner(),
                   ]),
-                  const SizedBox(height: 12),
-                  _statusBanner(),
-                ]),
+                ),
               ),
-            ),
-            _bottomBar(context),
-          ],
+              _bottomBar(context),
+            ],
+          ),
         ),
       ),
     );
   }
+
 
   Widget _heroCard(String name, bool hasName, String clockOnly) {
     return Container(
@@ -266,7 +314,7 @@ class CheckinSuccessScreen extends StatelessWidget {
         SizedBox(
           width: double.infinity, height: 50,
           child: ElevatedButton(
-            onPressed: () { Navigator.of(context).pop(); onScanNext(); },
+            onPressed: () { Navigator.of(context).pop(); widget.onScanNext(); },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,

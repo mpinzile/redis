@@ -264,19 +264,37 @@ class _CheckinModeEntryScreenState extends State<CheckinModeEntryScreen> {
                         style: appText(size: 15, weight: FontWeight.w800, color: Colors.white)),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Center(
-              child: TextButton.icon(
-                onPressed: () async {
-                  final data = await Clipboard.getData('text/plain');
-                  final t = data?.text?.trim();
-                  if (t != null && t.isNotEmpty) _pasteCode(t);
-                },
-                icon: SvgPicture.asset('assets/icons/document-text-icon.svg', width: 16, height: 16, colorFilter: const ColorFilter.mode(AppColors.textSecondary, BlendMode.srcIn)),
-                label: Text('Paste from clipboard',
-                    style: appText(size: 13, weight: FontWeight.w600, color: AppColors.textSecondary)),
-              ),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                TextButton.icon(
+                  onPressed: () async {
+                    final data = await Clipboard.getData('text/plain');
+                    final t = data?.text?.trim();
+                    if (t != null && t.isNotEmpty) _pasteCode(t);
+                  },
+                  icon: SvgPicture.asset('assets/icons/document-text-icon.svg', width: 16, height: 16, colorFilter: const ColorFilter.mode(AppColors.textSecondary, BlendMode.srcIn)),
+                  label: Text('Paste',
+                      style: appText(size: 13, weight: FontWeight.w600, color: AppColors.textSecondary)),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: _ctrls.any((c) => c.text.isNotEmpty)
+                      ? () {
+                          for (final c in _ctrls) {
+                            c.clear();
+                          }
+                          _focus[0].requestFocus();
+                          setState(() => _error = null);
+                        }
+                      : null,
+                  icon: Icon(Icons.backspace_outlined, size: 16, color: AppColors.textSecondary),
+                  label: Text('Clear code',
+                      style: appText(size: 13, weight: FontWeight.w600, color: AppColors.textSecondary)),
+                ),
+              ]),
             ),
+
             const SizedBox(height: 28),
 
             // ── Helper ──
@@ -317,59 +335,87 @@ class _CheckinModeEntryScreenState extends State<CheckinModeEntryScreen> {
     );
   }
 
+  /// Handle hardware/IME Backspace when the focused box is empty. Many
+  /// soft-keyboards (Gboard especially) swallow the delete event in OTP-
+  /// style single-character fields because the text didn't change, leaving
+  /// the user unable to delete previous digits. Catching the key here moves
+  /// focus back and clears the previous box so editing always works.
+  KeyEventResult _handleKey(int i, FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final isBackspace = event.logicalKey == LogicalKeyboardKey.backspace;
+    if (!isBackspace) return KeyEventResult.ignored;
+    if (_ctrls[i].text.isNotEmpty) {
+      _ctrls[i].clear();
+      setState(() {});
+      return KeyEventResult.handled;
+    }
+    if (i > 0) {
+      _ctrls[i - 1].clear();
+      _focus[i - 1].requestFocus();
+      setState(() {});
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   Widget _codeBox(int i) {
     return SizedBox(
       width: 40,
       height: 56,
-      child: TextField(
-        controller: _ctrls[i],
-        focusNode: _focus[i],
-        textAlign: TextAlign.center,
-        maxLength: 1,
-        autocorrect: false,
-        enableSuggestions: false,
-        textCapitalization: TextCapitalization.characters,
-        style: appText(size: 20, weight: FontWeight.w800, letterSpacing: 0),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-          TextInputFormatter.withFunction((oldV, newV) =>
-              newV.copyWith(text: newV.text.toUpperCase())),
-        ],
-        decoration: InputDecoration(
-          counterText: '',
-          filled: true,
-          fillColor: AppColors.surface,
-          contentPadding: EdgeInsets.zero,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.borderLight),
+      child: Focus(
+        onKeyEvent: (node, event) => _handleKey(i, node, event),
+        child: TextField(
+          controller: _ctrls[i],
+          focusNode: _focus[i],
+          textAlign: TextAlign.center,
+          maxLength: 1,
+          autocorrect: false,
+          enableSuggestions: false,
+          // visiblePassword keeps backspace events reliable on Gboard and
+          // disables predictive text that would otherwise hijack the input.
+          keyboardType: TextInputType.visiblePassword,
+          textCapitalization: TextCapitalization.characters,
+          style: appText(size: 20, weight: FontWeight.w800, letterSpacing: 0),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+            TextInputFormatter.withFunction((oldV, newV) =>
+                newV.copyWith(text: newV.text.toUpperCase())),
+          ],
+          decoration: InputDecoration(
+            counterText: '',
+            filled: true,
+            fillColor: AppColors.surface,
+            contentPadding: EdgeInsets.zero,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.borderLight),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.borderLight),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.6),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.borderLight),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.primary, width: 1.6),
-          ),
+          onChanged: (v) {
+            if (v.length > 1) {
+              _pasteCode(v);
+              return;
+            }
+            if (v.isNotEmpty && i < 7) {
+              _focus[i + 1].requestFocus();
+            }
+            setState(() {});
+            if (_ready) {
+              FocusScope.of(context).unfocus();
+              _redeem();
+            }
+          },
         ),
-        onChanged: (v) {
-          if (v.length > 1) {
-            _pasteCode(v);
-            return;
-          }
-          if (v.isNotEmpty && i < 7) {
-            _focus[i + 1].requestFocus();
-          } else if (v.isEmpty && i > 0) {
-            _focus[i - 1].requestFocus();
-          }
-          setState(() {});
-          if (_ready) {
-            FocusScope.of(context).unfocus();
-            _redeem();
-          }
-        },
       ),
     );
   }
 }
+

@@ -9,6 +9,8 @@ import '../../../core/services/checkin_fast_service.dart';
 import '../checkin_success_screen.dart';
 import '../checkin_failed_screen.dart';
 import '../../../core/widgets/self_scrolling_pills.dart';
+import 'checkin_first_run_guide.dart';
+
 
 /// Premium full-screen Guest / Ticket Check-In scanner.
 ///
@@ -49,6 +51,7 @@ class _EventCheckinTabState extends State<EventCheckinTab>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   late final MobileScannerController _controller;
   late final AnimationController _scanLineController;
+  Timer? _statsRefreshTimer;
   bool _torchOn = false;
   CameraFacing _facing = CameraFacing.back;
   bool _processing = false;
@@ -73,6 +76,7 @@ class _EventCheckinTabState extends State<EventCheckinTab>
   @override
   bool get wantKeepAlive => true;
 
+
   @override
   void initState() {
     super.initState();
@@ -88,7 +92,22 @@ class _EventCheckinTabState extends State<EventCheckinTab>
     // Warm the Redis gate state so the very first scan doesn't pay the
     // preload cost. Fire-and-forget — readiness check guards the path.
     _ensureReady();
+    // Silently refresh aggregate stats (Total / Checked In / Pending) every
+    // 15s so organizers see live numbers without any spinner or jank.
+    _statsRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (!mounted || _resultOpen || _processing) return;
+      // ignore: unawaited_futures
+      _loadStats(silent: true);
+    });
+    // Show the one-time onboarding guide so gate staff know to tap the
+    // success screen to hold guest details. Runs after first frame so the
+    // sheet has a valid context.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) CheckinFirstRunGuide.showIfFirstRun(context);
+    });
   }
+
+
 
   Future<void> _ensureReady() async {
     try {
@@ -104,14 +123,19 @@ class _EventCheckinTabState extends State<EventCheckinTab>
 
   @override
   void dispose() {
+    _statsRefreshTimer?.cancel();
     _scanLineController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _loadStats({int limit = 10}) async {
+  /// Load aggregate scan stats + recent activity. When [silent] is true the
+  /// skeleton state is preserved (used by the 15s background refresh) so the
+  /// UI never flickers while organizers are watching the numbers tick up.
+  Future<void> _loadStats({int limit = 10, bool silent = false}) async {
     final res = await EventsService.getScanStats(widget.eventId, limit: limit);
     if (!mounted) return;
+
     if (res['success'] == true && res['data'] is Map) {
       final data = Map<String, dynamic>.from(res['data'] as Map);
       setState(() {
@@ -132,10 +156,11 @@ class _EventCheckinTabState extends State<EventCheckinTab>
           widget.onTitleResolved?.call(t);
         }
       });
-    } else {
+    } else if (!silent) {
       setState(() => _loadingStats = false);
     }
   }
+
 
   void _onBarcode(BarcodeCapture cap) {
     if (_resultOpen || _processing) return;
@@ -149,20 +174,17 @@ class _EventCheckinTabState extends State<EventCheckinTab>
   /// camera quickly). On errors we leave the screen up — the gate team
   /// must consciously decide what to do next.
   Future<void> _pushResult(WidgetBuilder builder, {bool autoClose = false}) async {
+    // autoClose is now handled inside the success screen itself so that the
+    // gate team can tap the screen to keep it open while confirming guest
+    // details. We just block further scans until the route pops.
     _resultOpen = true;
-    Timer? closeTimer;
     final route = MaterialPageRoute(builder: builder);
-    if (autoClose) {
-      closeTimer = Timer(const Duration(seconds: 5), () {
-        if (route.isCurrent) Navigator.of(context).maybePop();
-      });
-    }
     await Navigator.of(context).push(route);
-    closeTimer?.cancel();
     _resultOpen = false;
     _lastCode = null;
     _lastAt = null;
   }
+
 
   String _pickName(Map<String, dynamic> data) {
     for (final k in const ['display_name', 'name', 'guest_name', 'ticket_holder_name', 'buyer_name']) {
@@ -231,12 +253,16 @@ class _EventCheckinTabState extends State<EventCheckinTab>
 
     if (res['success'] == true) {
       await _pushResult(
-        (_) => CheckinSuccessScreen(data: shaped, onScanNext: () {}),
-        autoClose: true,
+        (_) => CheckinSuccessScreen(
+          data: shaped,
+          onScanNext: () {},
+          autoCloseAfter: const Duration(seconds: 5),
+        ),
       );
+
       // Refresh stats in the background — never block the next scan.
       // ignore: unawaited_futures
-      Future.microtask(_loadStats);
+      Future.microtask(() => _loadStats(silent: true));
     } else if (isAlready) {
       shaped['reason'] = 'already_used';
       await _pushResult((_) => CheckinFailedScreen(
@@ -922,10 +948,43 @@ class _EventCheckinTabState extends State<EventCheckinTab>
           ),
         ]),
         const SizedBox(height: 2),
-        Text(value, style: appText(size: 15, weight: FontWeight.w800, color: AppColors.textPrimary)),
+        // Scoreboard-style flip: when the value changes the new number
+        // slides up from below and the old one slides out to the top, the
+        // same motion soccer match scoreboards use.
+        ClipRect(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 380),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, anim) {
+              final isIncoming = child.key == ValueKey(value);
+              final offset = Tween<Offset>(
+                begin: Offset(0, isIncoming ? 0.9 : -0.9),
+                end: Offset.zero,
+              ).animate(anim);
+              return ClipRect(
+                child: SlideTransition(
+                  position: offset,
+                  child: FadeTransition(opacity: anim, child: child),
+                ),
+              );
+            },
+            layoutBuilder: (current, previous) => Stack(
+              alignment: Alignment.centerLeft,
+              children: [...previous, if (current != null) current],
+            ),
+            child: Text(
+              value,
+              key: ValueKey<String>(value),
+              style: appText(size: 15, weight: FontWeight.w800, color: AppColors.textPrimary),
+            ),
+          ),
+        ),
       ]),
     );
   }
+
+
 
   Widget _divider() => Container(
         width: 1, height: 30,

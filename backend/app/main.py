@@ -94,6 +94,14 @@ if QUERY_LOG_ON:
 from middleware.slow_request_logger import SlowRequestLoggerMiddleware
 app.add_middleware(SlowRequestLoggerMiddleware)
 
+# 8. Perf instrumentation — Stage 1 of the performance program.
+#    Innermost middleware: emits one JSON line per request with timing,
+#    query count, slowest query, Redis/Celery/external timings, payload
+#    size. Adds X-Request-ID header. Does NOT change response bodies.
+#    Disable with PERF_INSTRUMENTATION=false.
+from core.perf import PerfMiddleware
+app.add_middleware(PerfMiddleware)
+
 # ------------------------------------------------------------------
 # Routes
 # ------------------------------------------------------------------

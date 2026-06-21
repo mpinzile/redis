@@ -166,14 +166,20 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
     }
   };
 
+  // Strip the leading "NRU-" prefix when displaying or copying the code:
+  // the mobile app pre-fills "NRU" on the access screen, so showing it here
+  // makes organizers (and the team members they share it with) re-type it.
+  const stripNru = (value: string) => value.replace(/^NRU-?/i, "");
+
   const copyCode = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      await navigator.clipboard.writeText(stripNru(value));
       toast.success("Code copied");
     } catch {
       toast.error("Couldn't copy to clipboard");
     }
   };
+
 
   return (
     <div className="space-y-4">
@@ -210,8 +216,9 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
                 {code ? (
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
                     <code className="px-3 py-1.5 rounded-md bg-muted font-mono text-sm tracking-wider text-foreground">
-                      {code.prefix}
+                      {stripNru(code.prefix)}
                     </code>
+
                     <Badge
                       variant={code.status === "active" ? "default" : "secondary"}
                       className={code.status === "active" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/15" : ""}
@@ -439,9 +446,13 @@ const CheckinTeam = ({ eventId, canManage: canManageProp }: Props) => {
               <div className="rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 p-6 text-center">
                 <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Event code</p>
                 <p className="font-mono text-2xl font-bold tracking-[0.2em] text-primary select-all">
-                  {revealedCode}
+                  {stripNru(revealedCode)}
+                </p>
+                <p className="mt-2 text-[10px] text-muted-foreground">
+                  The "NRU" prefix is added automatically in the mobile app — share only what you see above.
                 </p>
               </div>
+
               <div className="flex gap-2">
                 <Button onClick={() => copyCode(revealedCode)} className="flex-1 gap-2">
                   <Copy className="w-4 h-4" />
