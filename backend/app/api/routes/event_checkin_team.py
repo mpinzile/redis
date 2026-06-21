@@ -609,12 +609,35 @@ def checkin_audit_log(
                 "avatar": getattr(prof, "profile_picture_url", None) if prof else None,
             }
 
+    # Resolve names for attendees that lack a stored guest_name by looking up
+    # linked Nuru users (attendee_id) or contributor records (contributor_id).
+    missing_user_ids = {a.attendee_id for a in attendees if not (a.guest_name or a.common_name) and a.attendee_id}
+    missing_contrib_ids = {a.contributor_id for a in attendees if not (a.guest_name or a.common_name) and a.contributor_id}
+    user_name_map: dict = {}
+    if missing_user_ids:
+        for u in db.query(User).filter(User.id.in_(list(missing_user_ids))).all():
+            user_name_map[u.id] = f"{u.first_name or ''} {u.last_name or ''}".strip() or u.email
+    contrib_name_map: dict = {}
+    if missing_contrib_ids:
+        from models.contributions import UserContributor as _UC
+        for c in db.query(_UC).filter(_UC.id.in_(list(missing_contrib_ids))).all():
+            contrib_name_map[c.id] = c.common_name or c.name
+
+    def _attendee_name(a) -> str:
+        return (
+            a.guest_name
+            or a.common_name
+            or (user_name_map.get(a.attendee_id) if a.attendee_id else None)
+            or (contrib_name_map.get(a.contributor_id) if a.contributor_id else None)
+            or "Guest"
+        )
+
     entries: list = []
     for a in attendees:
         entries.append({
             "kind": "guest",
             "id": str(a.id),
-            "name": a.guest_name or "Guest",
+            "name": _attendee_name(a),
             "ref": str(a.id)[:8].upper(),
             "checked_in_at": a.checked_in_at.isoformat() if a.checked_in_at else None,
             "checked_in_by": performer_map.get(getattr(a, "checked_in_by_user_id", None)),

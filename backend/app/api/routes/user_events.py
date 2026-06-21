@@ -3172,39 +3172,92 @@ def _event_has_ticket_sales(db: Session, event: Event) -> bool:
 def _scan_event_aggregates(db: Session, event: Event) -> dict:
     """Scan stats for the unified scanner UI.
 
-    For ticketed events: counts ticket seats (sum of quantity over confirmed/
-    approved orders). Total/Checked In/Pending refer to TICKETS.
-
-    For non-ticketed events: counts ATTENDEES who have accepted the
-    invitation (rsvp_status = confirmed OR checked_in). Total = accepted
-    guests, Checked In = those scanned, Pending = accepted but not yet
-    scanned. Guests who declined or never replied are not counted.
+    Postgres holds the persisted truth, but the fast-lane scanner first
+    writes to Redis and Celery drains those writes asynchronously (every
+    ~2s). So we union the Redis-staged check-ins with the Postgres counts —
+    that way the organizer sees the number tick up the moment a guest is
+    scanned, instead of waiting for the persistence worker to catch up.
     """
+    from services.checkin_fastlane import dump_state as _fast_dump_state
+
     eid = event.id
     sells_tickets = _event_has_ticket_sales(db, event)
+
+    # Pull Redis-staged "in" tokens (best-effort — empty if Redis is off).
+    staged_guest_ids: set[uuid.UUID] = set()
+    staged_ticket_ids: set[uuid.UUID] = set()
+    try:
+        state = _fast_dump_state(eid) or {}
+        for _tok, h in state.items():
+            raw_id = h.get("id") or h.get(b"id")
+            if isinstance(raw_id, (bytes, bytearray)):
+                raw_id = raw_id.decode()
+            raw_kind = h.get("kind") or h.get(b"kind")
+            if isinstance(raw_kind, (bytes, bytearray)):
+                raw_kind = raw_kind.decode()
+            if not raw_id or not raw_kind:
+                continue
+            try:
+                u = uuid.UUID(raw_id)
+            except (ValueError, TypeError):
+                continue
+            if raw_kind == "guest":
+                staged_guest_ids.add(u)
+            elif raw_kind == "ticket":
+                staged_ticket_ids.add(u)
+    except Exception:
+        pass
 
     if sells_tickets:
         total = int(db.query(sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0)).filter(
             EventTicket.event_id == eid,
             EventTicket.status.in_([TicketOrderStatusEnum.approved, TicketOrderStatusEnum.confirmed]),
         ).scalar() or 0)
-        checked = int(db.query(sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0)).filter(
+        checked_db = int(db.query(sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0)).filter(
             EventTicket.event_id == eid,
             EventTicket.status.in_([TicketOrderStatusEnum.approved, TicketOrderStatusEnum.confirmed]),
             EventTicket.checked_in == True,
         ).scalar() or 0)
+        # Add Redis-staged tickets whose Postgres row hasn't flipped yet.
+        staged_extra = 0
+        if staged_ticket_ids:
+            rows = db.query(EventTicket.id, EventTicket.quantity, EventTicket.checked_in).filter(
+                EventTicket.id.in_(list(staged_ticket_ids)),
+                EventTicket.event_id == eid,
+            ).all()
+            for _id, qty, ck in rows:
+                if not ck:
+                    staged_extra += int(qty or 1)
+        checked = checked_db + staged_extra
         mode = "tickets"
         labels = {"total": "Total Tickets", "checked_in": "Checked In", "pending": "Pending"}
     else:
         accepted_statuses = [RSVPStatusEnum.confirmed, RSVPStatusEnum.checked_in]
-        total = int(db.query(sa_func.count(EventAttendee.id)).filter(
+        # Total accepted attendees in Postgres + any Redis-staged guest IDs
+        # whose attendee row exists but isn't yet confirmed (rare, but keeps
+        # the totals honest when an organizer scans a freshly added guest).
+        total_db = int(db.query(sa_func.count(EventAttendee.id)).filter(
             EventAttendee.event_id == eid,
             EventAttendee.rsvp_status.in_(accepted_statuses),
         ).scalar() or 0)
-        checked = int(db.query(sa_func.count(EventAttendee.id)).filter(
+        checked_db = int(db.query(sa_func.count(EventAttendee.id)).filter(
             EventAttendee.event_id == eid,
             EventAttendee.checked_in == True,
         ).scalar() or 0)
+        staged_extra = 0
+        staged_extra_total = 0
+        if staged_guest_ids:
+            rows = db.query(EventAttendee.id, EventAttendee.checked_in, EventAttendee.rsvp_status).filter(
+                EventAttendee.id.in_(list(staged_guest_ids)),
+                EventAttendee.event_id == eid,
+            ).all()
+            for _id, ck, rsvp in rows:
+                if not ck:
+                    staged_extra += 1
+                if rsvp not in accepted_statuses:
+                    staged_extra_total += 1
+        total = total_db + staged_extra_total
+        checked = checked_db + staged_extra
         mode = "guests"
         labels = {"total": "Total Guests", "checked_in": "Checked In", "pending": "Pending"}
 
@@ -3215,6 +3268,7 @@ def _scan_event_aggregates(db: Session, event: Event) -> dict:
         "checked_in": checked,
         "pending": max(0, total - checked),
     }
+
 
 
 @router.get("/{event_id}/scan/stats")
