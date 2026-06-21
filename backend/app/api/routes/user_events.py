@@ -35,6 +35,8 @@ from models import (
 from utils.auth import get_current_user
 from utils.helpers import format_price, standard_response, format_phone_display
 from utils.checkin_scan import authorize_scan, stamp_audit, idempotent
+from services.checkin_fastlane import _enrich_with_event_meta as _scan_enrich_meta
+from core.redis import get_redis, redis_available
 from api.routes.rsvp import generate_rsvp_code
 from utils.validation_functions import validate_phone_number
 from utils.event_owner import get_event_owner_display_name, user_can_manage_event
@@ -3079,7 +3081,9 @@ def checkin_guest(
     # fast path; the scanner already has the name cached locally.
     name = att.guest_name or "Guest"
 
-    # Parity with QR scan validations (event timing, already-checked-in).
+    # Event-end blocking is intentionally relaxed on this endpoint so the web
+    # check-in UI can continue to mark guests after the event date. The QR
+    # scan path retains its own guards.
     if hasattr(event, "start_date") and event.start_date:
         from datetime import date as date_type, timedelta
         event_date = event.start_date if isinstance(event.start_date, date_type) else (
@@ -3087,9 +3091,6 @@ def checkin_guest(
         )
         if event_date:
             today = now.date()
-            if event_date < today:
-                return standard_response(False, "This event has already ended — check-in is closed",
-                                         {"reason": "event_ended", "guest_id": str(att.id), "name": name})
             if event_date > today + timedelta(days=1):
                 return standard_response(False, "This event hasn't started yet — check-in opens on event day",
                                          {"reason": "event_not_started", "guest_id": str(att.id), "name": name})
@@ -3394,18 +3395,59 @@ def _attendee_payload(db: Session, att: EventAttendee, event: Event, *, reason: 
 # ticket_class, performer/user/profile). These lean variants return only
 # what the scanner success/failed screens render, with zero extra queries.
 
+def _scan_enrich_payload(db: Session, event: Event, att: Optional[EventAttendee], payload: dict) -> dict:
+    """Best-effort, sub-millisecond enrichment for the scan payload.
+
+    - Pulls event_type / event_short_id / is_ticketed_event from the Redis
+      meta hash (single HMGET).
+    - Adds plus_ones count when we have an attendee (lightweight COUNT).
+    Never raises — the scan path must stay fast.
+    """
+    try:
+        if redis_available():
+            r = get_redis()
+            if r is not None:
+                _scan_enrich_meta(r, str(event.id), payload)
+    except Exception:
+        pass
+    # Fallback: hydrate event_type from ORM if Redis didn't supply it.
+    if not payload.get("event_type"):
+        try:
+            et = getattr(event, "event_type", None)
+            if et is not None and getattr(et, "name", None):
+                payload["event_type"] = et.name
+        except Exception:
+            pass
+    if not payload.get("event_short_id"):
+        payload["event_short_id"] = str(event.id).replace("-", "")[:8].upper()
+    if att is not None:
+        try:
+            pcount = db.query(sa_func.count(EventGuestPlusOne.id)).filter(
+                EventGuestPlusOne.attendee_id == att.id
+            ).scalar() or 0
+            payload["plus_ones"] = int(pcount)
+            # quantity = 1 (guest) + plus ones
+            payload["quantity"] = 1 + int(pcount)
+        except Exception:
+            payload.setdefault("plus_ones", 0)
+    return payload
+
+
 def _ticket_payload_lean(ticket: EventTicket, event: Event, *, reason: str | None = None,
                           ticket_class_name: str | None = None) -> dict:
+    raw_name = (ticket.buyer_name or "").strip()
     return {
         "kind": "ticket",
         "id": str(ticket.id),
         "code": ticket.ticket_code,
-        "name": ticket.buyer_name or "Ticket Holder",
+        "name": raw_name or "Ticket Holder",
+        "has_name": bool(raw_name),
         "phone": ticket.buyer_phone,
         "email": ticket.buyer_email,
         "ticket_class": ticket_class_name,
         "ticket_id": ticket.ticket_code,
         "quantity": ticket.quantity or 1,
+        "is_ticketed_event": True,
         "checked_in": ticket.checked_in,
         "checked_in_at": ticket.checked_in_at.isoformat() if ticket.checked_in_at else None,
         "checked_in_by": None,
@@ -3417,16 +3459,20 @@ def _ticket_payload_lean(ticket: EventTicket, event: Event, *, reason: str | Non
 def _attendee_payload_lean(att: EventAttendee, event: Event, *, reason: str | None = None,
                             invitation_code: str | None = None) -> dict:
     short = str(att.id)[:8].upper()
+    raw_name = (att.guest_name or "").strip()
     return {
         "kind": "guest",
         "id": str(att.id),
         "code": invitation_code or short,
-        "name": att.guest_name or "Guest",
+        "name": raw_name or "Guest",
+        "has_name": bool(raw_name),
         "phone": att.guest_phone,
         "email": att.guest_email,
         "ticket_class": "Guest Pass",
         "ticket_id": invitation_code or short,
         "quantity": 1,
+        "plus_ones": 0,
+        "is_ticketed_event": False,
         "rsvp_status": att.rsvp_status.value if hasattr(att.rsvp_status, "value") else att.rsvp_status,
         "checked_in": att.checked_in,
         "checked_in_at": att.checked_in_at.isoformat() if att.checked_in_at else None,
@@ -3535,15 +3581,18 @@ def checkin_guest_qr(
             p = {
                 "kind": "unknown",
                 "name": "Unknown Guest",
+                "has_name": False,
                 "code": code,
                 "ticket_id": code,
                 "event": {"id": str(event.id), "name": event.name},
                 "reason": reason,
             }
         p["scan_time"] = now.isoformat()
-        # `stats` is intentionally omitted on the scan response — mobile
-        # refreshes via /scan/stats in the background.
+        # Enrich with event_type / event_short_id / is_ticketed_event +
+        # plus_ones count so the failed screen renders complete details.
+        _scan_enrich_payload(db, event, att, p)
         return p
+
 
     # ── 4. Validate event timing AFTER we have the name to display.
     if hasattr(event, 'start_date') and event.start_date:
@@ -3617,6 +3666,7 @@ def checkin_guest_qr(
         db.refresh(ticket)
         payload = _ticket_payload_lean(ticket, event)
         payload["scan_time"] = now.isoformat()
+        _scan_enrich_payload(db, event, None, payload)
         resp = standard_response(True, "Ticket checked in successfully", payload)
         if store_idem:
             store_idem(resp)
@@ -3648,6 +3698,7 @@ def checkin_guest_qr(
     db.refresh(att)
     payload = _attendee_payload_lean(att, event)
     payload["scan_time"] = now.isoformat()
+    _scan_enrich_payload(db, event, att, payload)
     resp = standard_response(True, "Guest checked in successfully", payload)
 
     if store_idem:

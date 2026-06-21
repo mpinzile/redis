@@ -119,13 +119,18 @@ class CheckinFailedScreen extends StatelessWidget {
     final ev = (data['event'] as Map?) ?? {};
     final scanTime = _fmtDateTime(data['scan_time']?.toString());
     final rawName = (data['name'] ?? '').toString().trim();
-    final guestName = (rawName.isEmpty || rawName.toLowerCase() == 'guest checked in')
-        ? 'Unknown'
-        : rawName;
+    final hasName = data['has_name'] == true ||
+        (rawName.isNotEmpty &&
+            rawName.toLowerCase() != 'guest' &&
+            rawName.toLowerCase() != 'unknown' &&
+            rawName.toLowerCase() != 'guest checked in');
+    final guestName = hasName ? rawName : 'Guest';
     final isTicket = data['kind'] == 'ticket';
     final isTicketed = data['is_ticketed_event'] == true || isTicket;
     final whoLabel = isTicketed ? 'Ticket Holder' : 'Guest Name';
     final eventName = (ev['name'] ?? '-').toString();
+    final eventType = (data['event_type'] ?? '').toString();
+    final plusOnes = (data['plus_ones'] is num) ? (data['plus_ones'] as num).toInt() : 0;
     final rawCode = (data['ticket_id'] ?? data['code'] ?? data['scanned_code'] ?? '').toString();
     final code = _shortId(rawCode);
 
@@ -154,8 +159,12 @@ class CheckinFailedScreen extends StatelessWidget {
                   _detailsCard([
                     _row('assets/icons/clock-icon.svg', 'Scan Time', scanTime),
                     _row('assets/icons/user-icon.svg', whoLabel, guestName),
+                    if (!isTicketed && eventType.isNotEmpty)
+                      _row('assets/icons/calendar-icon.svg', 'Event Type', eventType),
                     _row('assets/icons/calendar-icon.svg', 'Event', eventName),
                     _row('assets/icons/ticket-icon.svg', isTicketed ? 'Ticket ID' : 'Guest ID', code, mono: true),
+                    if (plusOnes > 0)
+                      _row('assets/icons/users-icon.svg', 'Plus Ones', '+$plusOnes'),
                     _reasonRow(),
                   ]),
                   const SizedBox(height: 12),

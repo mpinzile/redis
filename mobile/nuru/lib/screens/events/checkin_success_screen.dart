@@ -68,8 +68,10 @@ class CheckinSuccessScreen extends StatelessWidget {
     final isTicketed = data['is_ticketed_event'] == true || isTicket;
     final rawName = (data['name'] ?? '').toString().trim();
     final hasName = data['has_name'] == true ||
-        (rawName.isNotEmpty && rawName.toLowerCase() != 'guest checked in');
-    final name = rawName.isEmpty ? 'Guest checked in' : rawName;
+        (rawName.isNotEmpty &&
+            rawName.toLowerCase() != 'guest' &&
+            rawName.toLowerCase() != 'guest checked in');
+    final displayName = hasName ? rawName : 'Guest';
     final ticketClass = (data['ticket_class'] ?? '').toString();
     final rawTicketId = (data['ticket_id'] ?? data['code'] ?? '').toString();
     final ticketIdShort = _shortId(rawTicketId);
@@ -78,7 +80,10 @@ class CheckinSuccessScreen extends StatelessWidget {
     final eventShort = (data['event_short_id']?.toString().isNotEmpty == true)
         ? data['event_short_id'].toString().toUpperCase()
         : _shortId(rawEventId);
-    final qty = (data['quantity'] is num) ? (data['quantity'] as num).toInt() : 1;
+    final plusOnes = (data['plus_ones'] is num) ? (data['plus_ones'] as num).toInt() : 0;
+    final qty = (data['quantity'] is num)
+        ? (data['quantity'] as num).toInt()
+        : (1 + (plusOnes < 0 ? 0 : plusOnes));
     final eventName = (ev['name'] ?? '').toString();
     final whenIso = (data['checked_in_at']?.toString().isNotEmpty == true)
         ? data['checked_in_at']?.toString()
@@ -106,10 +111,10 @@ class CheckinSuccessScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _heroCard(name, hasName, clockOnly),
+                  _heroCard(displayName, hasName, clockOnly),
                   const SizedBox(height: 16),
                   _detailsCard([
-                    _row('assets/icons/user-icon.svg', isTicketed ? 'Ticket Holder' : 'Guest Name', name),
+                    _row('assets/icons/user-icon.svg', isTicketed ? 'Ticket Holder' : 'Guest Name', displayName),
                     if (isTicketed) ...[
                       _row('assets/icons/ticket-icon.svg', 'Ticket Type', ticketClass.isEmpty ? 'Standard' : ticketClass),
                       _row('assets/icons/ticket-icon.svg', 'Ticket ID', ticketIdShort, mono: true),
@@ -117,7 +122,8 @@ class CheckinSuccessScreen extends StatelessWidget {
                       _row('assets/icons/calendar-icon.svg', 'Event Type', eventType.isEmpty ? '-' : eventType),
                       _row('assets/icons/ticket-icon.svg', 'Event ID', eventShort, mono: true),
                     ],
-                    if (qty > 1) _row('assets/icons/users-icon.svg', 'Number of Guests', '$qty'),
+                    if (plusOnes > 0)
+                      _row('assets/icons/users-icon.svg', 'Plus Ones', '+$plusOnes (total $qty)'),
                     _row('assets/icons/calendar-icon.svg', 'Event', eventName.isEmpty ? '-' : eventName),
                     _row('assets/icons/clock-icon.svg', 'Checked In At', checkedInAt, last: true),
                   ]),
@@ -195,7 +201,7 @@ class CheckinSuccessScreen extends StatelessWidget {
       decoration: BoxDecoration(
         border: last ? null : Border(bottom: BorderSide(color: AppColors.borderLight.withOpacity(0.7))),
       ),
-      child: Row(children: [
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           width: 34, height: 34,
           decoration: BoxDecoration(color: AppColors.success.withOpacity(0.12), shape: BoxShape.circle),
@@ -205,16 +211,23 @@ class CheckinSuccessScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Expanded(child: Text(label, style: appText(size: 13, color: AppColors.textSecondary, weight: FontWeight.w500))),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(label, style: appText(size: 13, color: AppColors.textSecondary, weight: FontWeight.w500)),
+        ),
         const SizedBox(width: 10),
-        Flexible(
-          child: Text(value,
-              textAlign: TextAlign.right,
-              style: appText(
-                size: 13,
-                weight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ).copyWith(fontFamily: mono ? 'monospace' : null, letterSpacing: mono ? 0.5 : null)),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(value,
+                textAlign: TextAlign.right,
+                style: appText(
+                  size: 13,
+                  weight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  height: 1.35,
+                ).copyWith(fontFamily: mono ? 'monospace' : null, letterSpacing: mono ? 0.5 : null)),
+          ),
         ),
       ]),
     );

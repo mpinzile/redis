@@ -422,16 +422,9 @@ const EventManagement = () => {
   const expectedGuests = apiEvent?.expected_guests || 0;
   const eventBudget = apiEvent?.budget ? formatPrice(apiEvent.budget) : "";
   const eventDescription = apiEvent?.description || "";
-  const isEventEnded = (() => {
-    const dateStr = apiEvent?.start_date;
-    if (!dateStr) return true;
-
-    const eventDay = String(dateStr).slice(0, 10);
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-    return eventDay !== today;
-  })();
+  // Check-in actions stay visible regardless of the event date so organizers
+  // can still test or correct attendance after the event window closes.
+  const isEventEnded = false;
 
   return (
     <div>
