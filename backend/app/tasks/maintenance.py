@@ -221,3 +221,60 @@ def prune_old_page_views(self, retention_days: int = 90):
         raise self.retry(exc=exc)
     finally:
         db.close()
+
+
+# ─────────────────────────────────────────────
+# Reliability infra: expire idempotency keys & old job rows
+# ─────────────────────────────────────────────
+@celery_app.task(
+    name="tasks.maintenance.purge_expired_idempotency_keys",
+    bind=True,
+    max_retries=1,
+    default_retry_delay=600,
+)
+def purge_expired_idempotency_keys(self):
+    """Drop ``idempotency_keys`` rows whose 24h replay window has passed."""
+    db = SessionLocal()
+    try:
+        result = db.execute(text("DELETE FROM idempotency_keys WHERE expires_at < NOW()"))
+        db.commit()
+        return {"deleted_idempotency_keys": int(result.rowcount or 0)}
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        raise self.retry(exc=exc)
+    finally:
+        db.close()
+
+
+@celery_app.task(
+    name="tasks.maintenance.purge_old_job_status",
+    bind=True,
+    max_retries=1,
+    default_retry_delay=600,
+)
+def purge_old_job_status(self, retention_days: int = 30):
+    """Trim ``job_status`` rows that finished more than ``retention_days`` ago.
+
+    Dead-lettered rows are preserved (admin may still want to inspect them).
+    """
+    db = SessionLocal()
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=retention_days)
+        result = db.execute(
+            text(
+                """
+                DELETE FROM job_status
+                 WHERE finished_at IS NOT NULL
+                   AND finished_at < :cutoff
+                   AND status <> 'dead_lettered'
+                """
+            ),
+            {"cutoff": cutoff},
+        )
+        db.commit()
+        return {"deleted_job_status_rows": int(result.rowcount or 0)}
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        raise self.retry(exc=exc)
+    finally:
+        db.close()

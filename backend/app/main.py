@@ -215,6 +215,13 @@ def startup_checks():
     print("[startup] Background tasks handled by Celery workers (not in-process threads)")
     print("[startup] Run:  celery -A core.celery_app worker --beat --loglevel=info")
 
+    # Register force-sync domain handlers (admin POST /admin/jobs/force-sync).
+    try:
+        from core.jobs.force_sync_registry import register_all as _register_force_sync
+        _register_force_sync()
+    except Exception as exc:  # noqa: BLE001
+        print(f"[startup] force-sync registry failed: {exc!r}")
+
     # Voice Assistant — install Gemini Live realtime bridge if configured.
     # Safe no-op when GEMINI_API_KEY is missing (Phase 5 SilentAgentBridge stays).
     try:

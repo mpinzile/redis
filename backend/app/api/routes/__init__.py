@@ -69,6 +69,8 @@ from .voice_calls import router as voice_calls_router
 from .event_checkin_team import router as event_checkin_team_router, redeem_router as checkin_redeem_router
 from .scan_resolve import router as scan_resolve_router
 from .checkin_fast import router as checkin_fast_router
+from .jobs import router as jobs_router
+from .admin_jobs import router as admin_jobs_router
 
 # All routers to be included in main app
 all_routers = [
@@ -140,6 +142,8 @@ all_routers = [
     checkin_redeem_router,              # /checkin/redeem + /checkin/session/*
     scan_resolve_router,                # /scan/resolve  (universal QR dispatcher)
     checkin_fast_router,                # /events/{id}/checkin/{fast,manual,readiness,preload,force-sync}
+    jobs_router,                        # /jobs/{id} + /jobs
+    admin_jobs_router,                  # /admin/jobs/... + /admin/dead-letter-jobs/...
 ]
 
 __all__ = [

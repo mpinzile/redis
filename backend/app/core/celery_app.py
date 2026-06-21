@@ -147,6 +147,16 @@ celery_app.conf.update(
             "task": "tasks.maintenance.prune_old_page_views",
             "schedule": crontab(minute=30, hour=3),  # daily at 03:30 EAT
         },
+        # Reliability infra — clear replay window once it's safe.
+        "purge-expired-idempotency-keys": {
+            "task": "tasks.maintenance.purge_expired_idempotency_keys",
+            "schedule": crontab(minute=15, hour="*"),  # hourly
+        },
+        # Trim finished job_status rows older than 30 days (DLQ rows kept).
+        "purge-old-job-status": {
+            "task": "tasks.maintenance.purge_old_job_status",
+            "schedule": crontab(minute=45, hour=3),  # daily 03:45 EAT
+        },
         # Reminder automation scheduler — picks up due automations and
         # dispatches them to per-recipient send tasks.
         "scan-due-reminder-automations": {
