@@ -152,6 +152,14 @@ class CacheKeys:
     EVENT_TYPES = "ref:event_types"                               # TTL 30 min
     SERVICE_CATEGORIES = "ref:service_categories"                 # TTL 30 min
 
+    # Event tabs (per-event hot caches)
+    EVENT_GUEST_SUMMARY = "ev:{event_id}:guest_summary"           # TTL 30 sec
+    EVENT_CONTRIB_SUMMARY = "ev:{event_id}:contrib_summary"       # TTL 30 sec
+
+    # WhatsApp logs dashboard stats (per user + filter hash)
+    WA_LOG_STATS = "wa:stats:{user_id}:{filter_hash}"             # TTL 30 sec
+
+
     # Invalidation patterns
     PAT_USER_FEED = "feed:{user_id}:*"
     PAT_USER_NOTIF = "notif:{user_id}:*"
@@ -173,6 +181,20 @@ class CacheKeys:
     @staticmethod
     def for_unread(user_id: str) -> str:
         return CacheKeys.UNREAD_COUNT.format(user_id=user_id)
+
+    @staticmethod
+    def for_event_guest_summary(event_id: str) -> str:
+        return CacheKeys.EVENT_GUEST_SUMMARY.format(event_id=event_id)
+
+    @staticmethod
+    def for_event_contrib_summary(event_id: str) -> str:
+        return CacheKeys.EVENT_CONTRIB_SUMMARY.format(event_id=event_id)
+
+    @staticmethod
+    def for_wa_log_stats(user_id: str, filter_hash: str) -> str:
+        return CacheKeys.WA_LOG_STATS.format(user_id=user_id, filter_hash=filter_hash)
+
+
 
 
 # ─────────────────────────────────────────────────────────
@@ -198,6 +220,33 @@ def invalidate_trending():
 def invalidate_all_feeds():
     """Nuclear option – bust every cached feed (use after quality score recompute)."""
     cache_delete_pattern(CacheKeys.PAT_ALL_FEEDS)
+
+
+def invalidate_event_guest_summary(event_id: str):
+    """Bust the cached guest-tab summary (totals/checkin counts) for an event.
+
+    Call this from every guest mutation path (create/update/delete, RSVP,
+    bulk import, check-in, undo-checkin). Cheap — single Redis DEL.
+    """
+    cache_delete(CacheKeys.for_event_guest_summary(str(event_id)))
+
+
+def invalidate_event_contrib_summary(event_id: str):
+    """Bust the cached contributions-tab summary for an event.
+
+    Call after every contribution mutation (create/update/delete + payment
+    confirmation flips). Single DEL — safe even when Redis is unavailable.
+    """
+    cache_delete(CacheKeys.for_event_contrib_summary(str(event_id)))
+
+
+def invalidate_wa_log_stats(user_id: str):
+    """Bust all cached WhatsApp-log stat tiles for a user. Used after any
+    mutation that changes log status (delete/restore/resend) so the tiles
+    on the dashboard refresh without waiting for the 30s TTL."""
+    cache_delete_pattern(f"wa:stats:{user_id}:*")
+
+
 
 
 # ─────────────────────────────────────────────────────────

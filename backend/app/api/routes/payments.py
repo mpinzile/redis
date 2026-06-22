@@ -326,7 +326,13 @@ def _sync_target_after_payment(db: Session, tx: Transaction):
             if existing.confirmation_status != ContributionStatusEnum.confirmed:
                 existing.confirmation_status = ContributionStatusEnum.confirmed
                 existing.confirmed_at = existing.confirmed_at or datetime.utcnow()
+                try:
+                    from core.redis import invalidate_event_contrib_summary
+                    invalidate_event_contrib_summary(str(event_id))
+                except Exception:
+                    pass
             return
+
 
         payer = db.query(User).filter(User.id == payer_id).first()
         if not payer:
@@ -439,6 +445,12 @@ def _sync_target_after_payment(db: Session, tx: Transaction):
         )
         db.add(contribution)
         db.flush()
+        try:
+            from core.redis import invalidate_event_contrib_summary
+            invalidate_event_contrib_summary(str(event_id))
+        except Exception:
+            pass
+
 
         # Post the contribution bubble into the event group chat (best-effort).
         # Mirrors the manual-record path in user_contributors.py so members see

@@ -147,6 +147,11 @@ def _respond_internal(db, code: str, status: str) -> bool:
         attendee.rsvp_status = rsvp_enum
 
     db.commit()
+    try:
+        from core.redis import invalidate_event_guest_summary
+        invalidate_event_guest_summary(str(inv.event_id))
+    except Exception:
+        pass
     return True
 
 
@@ -488,6 +493,11 @@ def respond_to_rsvp(code: str, body: RSVPResponseInput):
 
 
         db.commit()
+        try:
+            from core.redis import invalidate_event_guest_summary
+            invalidate_event_guest_summary(str(event.id))
+        except Exception:
+            pass
 
         status_label = rsvp_enum.value
 

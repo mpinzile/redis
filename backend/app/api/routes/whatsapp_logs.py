@@ -42,8 +42,8 @@ def _scope_to_user(query, db: Session, current_user: User):
     Admins bypass scoping (handled by the caller).
     Non-admins see:
       • messages they triggered (user_id == me), OR
-      • messages delivered TO their own phone, OR
-      • messages tied to events they own.
+      • messages delivered TO their own normalized phone, OR
+      • messages tied to events they organize.
     """
     conds = [WAMessageLog.user_id == current_user.id]
 
@@ -57,18 +57,21 @@ def _scope_to_user(query, db: Session, current_user: User):
 
     own_norm = _normalize_for_match(getattr(current_user, "phone", None) or "")
     if own_norm:
+        # Equality matches use the existing indexes on
+        # ix_wa_message_logs_normalized_phone / _recipient_phone. We no
+        # longer add a trailing ILIKE("%last9") on those columns — that
+        # disabled the index and forced a sequential scan for every
+        # dashboard page load.
         conds.append(WAMessageLog.normalized_phone == own_norm)
         conds.append(WAMessageLog.recipient_phone == own_norm)
-        digits = "".join(c for c in own_norm if c.isdigit())
-        last9 = digits[-9:] if len(digits) >= 9 else digits
-        if last9:
-            conds.append(WAMessageLog.normalized_phone.ilike(f"%{last9}"))
-            conds.append(WAMessageLog.recipient_phone.ilike(f"%{last9}"))
 
-    # Events the user owns / organizes
+    # Events the user organizes (column is `organizer_id`, not `owner_id`).
+    # NB: the previous version referenced Event.owner_id which raises and
+    # silently swallowed the whole event-scope branch, so organizers were
+    # missing messages tied to events they did not personally trigger.
     try:
         own_event_ids = [
-            e.id for e in db.query(Event.id).filter(Event.owner_id == current_user.id).all()
+            e.id for e in db.query(Event.id).filter(Event.organizer_id == current_user.id).all()
         ]
         if own_event_ids:
             conds.append(WAMessageLog.event_id.in_(own_event_ids))
@@ -76,6 +79,7 @@ def _scope_to_user(query, db: Session, current_user: User):
         pass
 
     return query.filter(or_(*conds))
+
 
 
 _RETRYABLE_STATUSES = {"failed", "rejected", "unknown"}
@@ -301,6 +305,23 @@ def stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Cache per (user, filter set, days). Tiles refresh every 30s in the
+    # UI; the GROUP BY status scan over wa_message_logs is expensive on
+    # large tables so we serve it from Redis where possible.
+    from core.redis import cache_get, cache_set, CacheKeys
+    import hashlib
+    filter_payload = "|".join(str(x or "") for x in [
+        days, status, category, message_type, template_name, event_id,
+        recipient, q, date_from, date_to, message_purpose, recipient_type,
+        whatsapp_available, source_module, error_code, fallback_status,
+        with_deleted, _is_admin(current_user),
+    ])
+    fhash = hashlib.md5(filter_payload.encode()).hexdigest()[:16]
+    cache_key = CacheKeys.for_wa_log_stats(str(current_user.id), fhash)
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return standard_response(True, "Stats", cached)
+
     since = datetime.utcnow() - timedelta(days=days)
     base = db.query(WAMessageLog.status, func.count(WAMessageLog.id))
     if not _is_admin(current_user):
@@ -326,7 +347,9 @@ def stats(
     counts = {s: int(c) for s, c in rows}
     total = sum(counts.values())
     counts["total"] = total
+    cache_set(cache_key, counts, ttl_seconds=30)
     return standard_response(True, "Stats", counts)
+
 
 
 
@@ -426,6 +449,11 @@ def delete_log(
     row.deleted_at = datetime.utcnow()
     row.deleted_by_user_id = current_user.id
     db.commit()
+    try:
+        from core.redis import invalidate_wa_log_stats
+        invalidate_wa_log_stats(str(current_user.id))
+    except Exception:
+        pass
     return standard_response(True, "Log deleted", _serialize(row))
 
 
@@ -456,6 +484,11 @@ def bulk_delete_logs(
             r.deleted_at = now
             r.deleted_by_user_id = current_user.id
     db.commit()
+    try:
+        from core.redis import invalidate_wa_log_stats
+        invalidate_wa_log_stats(str(current_user.id))
+    except Exception:
+        pass
     return standard_response(True, f"Deleted {len(rows)} log(s)", {"deleted": len(rows)})
 
 
@@ -478,6 +511,11 @@ def restore_log(
     row.deleted_at = None
     row.deleted_by_user_id = None
     db.commit()
+    try:
+        from core.redis import invalidate_wa_log_stats
+        invalidate_wa_log_stats(str(current_user.id))
+    except Exception:
+        pass
     return standard_response(True, "Log restored", _serialize(row))
 
 

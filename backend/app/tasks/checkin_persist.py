@@ -98,7 +98,10 @@ def _persist_entry(db, event_id: str, fields: dict) -> bool:
 def drain_event(event_id: str, batch: int = 500) -> int:
     """Drain pending stream entries for a single event. Returns count
     persisted (including no-ops where the row was already checked in)."""
-    entries = fast.read_stream(event_id, count=batch, block_ms=0)
+    # block_ms=None → non-blocking. Earlier we passed 0, which redis-py
+    # interprets as BLOCK forever; the socket read then hit its 4s timeout
+    # and logged warnings even when the stream was empty.
+    entries = fast.read_stream(event_id, count=batch, block_ms=None)
     if not entries:
         return 0
     persisted_ids: list[str] = []
@@ -125,6 +128,13 @@ def drain_event(event_id: str, batch: int = 500) -> int:
 
     if persisted_ids:
         fast.ack_stream(event_id, persisted_ids)
+        # Bust the cached Guests tab summary so the check-in totals on the
+        # web/mobile organizer view reflect the drain without waiting 30s.
+        try:
+            from core.redis import invalidate_event_guest_summary
+            invalidate_event_guest_summary(event_id)
+        except Exception:
+            pass
     if dead_ids:
         r = get_redis()
         if r is not None:
@@ -139,19 +149,45 @@ def drain_event(event_id: str, batch: int = 500) -> int:
     return len(persisted_ids) + len(dead_ids)
 
 
+_DRAIN_LOCK_KEY = "fastlane:drain:lock"
+_DRAIN_LOCK_TTL = 30  # seconds — auto-released if a worker dies mid-drain
+
+
 @celery_app.task(name="tasks.checkin_persist.drain_active_events")
 def drain_active_events() -> dict:
     """Drain every active event's stream. Cheap when no events are live —
-    only walks keys that exist."""
-    drained: dict[str, int] = {}
-    for eid in fast.active_event_ids():
+    only walks keys that exist.
+
+    Wrapped in a single-flight Redis lock so overlapping beat ticks (the
+    schedule fires every few seconds) never run two drainers in parallel.
+    """
+    r = get_redis()
+    have_lock = False
+    if r is not None:
         try:
-            n = drain_event(eid)
-            if n:
-                drained[eid] = n
-        except Exception as e:
-            log.warning("drain event=%s failed: %s", eid, e)
-    return {"events": len(drained), "entries": sum(drained.values())}
+            have_lock = bool(r.set(_DRAIN_LOCK_KEY, "1", nx=True, ex=_DRAIN_LOCK_TTL))
+        except Exception:
+            have_lock = True  # fall through if Redis can't lock
+        if not have_lock:
+            # Another worker is already draining — exit cleanly.
+            return {"events": 0, "entries": 0, "skipped": "locked"}
+
+    try:
+        drained: dict[str, int] = {}
+        for eid in fast.active_event_ids():
+            try:
+                n = drain_event(eid)
+                if n:
+                    drained[eid] = n
+            except Exception as e:
+                log.warning("drain event=%s failed: %s", eid, e)
+        return {"events": len(drained), "entries": sum(drained.values())}
+    finally:
+        if have_lock and r is not None:
+            try:
+                r.delete(_DRAIN_LOCK_KEY)
+            except Exception:
+                pass
 
 
 @celery_app.task(name="tasks.checkin_persist.reconcile_event")

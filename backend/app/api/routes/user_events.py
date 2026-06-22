@@ -48,6 +48,32 @@ from utils.whatsapp_cards import wa_send_invitation_card, wa_send_invitation_tex
 
 EAT = pytz.timezone("Africa/Nairobi")
 HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def _bust_guest_summary(event_id) -> None:
+    """Best-effort cache invalidation for the guest-tab summary.
+
+    Called after any guest mutation (add/update/delete/RSVP/check-in) so the
+    cached counts on the Guests tab reflect the change immediately rather
+    than waiting for the 30s TTL. Safe to call even if Redis is unavailable.
+    """
+    try:
+        from core.redis import invalidate_event_guest_summary
+        invalidate_event_guest_summary(str(event_id))
+    except Exception:
+        pass
+
+
+def _bust_contrib_summary(event_id) -> None:
+    """Bust the cached contributions-tab summary after every mutation
+    (record/update/delete/payment-confirm). Safe if Redis is unavailable."""
+    try:
+        from core.redis import invalidate_event_contrib_summary
+        invalidate_event_contrib_summary(str(event_id))
+    except Exception:
+        pass
+
+
 VALID_STATUS_FILTERS = {"draft", "confirmed", "published", "cancelled", "completed", "all"}
 
 
@@ -791,38 +817,90 @@ def get_invited_events(
     page: int = 1, limit: int = 20,
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
 ):
-    """Returns events the current user has been invited to, with RSVP status."""
-    # 1. Direct invitations by invited_user_id
-    invitations = (
-        db.query(EventInvitation)
+    """Returns events the current user has been invited to, with RSVP status.
+
+    Performance: paginates event_ids at SQL level (no full table scan into
+    Python), then batch-loads invitations + attendees only for the paged
+    slice. Removes the per-row EventInvitation lookup that previously made
+    this ~4.5s for users with many invites.
+    """
+    # 1. Single ranked list of (event_id, sort_key) the user is connected to,
+    #    via UNION of direct invitations + attendee rows. Pagination happens
+    #    in SQL — we no longer load every row into Python first.
+    inv_q = (
+        db.query(
+            EventInvitation.event_id.label("event_id"),
+            sa_func.max(EventInvitation.created_at).label("sort_at"),
+        )
         .filter(EventInvitation.invited_user_id == current_user.id)
+        .group_by(EventInvitation.event_id)
+    )
+    att_q = (
+        db.query(
+            EventAttendee.event_id.label("event_id"),
+            sa_func.max(EventAttendee.created_at).label("sort_at"),
+        )
+        .filter(EventAttendee.attendee_id == current_user.id)
+        .group_by(EventAttendee.event_id)
+    )
+    union_sub = inv_q.union(att_q).subquery()
+    ranked = (
+        db.query(
+            union_sub.c.event_id,
+            sa_func.max(union_sub.c.sort_at).label("sort_at"),
+        )
+        .group_by(union_sub.c.event_id)
+        .order_by(sa_func.max(union_sub.c.sort_at).desc())
+    )
+
+    total = ranked.count()
+    if total == 0:
+        return standard_response(True, "No event invitations found", {"events": [], "pagination": {"page": 1, "limit": limit, "total_items": 0, "total_pages": 1, "has_next": False, "has_previous": False}})
+    total_pages = max(1, math.ceil(total / limit))
+    page = max(1, min(page, total_pages))
+    paged_rows = ranked.limit(limit).offset((page - 1) * limit).all()
+    paged_ids = [r.event_id for r in paged_rows]
+
+    # 2. Batch-load invitations for paged slice only (single query, no N+1).
+    inv_rows = (
+        db.query(EventInvitation)
+        .filter(
+            EventInvitation.event_id.in_(paged_ids),
+            ((EventInvitation.invited_user_id == current_user.id)),
+        )
         .order_by(EventInvitation.created_at.desc())
         .all()
     )
-    inv_map = {inv.event_id: inv for inv in invitations}
+    inv_by_event: dict = {}
+    for inv in inv_rows:
+        # Keep newest per event (rows are ordered desc).
+        inv_by_event.setdefault(inv.event_id, inv)
 
-    # 2. Also find events via EventAttendee (covers cases where invited_user_id is NULL)
-    attendee_records = (
-        db.query(EventAttendee)
-        .filter(EventAttendee.attendee_id == current_user.id)
-        .all()
-    )
-    for att in attendee_records:
-        if att.event_id not in inv_map and att.invitation_id:
-            inv = db.query(EventInvitation).filter(EventInvitation.id == att.invitation_id).first()
-            if inv:
-                inv_map[att.event_id] = inv
-        elif att.event_id not in inv_map:
-            # Attendee exists but no invitation record — synthesise minimal data
-            inv_map[att.event_id] = att  # we'll handle both types below
+    # 3. Attendee rows for paged slice — also fills invitation gap via invitation_id.
+    att_rows = db.query(EventAttendee).filter(
+        EventAttendee.event_id.in_(paged_ids),
+        EventAttendee.attendee_id == current_user.id,
+    ).all()
+    att_by_event = {str(a.event_id): a for a in att_rows}
 
-    event_ids = list(inv_map.keys())
-    if not event_ids:
-        return standard_response(True, "No event invitations found", {"events": [], "pagination": {"page": 1, "limit": limit, "total_items": 0, "total_pages": 1, "has_next": False, "has_previous": False}})
+    # Resolve invitation rows referenced by attendee.invitation_id in one query.
+    missing_inv_ids = [
+        a.invitation_id for a in att_rows
+        if a.invitation_id and a.event_id not in inv_by_event
+    ]
+    if missing_inv_ids:
+        for inv in db.query(EventInvitation).filter(EventInvitation.id.in_(missing_inv_ids)).all():
+            inv_by_event.setdefault(inv.event_id, inv)
 
-    total = len(event_ids)
-    total_pages = max(1, math.ceil(total / limit))
-    paged_ids = event_ids[(page - 1) * limit : page * limit]
+    # 4. Build the inv-or-attendee map preserving the original behavior.
+    inv_map: dict = {}
+    for eid in paged_ids:
+        if eid in inv_by_event:
+            inv_map[eid] = inv_by_event[eid]
+        else:
+            att = att_by_event.get(str(eid))
+            if att:
+                inv_map[eid] = att
 
     events = db.query(Event).filter(Event.id.in_(paged_ids)).all()
     event_order = {eid: i for i, eid in enumerate(paged_ids)}
@@ -833,12 +911,6 @@ def get_invited_events(
     ctx = batch_load_event_context(db, [e.id for e in events])
     organizer_map = batch_load_users(db, {e.organizer_id for e in events if e.organizer_id})
 
-    # Batch load current user's attendee record per event
-    att_rows = db.query(EventAttendee).filter(
-        EventAttendee.event_id.in_(paged_ids),
-        EventAttendee.attendee_id == current_user.id,
-    ).all()
-    att_by_event = {str(a.event_id): a for a in att_rows}
 
     results = []
     for ev in events:
@@ -908,20 +980,32 @@ def get_committee_events(
     page: int = 1, limit: int = 20,
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
 ):
-    """Returns events where the current user is a committee member, with role and permissions."""
-    memberships = (
+    """Returns events where the current user is a committee member, with role and permissions.
+
+    Performance: paginates membership rows at SQL level (LIMIT/OFFSET) and
+    batch-loads events, roles, permissions only for the paged slice. Prior
+    version loaded every membership row into Python before paginating.
+    """
+    base_q = (
         db.query(EventCommitteeMember)
         .filter(EventCommitteeMember.user_id == current_user.id)
-        .order_by(EventCommitteeMember.created_at.desc())
+    )
+    total = base_q.with_entities(sa_func.count(EventCommitteeMember.id)).scalar() or 0
+    if total == 0:
+        return standard_response(
+            True,
+            "You are not a committee member of any events",
+            {"events": [], "pagination": {"page": 1, "limit": limit, "total_items": 0, "total_pages": 1, "has_next": False, "has_previous": False}},
+        )
+
+    total_pages = max(1, math.ceil(total / limit))
+    page = max(1, min(page, total_pages))
+    paged = (
+        base_q.order_by(EventCommitteeMember.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
         .all()
     )
-
-    if not memberships:
-        return standard_response(True, "You are not a committee member of any events", {"events": [], "pagination": {"page": 1, "limit": limit, "total_items": 0, "total_pages": 1, "has_next": False, "has_previous": False}})
-
-    total = len(memberships)
-    total_pages = max(1, math.ceil(total / limit))
-    paged = memberships[(page - 1) * limit : page * limit]
 
     # Batch fetch events + context
     paged_event_ids = [cm.event_id for cm in paged]
@@ -938,6 +1022,7 @@ def get_committee_events(
     perms_map = {p.committee_member_id: p for p in db.query(CommitteePermission).filter(
         CommitteePermission.committee_member_id.in_(cm_ids)
     ).all()} if cm_ids else {}
+
 
     results = []
     for cm in paged:
@@ -2338,27 +2423,32 @@ def get_guests(event_id: str, page: int = 1, limit: int = 50, rsvp_status: str =
     total_pages = max(1, math.ceil(total / limit))
     attendees = query.order_by(EventAttendee.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
 
-    # Summary counts — collapse 6 queries into 1 grouped count + 1 invitation count
-    status_rows = db.query(
-        EventAttendee.rsvp_status, sa_func.count(EventAttendee.id)
-    ).filter(EventAttendee.event_id == eid).group_by(EventAttendee.rsvp_status).all()
-    status_counts = {row[0].value if hasattr(row[0], "value") else str(row[0]): row[1] for row in status_rows}
-    checked_in_count = db.query(sa_func.count(EventAttendee.id)).filter(
-        EventAttendee.event_id == eid, EventAttendee.checked_in == True
-    ).scalar() or 0
-    invitations_sent = db.query(sa_func.count(EventInvitation.id)).filter(
-        EventInvitation.event_id == eid
-    ).scalar() or 0
-
-    summary = {
-        "total": sum(status_counts.values()),
-        "confirmed": status_counts.get("confirmed", 0),
-        "pending": status_counts.get("pending", 0),
-        "declined": status_counts.get("declined", 0),
-        "maybe": status_counts.get("maybe", 0),
-        "checked_in": checked_in_count,
-        "invitations_sent": invitations_sent,
-    }
+    # Summary counts — cache for 30s, invalidated on guest mutations.
+    # The summary is invariant across page/filter/search, so cache by event only.
+    from core.redis import cache_get, cache_set, CacheKeys
+    summary_key = CacheKeys.for_event_guest_summary(str(eid))
+    summary = cache_get(summary_key)
+    if summary is None:
+        status_rows = db.query(
+            EventAttendee.rsvp_status, sa_func.count(EventAttendee.id)
+        ).filter(EventAttendee.event_id == eid).group_by(EventAttendee.rsvp_status).all()
+        status_counts = {row[0].value if hasattr(row[0], "value") else str(row[0]): row[1] for row in status_rows}
+        checked_in_count = db.query(sa_func.count(EventAttendee.id)).filter(
+            EventAttendee.event_id == eid, EventAttendee.checked_in == True
+        ).scalar() or 0
+        invitations_sent = db.query(sa_func.count(EventInvitation.id)).filter(
+            EventInvitation.event_id == eid
+        ).scalar() or 0
+        summary = {
+            "total": sum(status_counts.values()),
+            "confirmed": status_counts.get("confirmed", 0),
+            "pending": status_counts.get("pending", 0),
+            "declined": status_counts.get("declined", 0),
+            "maybe": status_counts.get("maybe", 0),
+            "checked_in": checked_in_count,
+            "invitations_sent": invitations_sent,
+        }
+        cache_set(summary_key, summary, ttl_seconds=30)
 
     from utils.batch_loaders import build_event_attendee_dicts
     return standard_response(True, "Guests retrieved successfully", {
@@ -2366,6 +2456,7 @@ def get_guests(event_id: str, page: int = 1, limit: int = 50, rsvp_status: str =
         "summary": summary,
         "pagination": {"page": page, "limit": limit, "total_items": total, "total_pages": total_pages, "has_next": page < total_pages, "has_previous": page > 1},
     })
+
 
 
 @router.post("/{event_id}/guests")
@@ -2461,6 +2552,7 @@ def add_guest(event_id: str, body: dict = Body(...), db: Session = Depends(get_d
         except Exception as e:
             db.rollback()
             return standard_response(False, f"Failed to add guest: {str(e)}")
+        _bust_guest_summary(eid)
 
         # SMS + WhatsApp to contributor if they have a phone
         if contributor.phone:
@@ -2580,6 +2672,7 @@ def add_guest(event_id: str, body: dict = Body(...), db: Session = Depends(get_d
         except Exception as e:
             db.rollback()
             return standard_response(False, f"Failed to add guest: {str(e)}")
+        _bust_guest_summary(eid)
 
         # Create notification + send SMS for the invited user
         if attendee_user and attendee_user.id != current_user.id:
@@ -2669,6 +2762,7 @@ def add_guests_bulk(event_id: str, body: dict = Body(...), db: Session = Depends
     except Exception as e:
         db.rollback()
         return standard_response(False, f"Failed to import guests: {str(e)}")
+    _bust_guest_summary(eid)
 
     return standard_response(True, "Guests imported successfully", {"imported": len(imported), "skipped": skipped, "errors": errors_list})
 
@@ -2799,6 +2893,8 @@ def add_contributors_as_guests(event_id: str, body: dict = Body(...), db: Sessio
     except Exception as e:
         db.rollback()
         return standard_response(False, f"Failed to add guests: {str(e)}")
+    _bust_guest_summary(eid)
+
 
     return standard_response(True, f"{added} contributor(s) added as guests", {
         "added": added,
@@ -2859,6 +2955,7 @@ def update_guest(event_id: str, guest_id: str, body: dict = Body(...), db: Sessi
             db.add(EventGuestPlusOne(id=uuid.uuid4(), attendee_id=att.id, name=po_name, created_at=now, updated_at=now))
 
     db.commit()
+    _bust_guest_summary(eid)
     return standard_response(True, "Guest updated successfully", _attendee_dict(db, att))
 
 
@@ -2895,6 +2992,7 @@ def remove_guest(event_id: str, guest_id: str, db: Session = Depends(get_db), cu
 
     db.delete(att)
     db.commit()
+    _bust_guest_summary(eid)
     return standard_response(True, "Guest removed successfully")
 
 
@@ -2923,6 +3021,7 @@ def remove_guests_bulk(event_id: str, body: dict = Body(...), db: Session = Depe
             continue
 
     db.commit()
+    _bust_guest_summary(eid)
     return standard_response(True, f"{deleted} guests removed successfully", {"deleted": deleted})
 
 
@@ -3130,6 +3229,7 @@ def checkin_guest(
             "guest_id": str(att.id),
             "name": name,
         })
+    _bust_guest_summary(eid)
 
     return standard_response(True, "Guest checked in successfully", {"guest_id": str(att.id), "name": name, "checked_in": True, "checked_in_at": now.isoformat()})
 
@@ -3232,31 +3332,28 @@ def _scan_event_aggregates(db: Session, event: Event) -> dict:
         mode = "tickets"
         labels = {"total": "Total Tickets", "checked_in": "Checked In", "pending": "Pending"}
     else:
-        accepted_statuses = [RSVPStatusEnum.confirmed, RSVPStatusEnum.checked_in]
-        # Total accepted attendees in Postgres + any Redis-staged guest IDs
-        # whose attendee row exists but isn't yet confirmed (rare, but keeps
-        # the totals honest when an organizer scans a freshly added guest).
+        # Total guests = every attendee row for the event (matches the Guests
+        # tab counter). Filtering by rsvp_status hid invited-but-not-yet-RSVPd
+        # guests, so the scanner header showed 0 even after a successful
+        # check-in. We count attendees regardless of status, then layer in any
+        # Redis-staged check-ins that haven't been drained to Postgres yet.
         total_db = int(db.query(sa_func.count(EventAttendee.id)).filter(
             EventAttendee.event_id == eid,
-            EventAttendee.rsvp_status.in_(accepted_statuses),
         ).scalar() or 0)
         checked_db = int(db.query(sa_func.count(EventAttendee.id)).filter(
             EventAttendee.event_id == eid,
             EventAttendee.checked_in == True,
         ).scalar() or 0)
         staged_extra = 0
-        staged_extra_total = 0
         if staged_guest_ids:
-            rows = db.query(EventAttendee.id, EventAttendee.checked_in, EventAttendee.rsvp_status).filter(
+            rows = db.query(EventAttendee.id, EventAttendee.checked_in).filter(
                 EventAttendee.id.in_(list(staged_guest_ids)),
                 EventAttendee.event_id == eid,
             ).all()
-            for _id, ck, rsvp in rows:
+            for _id, ck in rows:
                 if not ck:
                     staged_extra += 1
-                if rsvp not in accepted_statuses:
-                    staged_extra_total += 1
-        total = total_db + staged_extra_total
+        total = total_db
         checked = checked_db + staged_extra
         mode = "guests"
         labels = {"total": "Total Guests", "checked_in": "Checked In", "pending": "Pending"}
@@ -3754,6 +3851,7 @@ def checkin_guest_qr(
     payload["scan_time"] = now.isoformat()
     _scan_enrich_payload(db, event, att, payload)
     resp = standard_response(True, "Guest checked in successfully", payload)
+    _bust_guest_summary(eid)
 
     if store_idem:
         store_idem(resp)
@@ -3781,6 +3879,7 @@ def undo_checkin(event_id: str, guest_id: str, db: Session = Depends(get_db), cu
     att.checked_in_at = None
     att.updated_at = datetime.now(EAT)
     db.commit()
+    _bust_guest_summary(eid)
 
     return standard_response(True, "Check-in reverted successfully", {"guest_id": str(att.id), "checked_in": False})
 
@@ -4122,23 +4221,39 @@ def get_contributions(event_id: str, page: int = 1, limit: int = 20, sort_by: st
     total_pages = max(1, math.ceil(total / limit))
     contributions = query.offset((page - 1) * limit).limit(limit).all()
 
-    total_amount = db.query(sa_func.coalesce(sa_func.sum(EventContribution.amount), 0)).filter(
-        EventContribution.event_id == eid,
-        EventContribution.confirmation_status == "confirmed",
-    ).scalar()
-    ct = db.query(EventContributionTarget).filter(EventContributionTarget.event_id == eid).first()
-    settings = db.query(EventSetting).filter(EventSetting.event_id == eid).first()
-    target = float(ct.target_amount) if ct else (float(settings.contribution_target_amount) if settings and settings.contribution_target_amount else 0)
+    # Summary block (total/target/progress) is invariant across page/sort,
+    # so cache it for 30s keyed by event. Invalidated on every contribution
+    # mutation in this module.
+    from core.redis import cache_get, cache_set, CacheKeys
+    summary_key = CacheKeys.for_event_contrib_summary(str(eid))
+    summary = cache_get(summary_key)
+    if summary is None:
+        total_amount = db.query(sa_func.coalesce(sa_func.sum(EventContribution.amount), 0)).filter(
+            EventContribution.event_id == eid,
+            EventContribution.confirmation_status == "confirmed",
+        ).scalar()
+        ct = db.query(EventContributionTarget).filter(EventContributionTarget.event_id == eid).first()
+        settings = db.query(EventSetting).filter(EventSetting.event_id == eid).first()
+        target = float(ct.target_amount) if ct else (float(settings.contribution_target_amount) if settings and settings.contribution_target_amount else 0)
+        summary = {
+            "total_amount": float(total_amount),
+            "target_amount": target,
+            "progress_percentage": round((float(total_amount) / target * 100), 1) if target > 0 else 0,
+            "currency": _currency_code(db, event.currency_id),
+        }
+        cache_set(summary_key, summary, ttl_seconds=30)
+
+    # total_contributors mirrors the paginated total — keep outside the
+    # cache so it tracks the (rarely filtered) list count exactly.
+    summary_out = dict(summary)
+    summary_out["total_contributors"] = total
 
     return standard_response(True, "Contributions retrieved successfully", {
         "contributions": [_contribution_dict(db, c, event.currency_id) for c in contributions],
-        "summary": {
-            "total_amount": float(total_amount), "target_amount": target,
-            "progress_percentage": round((float(total_amount) / target * 100), 1) if target > 0 else 0,
-            "total_contributors": total, "currency": _currency_code(db, event.currency_id),
-        },
+        "summary": summary_out,
         "pagination": {"page": page, "limit": limit, "total_items": total, "total_pages": total_pages, "has_next": page < total_pages, "has_previous": page > 1},
     })
+
 
 
 @router.post("/{event_id}/contributions")
@@ -4185,6 +4300,8 @@ def record_contribution(event_id: str, body: dict = Body(...), db: Session = Dep
     except Exception as e:
         db.rollback()
         return standard_response(False, f"Failed to record contribution: {str(e)}")
+    _bust_contrib_summary(eid)
+
 
     # Notify contributor + SMS
     currency = _currency_code(db, event.currency_id) or "TZS"
@@ -4228,6 +4345,7 @@ def update_contribution(event_id: str, contribution_id: str, body: dict = Body(.
     if "transaction_reference" in body: c.transaction_ref = body["transaction_reference"]
 
     db.commit()
+    _bust_contrib_summary(eid)
 
     event = db.query(Event).filter(Event.id == eid).first()
     return standard_response(True, "Contribution updated successfully", _contribution_dict(db, c, event.currency_id))
@@ -4251,6 +4369,7 @@ def delete_contribution(event_id: str, contribution_id: str, db: Session = Depen
 
     db.delete(c)
     db.commit()
+    _bust_contrib_summary(eid)
     return standard_response(True, "Contribution deleted successfully")
 
 

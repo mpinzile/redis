@@ -618,7 +618,16 @@ def resolve_manual(event_id: uuid.UUID | str, *, attendee_id: Optional[str] = No
 # Stream consumption (used by the Celery persister)
 # ──────────────────────────────────────────────────────────────────────
 
-def read_stream(event_id: uuid.UUID | str, *, count: int = 200, block_ms: int = 0) -> list:
+def read_stream(event_id: uuid.UUID | str, *, count: int = 200, block_ms: int | None = None) -> list:
+    """Read pending stream entries for an event.
+
+    ``block_ms`` semantics match redis-py:
+      * ``None`` (default) → non-blocking; return immediately if empty.
+      * ``0``              → block forever (DO NOT use from the periodic
+                              drainer — the socket read will time out and
+                              spam warnings every few seconds).
+      * positive int       → block at most that many ms.
+    """
     r = get_redis()
     if not r:
         return []
@@ -630,7 +639,11 @@ def read_stream(event_id: uuid.UUID | str, *, count: int = 200, block_ms: int = 
         return r.xreadgroup("persist", "worker-1", {k_stream(str(event_id)): ">"},
                             count=count, block=block_ms) or []
     except Exception as e:
-        log.warning("fastlane: xreadgroup failed for %s: %s", event_id, e)
+        # "Timeout reading from socket" is normal when block_ms is set and
+        # the stream is empty — don't pollute logs with it.
+        msg = str(e).lower()
+        if "timeout" not in msg:
+            log.warning("fastlane: xreadgroup failed for %s: %s", event_id, e)
         return []
 
 

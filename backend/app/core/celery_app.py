@@ -165,10 +165,11 @@ celery_app.conf.update(
         },
         # Check-In Fast Lane — drain every active event's Redis stream
         # into Postgres. Cheap when nothing is happening (only walks keys
-        # that exist).
+        # that exist). 5s cadence + single-flight Redis lock means the
+        # next tick simply exits when a prior drain is still running.
         "checkin-fastlane-drain": {
             "task": "tasks.checkin_persist.drain_active_events",
-            "schedule": 2.0,  # every 2 seconds
+            "schedule": 5.0,
         },
         # WhatsApp availability — active probing is disabled by policy.
         # Availability is learned opportunistically from real Nuru sends,
