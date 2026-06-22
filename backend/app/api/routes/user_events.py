@@ -3369,16 +3369,22 @@ def _scan_event_aggregates(db: Session, event: Event) -> dict:
 
 
 @router.get("/{event_id}/scan/stats")
-def get_scan_stats(event_id: str, limit: int = Query(10, ge=1, le=100), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_scan_stats(
+    event_id: str,
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    x_checkin_session: Optional[str] = Header(default=None),
+):
     """Premium scanner header data: event card + aggregate counts + recent scans."""
     try:
         eid = uuid.UUID(event_id)
     except ValueError:
         return standard_response(False, "Invalid event ID format.")
 
-    event, err = _verify_event_access(db, eid, current_user, "can_check_in_guests")
-    if err:
-        return err
+    event, _scan_session, perm_err = authorize_scan(db, eid, current_user, x_checkin_session)
+    if perm_err:
+        return standard_response(False, perm_err)
 
     from api.routes.ticketing import _resolve_event_cover
 
