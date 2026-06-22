@@ -108,42 +108,67 @@ def get_unread_count(db: Session = Depends(get_db), current_user: User = Depends
 @router.get("/")
 def get_conversations(
     search: str = None,
+    page: int = 1,
+    limit: int = 30,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Returns all conversations for the current user.
+    """Returns conversations for the current user (paginated, newest first).
 
-    Optional ``?search=`` filters conversations whose other participant's
-    display name, username or email contains the term (case-insensitive).
+    Optional ``?search=`` pushes the filter into SQL by matching the other
+    participant's first/last/username/email — avoids loading every conversation
+    and filtering in Python.
     """
     from utils.batch_loaders import build_conversation_dicts
-    convs = db.query(Conversation).filter(
-        or_(Conversation.user_one_id == current_user.id, Conversation.user_two_id == current_user.id),
-        Conversation.is_active == True
-    ).order_by(Conversation.updated_at.desc()).all()
+    from sqlalchemy import and_
 
-    # Filter out conversations the user has hidden — but bring them back if a
-    # new message arrived after they hid it (WhatsApp-like behavior).
-    hides = {
-        str(h.conversation_id): h.hidden_at
-        for h in db.query(ConversationHide).filter(ConversationHide.user_id == current_user.id).all()
-    }
-    if hides:
-        convs = [
-            c for c in convs
-            if str(c.id) not in hides or (c.updated_at and c.updated_at > hides[str(c.id)])
-        ]
+    page = max(1, int(page or 1))
+    limit = max(1, min(int(limit or 30), 100))
+    offset = (page - 1) * limit
+
+    base_filter = and_(
+        or_(Conversation.user_one_id == current_user.id, Conversation.user_two_id == current_user.id),
+        Conversation.is_active == True,
+    )
+    query = db.query(Conversation).filter(base_filter)
+
+    if search and search.strip():
+        term = f"%{search.strip().lower()}%"
+        # Join to the *other* participant via a conditional ID expression.
+        from sqlalchemy import case as sa_case, func as sa_func
+        other_id_expr = sa_case(
+            (Conversation.user_one_id == current_user.id, Conversation.user_two_id),
+            else_=Conversation.user_one_id,
+        )
+        query = query.join(User, User.id == other_id_expr).filter(
+            or_(
+                sa_func.lower(sa_func.coalesce(User.first_name, "")).like(term),
+                sa_func.lower(sa_func.coalesce(User.last_name, "")).like(term),
+                sa_func.lower(sa_func.coalesce(User.username, "")).like(term),
+                sa_func.lower(sa_func.coalesce(User.email, "")).like(term),
+            )
+        )
+
+    query = query.order_by(Conversation.updated_at.desc())
+    convs = query.offset(offset).limit(limit).all()
+
+    # Apply hide filter on the visible page only.
+    if convs:
+        conv_ids = [c.id for c in convs]
+        hides = {
+            str(h.conversation_id): h.hidden_at
+            for h in db.query(ConversationHide).filter(
+                ConversationHide.user_id == current_user.id,
+                ConversationHide.conversation_id.in_(conv_ids),
+            ).all()
+        }
+        if hides:
+            convs = [
+                c for c in convs
+                if str(c.id) not in hides or (c.updated_at and c.updated_at > hides[str(c.id)])
+            ]
 
     data = build_conversation_dicts(db, convs, current_user.id)
-    if search and search.strip():
-        term = search.strip().lower()
-        data = [c for c in data if term in (
-            f"{c.get('other_user_name','')} "
-            f"{c.get('other_user_username','')} "
-            f"{c.get('other_user_email','')} "
-            f"{c.get('service_name','')} "
-            f"{(c.get('last_message') or {}).get('content','')}"
-        ).lower()]
     return standard_response(True, "Conversations retrieved successfully", data)
 
 

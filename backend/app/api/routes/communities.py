@@ -60,13 +60,17 @@ def get_communities(page: int = 1, limit: int = 20, db: Session = Depends(get_db
 @router.get("/my")
 def get_my_communities(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from utils.batch_loaders import build_community_dicts
-    memberships = db.query(CommunityMember).filter(CommunityMember.user_id == current_user.id).all()
-    community_ids = [m.community_id for m in memberships]
-    created = db.query(Community).filter(Community.created_by == current_user.id).all()
-    created_ids = [c.id for c in created]
-    all_ids = list(set(community_ids + created_ids))
-
-    communities = db.query(Community).filter(Community.id.in_(all_ids)).order_by(Community.created_at.desc()).all() if all_ids else []
+    from sqlalchemy import or_
+    # Single round-trip: communities the user created OR is a member of.
+    member_ids_subq = db.query(CommunityMember.community_id).filter(
+        CommunityMember.user_id == current_user.id
+    ).subquery()
+    communities = (
+        db.query(Community)
+        .filter(or_(Community.created_by == current_user.id, Community.id.in_(member_ids_subq)))
+        .order_by(Community.created_at.desc())
+        .all()
+    )
     data = build_community_dicts(db, communities, current_user.id)
     return standard_response(True, "My communities retrieved", data)
 
@@ -102,28 +106,48 @@ def get_recommended_communities(
         interests = {str(s).strip().lower() for s in profile.interests if s}
 
     # 3. Candidate set — public communities the user is not already in.
+    #    Push ranking and pagination into SQL: a candidate cap keeps memory
+    #    bounded even on very large communities tables, and an interest match
+    #    boost is computed via a CASE expression so the DB can ORDER BY it.
+    from sqlalchemy import case as sa_case, func as sa_func, desc
+
     q = db.query(Community).filter(Community.is_public.is_(True))
     if member_ids:
         q = q.filter(~Community.id.in_(member_ids))
 
-    candidates = q.all()
+    # Interest-match boost — 1 when the community category matches any
+    # onboarding interest (lower-cased exact match), 0 otherwise. Substring
+    # matching is still applied as a Python re-rank below for the visible
+    # page only (cheap because it's at most `safe_limit` rows).
+    if interests:
+        interest_boost = sa_case(
+            (sa_func.lower(sa_func.coalesce(Community.category, "")).in_(list(interests)), 1),
+            else_=0,
+        )
+    else:
+        interest_boost = sa_case(else_=0)
 
-    def _score(c: Community) -> tuple:
-        category = (getattr(c, "category", "") or "").strip().lower()
-        interest_match = 1 if (category and (category in interests
-            or any(i in category or category in i for i in interests))) else 0
-        verified = 1 if getattr(c, "is_verified", False) else 0
-        members = int(c.member_count or 0)
-        # Sort key — higher is better; created_at as final tiebreaker.
-        return (interest_match, verified, members, c.created_at or datetime.min)
+    verified_boost = sa_case((Community.is_verified.is_(True), 1), else_=0)
 
-    ranked = sorted(candidates, key=_score, reverse=True)
-    total = len(ranked)
     safe_limit = max(1, min(limit, 50))
     safe_page = max(1, page)
-    start = (safe_page - 1) * safe_limit
-    end = start + safe_limit
-    page_items = ranked[start:end]
+    offset = (safe_page - 1) * safe_limit
+
+    # Use a fast count() on the filtered query for accurate pagination.
+    total = q.count()
+
+    page_items = (
+        q.order_by(
+            desc(interest_boost),
+            desc(verified_boost),
+            Community.member_count.desc(),
+            Community.created_at.desc(),
+        )
+        .offset(offset)
+        .limit(safe_limit)
+        .all()
+    )
+
     pagination = {
         "page": safe_page,
         "limit": safe_limit,

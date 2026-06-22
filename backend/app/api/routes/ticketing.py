@@ -77,26 +77,40 @@ def get_ticket_classes(
     ).delete(synchronize_session=False)
     db.commit()
 
+    # Batch-load "sold" and "active reserved" quantities for ALL ticket
+    # classes in two grouped queries (previously: 2 queries per class).
+    class_ids = [tc.id for tc in classes]
+    sold_map: dict = {}
+    reserved_map: dict = {}
+    if class_ids:
+        sold_map = {
+            cid: int(qty or 0) for cid, qty in db.query(
+                EventTicket.ticket_class_id,
+                sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0),
+            ).filter(
+                EventTicket.ticket_class_id.in_(class_ids),
+                EventTicket.status.in_([
+                    TicketOrderStatusEnum.approved,
+                    TicketOrderStatusEnum.confirmed,
+                ]),
+            ).group_by(EventTicket.ticket_class_id).all()
+        }
+        reserved_map = {
+            cid: int(qty or 0) for cid, qty in db.query(
+                EventTicket.ticket_class_id,
+                sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0),
+            ).filter(
+                EventTicket.ticket_class_id.in_(class_ids),
+                EventTicket.status == TicketOrderStatusEnum.reserved,
+                EventTicket.reserved_until.isnot(None),
+                EventTicket.reserved_until > now,
+            ).group_by(EventTicket.ticket_class_id).all()
+        }
+
     result = []
     for tc in classes:
-        # Count only tickets that actually hold inventory:
-        #   - confirmed / approved (truly sold)
-        #   - reserved AND still inside the hold window (active reservation)
-        # Excludes: rejected, cancelled, refunded, expired-reserved, and
-        # stale pending orders (those must never block public availability).
-        sold = int(db.query(sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0)).filter(
-            EventTicket.ticket_class_id == tc.id,
-            EventTicket.status.in_([
-                TicketOrderStatusEnum.approved,
-                TicketOrderStatusEnum.confirmed,
-            ]),
-        ).scalar())
-        active_reserved = int(db.query(sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0)).filter(
-            EventTicket.ticket_class_id == tc.id,
-            EventTicket.status == TicketOrderStatusEnum.reserved,
-            EventTicket.reserved_until.isnot(None),
-            EventTicket.reserved_until > now,
-        ).scalar())
+        sold = sold_map.get(tc.id, 0)
+        active_reserved = reserved_map.get(tc.id, 0)
         blocking = sold + active_reserved
         available = max(0, tc.quantity - blocking)
         is_sold_out = available <= 0
@@ -160,27 +174,29 @@ def get_my_ticket_classes(
 
     from sqlalchemy import func as sa_func
 
+    # Batch grouped queries for sold / reserved / pending across all classes.
+    class_ids = [tc.id for tc in classes]
+    def _group(status_filter):
+        return {
+            cid: int(qty or 0) for cid, qty in db.query(
+                EventTicket.ticket_class_id,
+                sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0),
+            ).filter(
+                EventTicket.ticket_class_id.in_(class_ids),
+                status_filter,
+            ).group_by(EventTicket.ticket_class_id).all()
+        } if class_ids else {}
+
+    sold_map = _group(EventTicket.status.in_([TicketOrderStatusEnum.approved, TicketOrderStatusEnum.confirmed]))
+    reserved_map = _group(EventTicket.status == TicketOrderStatusEnum.reserved)
+    pending_map = _group(EventTicket.status == TicketOrderStatusEnum.pending)
+
     result = []
     for tc in classes:
-        # Organizer view: count only approved/confirmed tickets as "sold"
-        sold = db.query(sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0)).filter(
-            EventTicket.ticket_class_id == tc.id,
-            EventTicket.status.in_([TicketOrderStatusEnum.approved, TicketOrderStatusEnum.confirmed]),
-        ).scalar()
-        sold = int(sold)
-        # Reservations are unpaid holds; surface them separately so the UI
-        # can show "Sold X · Reserved Y · Available Z".
-        reserved = db.query(sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0)).filter(
-            EventTicket.ticket_class_id == tc.id,
-            EventTicket.status == TicketOrderStatusEnum.reserved,
-        ).scalar()
-        reserved = int(reserved)
-        # Pending (paid-pending or awaiting approval) also blocks inventory.
-        blocked_other = db.query(sa_func.coalesce(sa_func.sum(EventTicket.quantity), 0)).filter(
-            EventTicket.ticket_class_id == tc.id,
-            EventTicket.status == TicketOrderStatusEnum.pending,
-        ).scalar()
-        available = tc.quantity - sold - reserved - int(blocked_other)
+        sold = sold_map.get(tc.id, 0)
+        reserved = reserved_map.get(tc.id, 0)
+        blocked_other = pending_map.get(tc.id, 0)
+        available = tc.quantity - sold - reserved - blocked_other
         result.append({
             "id": str(tc.id),
             "name": tc.name,
@@ -619,23 +635,50 @@ def get_my_tickets(
 
     from models.users import UserProfile
 
+    # Batch event + ticket_class + organizer + organizer profile lookups
+    # (previously: 4 per-row queries × page size = up to 200 trips per page).
+    event_ids = {t.event_id for t in tickets if t.event_id}
+    class_ids = {t.ticket_class_id for t in tickets if t.ticket_class_id}
+    events_map = {e.id: e for e in db.query(Event).filter(Event.id.in_(event_ids)).all()} if event_ids else {}
+    classes_map = {c.id: c for c in db.query(EventTicketClass).filter(EventTicketClass.id.in_(class_ids)).all()} if class_ids else {}
+
+    organizer_ids = {e.organizer_id for e in events_map.values() if getattr(e, "organizer_id", None)}
+    organizers_map = {u.id: u for u in db.query(User).filter(User.id.in_(organizer_ids)).all()} if organizer_ids else {}
+    organizer_profiles_map = {
+        p.user_id: p for p in db.query(UserProfile).filter(UserProfile.user_id.in_(organizer_ids)).all()
+    } if organizer_ids else {}
+
+    # Cover images: batch one fallback EventImage lookup per event when needed.
+    event_cover_cache: dict = {}
+    for e in events_map.values():
+        if e.cover_image_url:
+            event_cover_cache[e.id] = e.cover_image_url
+    missing_cover_ids = [eid for eid in events_map if eid not in event_cover_cache]
+    if missing_cover_ids:
+        imgs = (
+            db.query(EventImage)
+            .filter(EventImage.event_id.in_(missing_cover_ids))
+            .order_by(EventImage.is_featured.desc(), EventImage.created_at.asc())
+            .all()
+        )
+        for img in imgs:
+            event_cover_cache.setdefault(img.event_id, img.image_url)
+
     result = []
     for t in tickets:
-        event = db.query(Event).filter(Event.id == t.event_id).first()
-        tc = db.query(EventTicketClass).filter(EventTicketClass.id == t.ticket_class_id).first()
-
+        event = events_map.get(t.event_id)
+        tc = classes_map.get(t.ticket_class_id)
         organizer_block = None
-        if event:
-            organizer = db.query(User).filter(User.id == event.organizer_id).first()
-            if organizer:
-                op = db.query(UserProfile).filter(UserProfile.user_id == organizer.id).first()
-                full = " ".join(filter(None, [organizer.first_name, organizer.last_name])).strip()
-                organizer_block = {
-                    "id": str(organizer.id),
-                    "name": full or organizer.username or "Organizer",
-                    "avatar": op.profile_picture_url if op else None,
-                    "is_verified": bool(getattr(organizer, "is_identity_verified", False)),
-                }
+        if event and event.organizer_id in organizers_map:
+            organizer = organizers_map[event.organizer_id]
+            op = organizer_profiles_map.get(organizer.id)
+            full = " ".join(filter(None, [organizer.first_name, organizer.last_name])).strip()
+            organizer_block = {
+                "id": str(organizer.id),
+                "name": full or organizer.username or "Organizer",
+                "avatar": op.profile_picture_url if op else None,
+                "is_verified": bool(getattr(organizer, "is_identity_verified", False)),
+            }
 
         result.append({
             "id": str(t.id),
@@ -646,7 +689,7 @@ def get_my_tickets(
                 "start_date": str(event.start_date) if event and event.start_date else None,
                 "start_time": str(event.start_time) if event and event.start_time else None,
                 "location": event.location if event else None,
-                "cover_image": _resolve_event_cover(event, db) if event else None,
+                "cover_image": event_cover_cache.get(t.event_id) if event else None,
                 "description": event.description if event else None,
                 "organizer": organizer_block,
             },
@@ -701,9 +744,13 @@ def get_event_tickets(
     total = query.count()
     tickets = query.offset(offset).limit(limit).all()
 
+    # Batch-load ticket classes for the visible page.
+    class_ids = {t.ticket_class_id for t in tickets if t.ticket_class_id}
+    classes_map = {c.id: c for c in db.query(EventTicketClass).filter(EventTicketClass.id.in_(class_ids)).all()} if class_ids else {}
+
     result = []
     for t in tickets:
-        tc = db.query(EventTicketClass).filter(EventTicketClass.id == t.ticket_class_id).first()
+        tc = classes_map.get(t.ticket_class_id)
         result.append({
             "id": str(t.id),
             "ticket_code": t.ticket_code,
@@ -805,23 +852,44 @@ def get_my_upcoming_tickets(
     current_user: User = Depends(get_current_user),
 ):
     """Get approved/confirmed tickets for upcoming events (today or future)."""
-    from sqlalchemy import or_
     today = datetime.now().date()
 
-    tickets = db.query(EventTicket).filter(
-        EventTicket.buyer_user_id == current_user.id,
-        EventTicket.status.in_([TicketOrderStatusEnum.confirmed, TicketOrderStatusEnum.approved]),
-    ).all()
+    # SQL-side join + date filter + limit (previously: unbounded fetch +
+    # per-ticket Event/EventTicketClass queries + Python date filter).
+    rows = (
+        db.query(EventTicket, Event, EventTicketClass)
+        .join(Event, Event.id == EventTicket.event_id)
+        .outerjoin(EventTicketClass, EventTicketClass.id == EventTicket.ticket_class_id)
+        .filter(
+            EventTicket.buyer_user_id == current_user.id,
+            EventTicket.status.in_([TicketOrderStatusEnum.confirmed, TicketOrderStatusEnum.approved]),
+            Event.start_date >= today,
+        )
+        .order_by(Event.start_date.asc())
+        .limit(10)
+        .all()
+    )
+
+    # Batch cover image fallback for events missing cover_image_url.
+    event_cover_cache: dict = {}
+    missing_cover_ids = []
+    for _, e, _ in rows:
+        if e.cover_image_url:
+            event_cover_cache[e.id] = e.cover_image_url
+        else:
+            missing_cover_ids.append(e.id)
+    if missing_cover_ids:
+        imgs = (
+            db.query(EventImage)
+            .filter(EventImage.event_id.in_(missing_cover_ids))
+            .order_by(EventImage.is_featured.desc(), EventImage.created_at.asc())
+            .all()
+        )
+        for img in imgs:
+            event_cover_cache.setdefault(img.event_id, img.image_url)
 
     result = []
-    for t in tickets:
-        event = db.query(Event).filter(Event.id == t.event_id).first()
-        if not event or not event.start_date:
-            continue
-        if event.start_date < today:
-            continue
-
-        tc = db.query(EventTicketClass).filter(EventTicketClass.id == t.ticket_class_id).first()
+    for t, event, tc in rows:
         result.append({
             "id": str(t.id),
             "ticket_code": t.ticket_code,
@@ -837,15 +905,12 @@ def get_my_upcoming_tickets(
                 "start_date": str(event.start_date),
                 "start_time": str(event.start_time) if event.start_time else None,
                 "location": event.location,
-                "cover_image": _resolve_event_cover(event, db),
+                "cover_image": event_cover_cache.get(event.id),
                 "description": event.description,
             },
         })
 
-    # Sort by event start_date
-    result.sort(key=lambda x: x["event"]["start_date"])
-
-    return standard_response(True, "Upcoming tickets retrieved", {"tickets": result[:10]})
+    return standard_response(True, "Upcoming tickets retrieved", {"tickets": result})
 
 
 # ──────────────────────────────────────────────

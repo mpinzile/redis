@@ -141,68 +141,134 @@ def _filter_bookings_by_search(items, term):
     return out
 
 
+def _booking_status_summary(db, base_query):
+    """One grouped query → status counts for the KPI strip."""
+    from sqlalchemy import func as sa_func
+    rows = (
+        base_query.with_entities(
+            ServiceBookingRequest.status, sa_func.count(ServiceBookingRequest.id)
+        ).group_by(ServiceBookingRequest.status).all()
+    )
+    counts = {"pending": 0, "accepted": 0, "rejected": 0, "completed": 0, "cancelled": 0}
+    total = 0
+    for st, n in rows:
+        key = st.value if hasattr(st, "value") else str(st)
+        counts[key] = int(n or 0)
+        total += int(n or 0)
+    counts["total"] = total
+    return counts
+
+
+def _apply_booking_search(query, term):
+    """Push search into SQL via joins on service title, event name and message."""
+    if not term or not term.strip():
+        return query
+    from sqlalchemy import or_, func as sa_func
+    t = f"%{term.strip().lower()}%"
+    return (
+        query.outerjoin(UserService, UserService.id == ServiceBookingRequest.user_service_id)
+        .outerjoin(Event, Event.id == ServiceBookingRequest.event_id)
+        .filter(or_(
+            sa_func.lower(UserService.title).like(t),
+            sa_func.lower(Event.name).like(t),
+            sa_func.lower(ServiceBookingRequest.message).like(t),
+        ))
+    )
+
+
 @router.get("/")
 def get_my_bookings(
-    search: str = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    from utils.batch_loaders import build_booking_dicts
-    bookings = db.query(ServiceBookingRequest).filter(ServiceBookingRequest.requester_user_id == current_user.id).order_by(ServiceBookingRequest.created_at.desc()).all()
-    items = build_booking_dicts(db, bookings)
-    items = _filter_bookings_by_search(items, search)
-    summary = {
-        "total": len(items),
-        "pending": sum(1 for b in items if b["status"] == "pending"),
-        "accepted": sum(1 for b in items if b["status"] == "accepted"),
-        "rejected": sum(1 for b in items if b["status"] == "rejected"),
-        "completed": sum(1 for b in items if b["status"] == "completed"),
-        "cancelled": sum(1 for b in items if b["status"] == "cancelled"),
-    }
-    return standard_response(True, "Bookings retrieved successfully", {"bookings": items, "summary": summary})
-
-
-@router.get("/received")
-def get_received_bookings(
+    page: int = 1,
+    limit: int = 20,
     status: str = None,
     search: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     from utils.batch_loaders import build_booking_dicts
-    my_service_ids = [s.id for s in db.query(UserService.id).filter(UserService.user_id == current_user.id).all()]
-    empty_summary = {"total": 0, "pending": 0, "accepted": 0, "rejected": 0, "completed": 0, "cancelled": 0, "total_earnings": 0}
-    if not my_service_ids:
-        return standard_response(True, "Received bookings retrieved successfully", {"bookings": [], "summary": empty_summary})
-    bookings = db.query(ServiceBookingRequest).filter(ServiceBookingRequest.user_service_id.in_(my_service_ids)).order_by(ServiceBookingRequest.created_at.desc()).all()
-    items = build_booking_dicts(db, bookings)
-    items = _filter_bookings_by_search(items, search)
+    base = db.query(ServiceBookingRequest).filter(
+        ServiceBookingRequest.requester_user_id == current_user.id
+    )
+    summary = _booking_status_summary(db, base)
 
-    def _amount(b):
-        for k in ("final_price", "quoted_price", "total_amount", "amount"):
-            v = b.get(k)
-            if v is not None:
-                try:
-                    return float(v)
-                except (TypeError, ValueError):
-                    pass
-        return 0.0
-
-    summary = {
-        "total": len(items),
-        "pending": sum(1 for b in items if b["status"] == "pending"),
-        "accepted": sum(1 for b in items if b["status"] == "accepted"),
-        "rejected": sum(1 for b in items if b["status"] == "rejected"),
-        "completed": sum(1 for b in items if b["status"] == "completed"),
-        "cancelled": sum(1 for b in items if b["status"] == "cancelled"),
-        "total_earnings": sum(_amount(b) for b in items if b["status"] in ("accepted", "completed")),
-    }
-
-    # Apply status filter AFTER summary so KPIs reflect totals
+    q = _apply_booking_search(base, search)
     if status and status != "all":
-        items = [b for b in items if b.get("status") == status]
+        q = q.filter(ServiceBookingRequest.status == status)
 
-    return standard_response(True, "Received bookings retrieved successfully", {"bookings": items, "summary": summary})
+    total = q.with_entities(ServiceBookingRequest.id).count()
+    page = max(1, int(page or 1))
+    limit = max(1, min(int(limit or 20), 100))
+    rows = (
+        q.order_by(ServiceBookingRequest.created_at.desc())
+        .offset((page - 1) * limit).limit(limit).all()
+    )
+    items = build_booking_dicts(db, rows)
+    total_pages = (total + limit - 1) // limit if limit else 1
+    return standard_response(True, "Bookings retrieved successfully", {
+        "bookings": items,
+        "summary": summary,
+        "pagination": {
+            "page": page, "limit": limit, "total_items": total,
+            "total_pages": total_pages, "has_next": page < total_pages, "has_previous": page > 1,
+        },
+    })
+
+
+@router.get("/received")
+def get_received_bookings(
+    page: int = 1,
+    limit: int = 20,
+    status: str = None,
+    search: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from utils.batch_loaders import build_booking_dicts
+    from sqlalchemy import func as sa_func
+    empty_summary = {"total": 0, "pending": 0, "accepted": 0, "rejected": 0, "completed": 0, "cancelled": 0, "total_earnings": 0}
+    my_service_ids = [s.id for s in db.query(UserService.id).filter(UserService.user_id == current_user.id).all()]
+    if not my_service_ids:
+        return standard_response(True, "Received bookings retrieved successfully", {
+            "bookings": [], "summary": empty_summary,
+            "pagination": {"page": 1, "limit": limit, "total_items": 0, "total_pages": 0, "has_next": False, "has_previous": False},
+        })
+
+    base = db.query(ServiceBookingRequest).filter(
+        ServiceBookingRequest.user_service_id.in_(my_service_ids)
+    )
+    summary = _booking_status_summary(db, base)
+    # Earnings — single SQL aggregate over accepted/completed (no Python loop).
+    earnings = db.query(
+        sa_func.coalesce(sa_func.sum(sa_func.coalesce(
+            ServiceBookingRequest.quoted_price, ServiceBookingRequest.proposed_price, 0
+        )), 0)
+    ).filter(
+        ServiceBookingRequest.user_service_id.in_(my_service_ids),
+        ServiceBookingRequest.status.in_(["accepted", "completed"]),
+    ).scalar() or 0
+    summary["total_earnings"] = float(earnings)
+
+    q = _apply_booking_search(base, search)
+    if status and status != "all":
+        q = q.filter(ServiceBookingRequest.status == status)
+
+    total = q.with_entities(ServiceBookingRequest.id).count()
+    page = max(1, int(page or 1))
+    limit = max(1, min(int(limit or 20), 100))
+    rows = (
+        q.order_by(ServiceBookingRequest.created_at.desc())
+        .offset((page - 1) * limit).limit(limit).all()
+    )
+    items = build_booking_dicts(db, rows)
+    total_pages = (total + limit - 1) // limit if limit else 1
+    return standard_response(True, "Received bookings retrieved successfully", {
+        "bookings": items,
+        "summary": summary,
+        "pagination": {
+            "page": page, "limit": limit, "total_items": total,
+            "total_pages": total_pages, "has_next": page < total_pages, "has_previous": page > 1,
+        },
+    })
 
 
 @router.get("/{booking_id}")

@@ -244,19 +244,38 @@ def create_meeting(event_id: str, body: CreateMeetingRequest, db: Session = Depe
 
 
 @router.get("")
-def list_meetings(event_id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    """List all meetings for this event."""
+def list_meetings(
+    event_id: str,
+    page: int = 1,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """List meetings for this event (paginated, newest first)."""
     user_id = str(current_user.id)
     _check_event_access(event_id, user_id, db)
 
-    meetings = db.query(EventMeeting).filter(
-        EventMeeting.event_id == event_id
-    ).order_by(EventMeeting.scheduled_at.desc()).all()
+    from sqlalchemy import func as sa_func
+    page = max(1, int(page or 1))
+    limit = max(1, min(int(limit or 20), 100))
+
+    total = db.query(sa_func.count(EventMeeting.id)).filter(EventMeeting.event_id == event_id).scalar() or 0
+    meetings = (
+        db.query(EventMeeting)
+        .filter(EventMeeting.event_id == event_id)
+        .order_by(EventMeeting.scheduled_at.desc())
+        .offset((page - 1) * limit).limit(limit).all()
+    )
 
     from utils.batch_loaders import build_meeting_dicts
+    total_pages = (total + limit - 1) // limit if limit else 1
     return {
         "success": True,
-        "data": build_meeting_dicts(db, meetings)
+        "data": build_meeting_dicts(db, meetings),
+        "pagination": {
+            "page": page, "limit": limit, "total_items": int(total),
+            "total_pages": total_pages, "has_next": page < total_pages, "has_previous": page > 1,
+        },
     }
 
 

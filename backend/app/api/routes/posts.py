@@ -159,46 +159,74 @@ def get_my_posts(page: int = 1, limit: int = 30, db: Session = Depends(get_db), 
 
 @router.get("/my-removed")
 def get_my_removed_posts(
+    page: int = 1, limit: int = 20,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Returns posts removed by an admin so the user can view removal reason and appeal."""
-    posts = db.query(UserFeed).filter(
-        UserFeed.user_id == current_user.id,
-        UserFeed.is_active == False,
-    ).order_by(UserFeed.updated_at.desc()).all()
+    page = max(1, int(page or 1)); limit = max(1, min(int(limit or 20), 100))
+    posts = (
+        db.query(UserFeed)
+        .filter(UserFeed.user_id == current_user.id, UserFeed.is_active == False)
+        .order_by(UserFeed.updated_at.desc())
+        .offset((page - 1) * limit).limit(limit).all()
+    )
+    if not posts:
+        return standard_response(True, "Removed posts retrieved", [])
+
+    post_ids = [p.id for p in posts]
+
+    # Batch all the per-post lookups in 5 queries total (down from ~7 × N).
+    appeals_map = {
+        a.content_id: a for a in db.query(ContentAppeal).filter(
+            ContentAppeal.user_id == current_user.id,
+            ContentAppeal.content_id.in_(post_ids),
+            ContentAppeal.content_type == AppealContentTypeEnum.post,
+        ).all()
+    }
+    images_map: dict = {}
+    for img in db.query(UserFeedImage).filter(UserFeedImage.feed_id.in_(post_ids)).all():
+        images_map.setdefault(img.feed_id, []).append(img)
+    glow_counts = {
+        fid: int(c or 0) for fid, c in db.query(
+            UserFeedGlow.feed_id, sa_func.count(UserFeedGlow.id)
+        ).filter(UserFeedGlow.feed_id.in_(post_ids)).group_by(UserFeedGlow.feed_id).all()
+    }
+    echo_counts = {
+        fid: int(c or 0) for fid, c in db.query(
+            UserFeedEcho.feed_id, sa_func.count(UserFeedEcho.id)
+        ).filter(UserFeedEcho.feed_id.in_(post_ids)).group_by(UserFeedEcho.feed_id).all()
+    }
+    comment_counts = {
+        fid: int(c or 0) for fid, c in db.query(
+            UserFeedComment.feed_id, sa_func.count(UserFeedComment.id)
+        ).filter(UserFeedComment.feed_id.in_(post_ids), UserFeedComment.is_active == True)
+         .group_by(UserFeedComment.feed_id).all()
+    }
+    # Author is always the current user — one lookup.
+    user = current_user
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
 
     data = []
     for p in posts:
-        appeal = db.query(ContentAppeal).filter(
-            ContentAppeal.user_id == current_user.id,
-            ContentAppeal.content_id == p.id,
-            ContentAppeal.content_type == AppealContentTypeEnum.post,
-        ).first()
-        images = db.query(UserFeedImage).filter(UserFeedImage.feed_id == p.id).all()
-        glow_count = db.query(sa_func.count(UserFeedGlow.id)).filter(UserFeedGlow.feed_id == p.id).scalar() or 0
-        echo_count = db.query(sa_func.count(UserFeedEcho.id)).filter(UserFeedEcho.feed_id == p.id).scalar() or 0
-        comment_count = db.query(sa_func.count(UserFeedComment.id)).filter(
-            UserFeedComment.feed_id == p.id, UserFeedComment.is_active == True
-        ).scalar() or 0
-        user = db.query(User).filter(User.id == p.user_id).first()
-        profile = db.query(UserProfile).filter(UserProfile.user_id == p.user_id).first() if user else None
+        appeal = appeals_map.get(p.id)
+        images = images_map.get(p.id, [])
         data.append({
             "id": str(p.id),
             "content": p.content,
             "images": [{"url": img.image_url, "media_type": getattr(img, 'media_type', None) or 'image'} for img in images],
             "location": p.location,
             "visibility": p.visibility.value if p.visibility else "public",
-            "glow_count": glow_count,
-            "echo_count": echo_count,
-            "comment_count": comment_count,
-            "removal_reason": p.removal_reason if hasattr(p, "removal_reason") else None,
+            "glow_count": glow_counts.get(p.id, 0),
+            "echo_count": echo_counts.get(p.id, 0),
+            "comment_count": comment_counts.get(p.id, 0),
+            "removal_reason": getattr(p, "removal_reason", None),
             "removed_at": p.updated_at.isoformat() if p.updated_at else None,
             "created_at": p.created_at.isoformat() if p.created_at else None,
             "author": {
-                "id": str(user.id) if user else None,
-                "name": f"{user.first_name} {user.last_name}" if user else None,
-                "username": user.username if user else None,
+                "id": str(user.id),
+                "name": f"{user.first_name} {user.last_name}",
+                "username": user.username,
                 "avatar": profile.profile_picture_url if profile else None,
             },
             "appeal": {

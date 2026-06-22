@@ -88,18 +88,26 @@ def list_event_sponsors(
     event = db.query(Event).filter(Event.id == eid).first()
     if not event:
         return standard_response(False, "Event not found")
+    from sqlalchemy import func as sa_func, case
     rows = db.query(EventSponsor).filter(EventSponsor.event_id == eid).order_by(EventSponsor.created_at.desc()).all()
-    confirmed_total = sum(
-        float(r.contribution_amount or 0) for r in rows if r.status == "accepted"
-    )
+    # Single aggregate query for the summary (no Python sum loops).
+    summary_row = db.query(
+        sa_func.count(EventSponsor.id).label("total"),
+        sa_func.count(case((EventSponsor.status == "accepted", 1))).label("accepted"),
+        sa_func.count(case((EventSponsor.status == "pending", 1))).label("pending"),
+        sa_func.count(case((EventSponsor.status == "declined", 1))).label("declined"),
+        sa_func.coalesce(
+            sa_func.sum(case((EventSponsor.status == "accepted", EventSponsor.contribution_amount))), 0
+        ).label("contribution_total"),
+    ).filter(EventSponsor.event_id == eid).one()
     return standard_response(True, "Sponsors retrieved", {
         "items": [_sponsor_dict(db, r) for r in rows],
         "summary": {
-            "total": len(rows),
-            "accepted": sum(1 for r in rows if r.status == "accepted"),
-            "pending": sum(1 for r in rows if r.status == "pending"),
-            "declined": sum(1 for r in rows if r.status == "declined"),
-            "contribution_total": confirmed_total,
+            "total": int(summary_row.total or 0),
+            "accepted": int(summary_row.accepted or 0),
+            "pending": int(summary_row.pending or 0),
+            "declined": int(summary_row.declined or 0),
+            "contribution_total": float(summary_row.contribution_total or 0),
         },
     })
 

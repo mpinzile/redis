@@ -59,16 +59,47 @@ def get_my_issues(
     query = query.order_by(Issue.created_at.desc(), Issue.id.desc())
     items, pagination = paginate(query, page, limit)
 
-    # Summary counts
-    total = db.query(sa_func.count(Issue.id)).filter(Issue.user_id == current_user.id).scalar() or 0
-    open_count = db.query(sa_func.count(Issue.id)).filter(Issue.user_id == current_user.id, Issue.status == IssueStatusEnum.open).scalar() or 0
-    in_progress_count = db.query(sa_func.count(Issue.id)).filter(Issue.user_id == current_user.id, Issue.status == IssueStatusEnum.in_progress).scalar() or 0
-    resolved_count = db.query(sa_func.count(Issue.id)).filter(Issue.user_id == current_user.id, Issue.status == IssueStatusEnum.resolved).scalar() or 0
+    # Single CASE-based aggregate replaces 4 separate COUNT queries.
+    from sqlalchemy import case
+    summary_row = db.query(
+        sa_func.count(Issue.id).label("total"),
+        sa_func.count(case((Issue.status == IssueStatusEnum.open, 1))).label("open"),
+        sa_func.count(case((Issue.status == IssueStatusEnum.in_progress, 1))).label("in_progress"),
+        sa_func.count(case((Issue.status == IssueStatusEnum.resolved, 1))).label("resolved"),
+    ).filter(Issue.user_id == current_user.id).one()
+    total = int(summary_row.total or 0)
+    open_count = int(summary_row.open or 0)
+    in_progress_count = int(summary_row.in_progress or 0)
+    resolved_count = int(summary_row.resolved or 0)
+
+    # Batch response counts and last-response timestamps for visible issues.
+    issue_ids = [i.id for i in items]
+    response_counts: dict = {}
+    last_response_map: dict = {}
+    if issue_ids:
+        response_counts = {
+            iid: int(cnt or 0) for iid, cnt in db.query(
+                IssueResponse.issue_id, sa_func.count(IssueResponse.id),
+            ).filter(IssueResponse.issue_id.in_(issue_ids))
+            .group_by(IssueResponse.issue_id).all()
+        }
+        # Latest response per issue via a windowed/grouped approach: fetch the
+        # max created_at per issue then look those rows up.
+        latest_times = dict(
+            db.query(IssueResponse.issue_id, sa_func.max(IssueResponse.created_at))
+            .filter(IssueResponse.issue_id.in_(issue_ids))
+            .group_by(IssueResponse.issue_id).all()
+        )
+        if latest_times:
+            from sqlalchemy import tuple_, and_, or_
+            conds = [and_(IssueResponse.issue_id == k, IssueResponse.created_at == v) for k, v in latest_times.items()]
+            last_rows = db.query(IssueResponse).filter(or_(*conds)).all() if conds else []
+            for r in last_rows:
+                last_response_map.setdefault(r.issue_id, r)
 
     data = []
     for issue in items:
-        response_count = db.query(sa_func.count(IssueResponse.id)).filter(IssueResponse.issue_id == issue.id).scalar() or 0
-        last_response = db.query(IssueResponse).filter(IssueResponse.issue_id == issue.id).order_by(IssueResponse.created_at.desc()).first()
+        last_response = last_response_map.get(issue.id)
         data.append({
             "id": str(issue.id),
             "subject": issue.subject,
@@ -81,7 +112,7 @@ def get_my_issues(
                 "icon": issue.category.icon,
             } if issue.category else None,
             "screenshot_urls": issue.screenshot_urls or [],
-            "response_count": response_count,
+            "response_count": response_counts.get(issue.id, 0),
             "last_response_at": last_response.created_at.isoformat() if last_response else None,
             "last_response_is_admin": last_response.is_admin if last_response else False,
             "created_at": issue.created_at.isoformat() if issue.created_at else None,

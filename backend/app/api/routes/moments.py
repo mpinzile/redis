@@ -36,38 +36,85 @@ def _moment_content_type(value):
 
 
 def _moment_dict(db, m, current_user_id=None):
-    user = db.query(User).filter(User.id == m.user_id).first()
-    profile = db.query(UserProfile).filter(UserProfile.user_id == m.user_id).first() if user else None
-    # Exclude the author from viewer counts — viewing your own glimpse must not inflate the count.
-    viewer_count = db.query(UserMomentViewer).filter(
-        UserMomentViewer.moment_id == m.id,
-        UserMomentViewer.viewer_id != m.user_id,
-    ).count()
-    has_seen = False
-    if current_user_id:
-        has_seen = db.query(UserMomentViewer).filter(UserMomentViewer.moment_id == m.id, UserMomentViewer.viewer_id == current_user_id).first() is not None
+    # Single-moment convenience wrapper around the batch builder. Kept so the
+    # /moments/{id} detail endpoints continue working without changes.
+    out = _build_moment_dicts(db, [m], current_user_id=current_user_id)
+    return out[0] if out else None
 
-    ct = _moment_content_type(m.content_type)
-    media_url = m.media_url
-    background_color = None
-    if isinstance(media_url, str) and media_url.startswith("text:"):
-        ct = "text"
-        background_color = media_url[5:] or None
-        media_url = None
 
-    return {
-        "id": str(m.id),
-        "author": {"id": str(user.id), "name": f"{user.first_name} {user.last_name}", "avatar": profile.profile_picture_url if profile else None, "is_verified": user.is_identity_verified or False} if user else None,
-        "caption": m.caption, "content_type": ct,
-        "media_url": media_url,
-        "thumbnail_url": m.thumbnail_url if hasattr(m, "thumbnail_url") else None,
-        "background_color": background_color,
-        "location": m.location if hasattr(m, "location") else None,
-        "viewer_count": viewer_count, "has_seen": has_seen,
-        "is_active": m.is_active,
-        "expires_at": m.expires_at.isoformat() if m.expires_at else None,
-        "created_at": m.created_at.isoformat() if m.created_at else None,
+def _build_moment_dicts(db, moments, current_user_id=None, _users_map=None, _profiles_map=None):
+    """Batch-load all author/viewer/has_seen data for a collection of moments.
+
+    Replaces a per-moment 4-query pattern (User, UserProfile, viewer count,
+    has_seen) with at most 4 batched queries regardless of input size.
+    """
+    if not moments:
+        return []
+    from sqlalchemy import func as sa_func
+    moment_ids = [m.id for m in moments]
+    user_ids = list({m.user_id for m in moments})
+
+    users_map = _users_map if _users_map is not None else {
+        u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()
     }
+    profiles_map = _profiles_map if _profiles_map is not None else {
+        p.user_id: p for p in db.query(UserProfile).filter(UserProfile.user_id.in_(user_ids)).all()
+    }
+
+    # Viewer count per moment, excluding the author (matches legacy semantics).
+    viewer_rows = (
+        db.query(UserMomentViewer.moment_id, sa_func.count(UserMomentViewer.id))
+        .join(UserMoment, UserMoment.id == UserMomentViewer.moment_id)
+        .filter(
+            UserMomentViewer.moment_id.in_(moment_ids),
+            UserMomentViewer.viewer_id != UserMoment.user_id,
+        )
+        .group_by(UserMomentViewer.moment_id)
+        .all()
+    )
+    viewer_counts = {mid: int(cnt or 0) for mid, cnt in viewer_rows}
+
+    seen_ids = set()
+    if current_user_id:
+        seen_ids = {
+            row[0] for row in db.query(UserMomentViewer.moment_id).filter(
+                UserMomentViewer.moment_id.in_(moment_ids),
+                UserMomentViewer.viewer_id == current_user_id,
+            ).all()
+        }
+
+    out = []
+    for m in moments:
+        user = users_map.get(m.user_id)
+        profile = profiles_map.get(m.user_id)
+        ct = _moment_content_type(m.content_type)
+        media_url = m.media_url
+        background_color = None
+        if isinstance(media_url, str) and media_url.startswith("text:"):
+            ct = "text"
+            background_color = media_url[5:] or None
+            media_url = None
+        out.append({
+            "id": str(m.id),
+            "author": {
+                "id": str(user.id),
+                "name": f"{user.first_name} {user.last_name}",
+                "avatar": profile.profile_picture_url if profile else None,
+                "is_verified": user.is_identity_verified or False,
+            } if user else None,
+            "caption": m.caption,
+            "content_type": ct,
+            "media_url": media_url,
+            "thumbnail_url": getattr(m, "thumbnail_url", None),
+            "background_color": background_color,
+            "location": getattr(m, "location", None),
+            "viewer_count": viewer_counts.get(m.id, 0),
+            "has_seen": m.id in seen_ids,
+            "is_active": m.is_active,
+            "expires_at": m.expires_at.isoformat() if m.expires_at else None,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        })
+    return out
 
 
 
@@ -77,39 +124,57 @@ def _moment_dict(db, m, current_user_id=None):
 
 @router.get("/my-removed")
 def get_my_removed_moments(
+    page: int = 1, limit: int = 30,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Returns moments removed by an admin so the user can view removal reason and appeal."""
-    moments = db.query(UserMoment).filter(
-        UserMoment.user_id == current_user.id,
-        UserMoment.is_active == False,
-    ).order_by(UserMoment.created_at.desc()).all()
+    from sqlalchemy import func as sa_func
+    page = max(1, int(page or 1)); limit = max(1, min(int(limit or 30), 100))
+
+    moments = (
+        db.query(UserMoment)
+        .filter(UserMoment.user_id == current_user.id, UserMoment.is_active == False)
+        .order_by(UserMoment.created_at.desc())
+        .offset((page - 1) * limit).limit(limit).all()
+    )
+    if not moments:
+        return standard_response(True, "Removed moments retrieved", [])
+
+    moment_ids = [m.id for m in moments]
+    # Batch: appeals, viewer counts, single author (always current_user).
+    appeals_map = {
+        a.content_id: a for a in db.query(ContentAppeal).filter(
+            ContentAppeal.user_id == current_user.id,
+            ContentAppeal.content_id.in_(moment_ids),
+            ContentAppeal.content_type == AppealContentTypeEnum.moment,
+        ).all()
+    }
+    viewer_counts = {
+        mid: int(cnt or 0) for mid, cnt in db.query(
+            UserMomentViewer.moment_id, sa_func.count(UserMomentViewer.id),
+        ).filter(UserMomentViewer.moment_id.in_(moment_ids)).group_by(UserMomentViewer.moment_id).all()
+    }
+    user = current_user
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
 
     data = []
     for m in moments:
-        appeal = db.query(ContentAppeal).filter(
-            ContentAppeal.user_id == current_user.id,
-            ContentAppeal.content_id == m.id,
-            ContentAppeal.content_type == AppealContentTypeEnum.moment,
-        ).first()
-        user = db.query(User).filter(User.id == m.user_id).first()
-        profile = db.query(UserProfile).filter(UserProfile.user_id == m.user_id).first() if user else None
-        viewer_count = db.query(UserMomentViewer).filter(UserMomentViewer.moment_id == m.id).count()
+        appeal = appeals_map.get(m.id)
         data.append({
             "id": str(m.id),
             "caption": m.caption,
             "media_url": m.media_url,
             "content_type": m.content_type.value if hasattr(m.content_type, "value") else str(m.content_type),
-            "location": m.location if hasattr(m, "location") else None,
-            "viewer_count": viewer_count,
-            "removal_reason": m.removal_reason if hasattr(m, "removal_reason") else None,
-            "removed_at": m.updated_at.isoformat() if hasattr(m, "updated_at") and m.updated_at else m.created_at.isoformat() if m.created_at else None,
+            "location": getattr(m, "location", None),
+            "viewer_count": viewer_counts.get(m.id, 0),
+            "removal_reason": getattr(m, "removal_reason", None),
+            "removed_at": (m.updated_at.isoformat() if getattr(m, "updated_at", None) else (m.created_at.isoformat() if m.created_at else None)),
             "created_at": m.created_at.isoformat() if m.created_at else None,
             "author": {
-                "id": str(user.id) if user else None,
-                "name": f"{user.first_name} {user.last_name}" if user else None,
-                "username": user.username if user else None,
+                "id": str(user.id),
+                "name": f"{user.first_name} {user.last_name}",
+                "username": user.username,
                 "avatar": profile.profile_picture_url if profile else None,
             },
             "appeal": {
@@ -145,7 +210,7 @@ def get_public_trending_moments(limit: int = 12, db: Session = Depends(get_db)):
         .all()
     )
     moments = [r[0] for r in rows]
-    return standard_response(True, "Trending moments", [_moment_dict(db, m) for m in moments])
+    return standard_response(True, "Trending moments", _build_moment_dicts(db, moments))
 
 
 # Authenticated trending: same ranking as public/trending but restricted to
@@ -194,7 +259,7 @@ def get_trending_moments(
     return standard_response(
         True,
         "Trending moments",
-        [_moment_dict(db, m, current_user.id) for m in moments],
+        _build_moment_dicts(db, moments, current_user_id=current_user.id),
     )
 
 
@@ -231,16 +296,35 @@ def get_moments_feed(db: Session = Depends(get_db), current_user: User = Depends
         UserMoment.user_id.in_(allowed_author_ids),
     ).order_by(UserMoment.created_at.desc()).limit(200).all()
 
-    # Group by user, latest first per user
-    user_moments = {}
-    for m in moments:
-        uid = str(m.user_id)
-        user_moments.setdefault(uid, []).append(_moment_dict(db, m, current_user.id))
+    # Pre-build all moment dicts in a single batch (≤4 queries total),
+    # reusing the user/profile maps for the feed header below.
+    author_ids = list({m.user_id for m in moments})
+    users_map = {u.id: u for u in db.query(User).filter(User.id.in_(author_ids)).all()} if author_ids else {}
+    profiles_map = {
+        p.user_id: p for p in db.query(UserProfile).filter(UserProfile.user_id.in_(author_ids)).all()
+    } if author_ids else {}
+    moment_dicts = _build_moment_dicts(
+        db, moments, current_user_id=current_user.id,
+        _users_map=users_map, _profiles_map=profiles_map,
+    )
+
+    # Group by user, latest first per user.
+    user_moments: dict[str, list[dict]] = {}
+    for d in moment_dicts:
+        author = d.get("author") or {}
+        uid = author.get("id")
+        if not uid:
+            continue
+        user_moments.setdefault(uid, []).append(d)
 
     feed = []
     for uid, items in user_moments.items():
-        user = db.query(User).filter(User.id == uuid.UUID(uid)).first()
-        profile = db.query(UserProfile).filter(UserProfile.user_id == uuid.UUID(uid)).first() if user else None
+        try:
+            uuid_uid = uuid.UUID(uid)
+        except ValueError:
+            continue
+        user = users_map.get(uuid_uid)
+        profile = profiles_map.get(uuid_uid)
         items = sorted(items, key=lambda item: item["created_at"] or "")
         latest_created_at = items[-1]["created_at"] if items else None
         all_seen = all(item["has_seen"] for item in items)
@@ -258,9 +342,7 @@ def get_moments_feed(db: Session = Depends(get_db), current_user: User = Depends
             "latest_created_at": latest_created_at,
         })
 
-    # Self first, then by latest moment desc
-    feed.sort(key=lambda f: (not f["user"]["is_self"], f["latest_created_at"] or ""), reverse=False)
-    # reverse=False keeps is_self first (False<True), but we want latest desc — re-sort:
+    # Self first, then others by latest moment desc.
     self_entries = [f for f in feed if f["user"]["is_self"]]
     other_entries = sorted(
         [f for f in feed if not f["user"]["is_self"]],
@@ -273,20 +355,39 @@ def get_moments_feed(db: Session = Depends(get_db), current_user: User = Depends
 
 
 @router.get("/me")
-def get_my_moments(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    moments = db.query(UserMoment).filter(UserMoment.user_id == current_user.id, UserMoment.is_active == True).order_by(UserMoment.created_at.desc()).all()
-    return standard_response(True, "Your moments retrieved", [_moment_dict(db, m, current_user.id) for m in moments])
+def get_my_moments(
+    page: int = 1, limit: int = 30,
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+):
+    page = max(1, int(page or 1)); limit = max(1, min(int(limit or 30), 100))
+    moments = (
+        db.query(UserMoment)
+        .filter(UserMoment.user_id == current_user.id, UserMoment.is_active == True)
+        .order_by(UserMoment.created_at.desc())
+        .offset((page - 1) * limit).limit(limit).all()
+    )
+    return standard_response(True, "Your moments retrieved", _build_moment_dicts(db, moments, current_user_id=current_user.id))
 
 
 @router.get("/user/{user_id}")
-def get_user_moments(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_user_moments(
+    user_id: str,
+    page: int = 1, limit: int = 30,
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+):
     try:
         uid = uuid.UUID(user_id)
     except ValueError:
         return standard_response(False, "Invalid user ID")
+    page = max(1, int(page or 1)); limit = max(1, min(int(limit or 30), 100))
     now = datetime.now(EAT)
-    moments = db.query(UserMoment).filter(UserMoment.user_id == uid, UserMoment.is_active == True, UserMoment.expires_at > now).order_by(UserMoment.created_at.asc()).all()
-    return standard_response(True, "User moments retrieved", [_moment_dict(db, m, current_user.id) for m in moments])
+    moments = (
+        db.query(UserMoment)
+        .filter(UserMoment.user_id == uid, UserMoment.is_active == True, UserMoment.expires_at > now)
+        .order_by(UserMoment.created_at.asc())
+        .offset((page - 1) * limit).limit(limit).all()
+    )
+    return standard_response(True, "User moments retrieved", _build_moment_dicts(db, moments, current_user_id=current_user.id))
 
 
 @router.post("/")

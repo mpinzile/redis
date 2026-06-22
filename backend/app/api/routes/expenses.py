@@ -82,25 +82,32 @@ def _expense_to_dict(expense: EventExpense, db: Session) -> dict:
 
 
 def _expense_summary(db: Session, event_id, currency: str = "TZS") -> dict:
-    expenses = db.query(EventExpense).filter(EventExpense.event_id == event_id).all()
+    from sqlalchemy import func as sa_func
+    # Single SUM+COUNT plus one GROUP BY query — no more loading all rows.
+    total_row = db.query(
+        sa_func.coalesce(sa_func.sum(EventExpense.amount), 0).label("total"),
+        sa_func.count(EventExpense.id).label("count"),
+    ).filter(EventExpense.event_id == event_id).one()
+    total = float(total_row.total or 0)
+    count = int(total_row.count or 0)
 
-    total = sum(float(e.amount) for e in expenses if e.amount)
-    count = len(expenses)
+    cat_rows = db.query(
+        EventExpense.category,
+        sa_func.coalesce(sa_func.sum(EventExpense.amount), 0).label("total"),
+        sa_func.count(EventExpense.id).label("count"),
+    ).filter(EventExpense.event_id == event_id).group_by(EventExpense.category).all()
 
-    # Category breakdown
-    cat_map = {}
-    for e in expenses:
-        cat = e.category or "Other"
-        if cat not in cat_map:
-            cat_map[cat] = {"category": cat, "total": 0, "count": 0}
-        cat_map[cat]["total"] += float(e.amount) if e.amount else 0
-        cat_map[cat]["count"] += 1
+    category_breakdown = [
+        {"category": (cat or "Other"), "total": float(t or 0), "count": int(c or 0)}
+        for cat, t, c in cat_rows
+    ]
+    category_breakdown.sort(key=lambda c: c["total"], reverse=True)
 
     return {
         "total_expenses": total,
         "count": count,
         "currency": currency,
-        "category_breakdown": sorted(cat_map.values(), key=lambda c: c["total"], reverse=True),
+        "category_breakdown": category_breakdown,
     }
 
 
